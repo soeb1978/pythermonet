@@ -68,9 +68,9 @@ if SS == 1:
     PD = 0.015;                                                         # Wall to wall distance U-pipe legs (m)                                
 
     # BHE field
-    NX = 4;                                                             # Number of boreholes in the x-direction (-)
+    NX = 2;                                                             # Number of boreholes in the x-direction (-)
     dx = 15;                                                            # Spacing between boreholes in the x-direction (m)
-    NY = 4;                                                             # Number of boreholes in the y-direction (-)
+    NY = 8;                                                             # Number of boreholes in the y-direction (-)
     dy = 15;                                                            # Spacing between boreholes in the y-direction (m)
 
 ############### User set flow and thermal parameters by medium END ############

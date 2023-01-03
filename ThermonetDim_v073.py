@@ -5,6 +5,10 @@ Created on Fri Nov  4 08:53:07 2022
 @author: SOEB
 """
 
+# To consider or implement
+# 1: Samtidighedsfaktor anvendes også på køling. Er det en god ide?
+# 2: Der designes to rørsystemer - et for varme og et for køling. Det skal gøres konsistent
+
 # Conceptual model drawings are found below the code
 
 import numpy as np
@@ -18,11 +22,11 @@ tic = time.time();                                                    # Track co
 ############### User set flow and thermal parameters by medium ################
 
 # Project ID
-PID = 'Vejerslev';                                     # Project name
+PID = 'Energiakademiet, Samsø';                                     # Project name
 
 # Input files
-HPFN = 'Vejerslev_HPS1.dat';                                                  # Input file containing heat pump information
-TOPOFN = 'Vejerslev_TOPO1.dat';                                           # Input file containing topology information 
+HPFN = 'HPS_Samso3.dat';                                                  # Input file containing heat pump information
+TOPOFN = 'Samso_TOPO.dat';                                           # Input file containing topology information 
 
 # Brine
 rhob = 965;                                                         # Brine density (kg/m3), T = 0C. https://www.handymath.com/cgi-bin/isopropanolwghtvoltble5.cgi?submit=Entry
@@ -34,20 +38,20 @@ lb = 0.45;                                                          # Brine ther
 lp = 0.4;                                                           # Pipe thermal conductivity (W/m/K). https://www.wavin.com/da-dk/catalog/Varme/Jordvarme/PE-80-lige-ror/40mm-jordvarme-PE-80PN6-100m
 
 # Thermonet
-PWD = 0.5;                                                          # Distance between forward and return pipe centers (m)
+PWD = 0.3;                                                          # Distance between forward and return pipe centers (m)
 dpt = 90;                                                           # Target pressure loss in thermonet (Pa/m). 10# reduction to account for loss in fittings. Source: Oklahoma State University, Closed-loop/ground source heat pump systems. Installation guide., (1988). Interval: 98-298 Pa/m
-lsh = 1.15;                                                          # Soil thermal conductivity thermonet and HHE (W/m/K) OK. Guestimate (0.8-1.2 W/m/K)
-lsc = 0.8;                                                          # Soil thermal conductivity thermonet and HHE (W/m/K) OK. Guestimate (0.8-1.2 W/m/K)
+lsh = 2;                                                          # Soil thermal conductivity thermonet and HHE (W/m/K) OK. Guestimate (0.8-1.2 W/m/K)
+lsc = 2;                                                          # Soil thermal conductivity thermonet and HHE (W/m/K) OK. Guestimate (0.8-1.2 W/m/K)
 rhocs = 2.5e6;                                                        # Soil volumetric heat capacity  thermonet and HHE (J/m3/K) OK. Guestimate
 zd = 1;                                                             # Burial depth of thermonet and HHE (m)
 
 # Heat pump
-Thi = -3;                                                            # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
+Thi = -2.5;                                                            # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
 Tci = 20;                                                            # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
 SF = 1;                                                              # Ratio of peak heating demand to be covered by the heat pump [0-1]. If SF = 0.8 then the heat pump delivers 80% of the peak heating load. The deficit is then supplied by an auxilliary heating device
 
 # Source selection
-SS = 1;                                                              # SS = 1: Borehole heat exchangers; SS = 0: Horizontal heat exchangers  
+SS = 0;                                                              # SS = 1: Borehole heat exchangers; SS = 0: Horizontal heat exchangers  
 
 if SS == 0:
     # Horizontal heat exchanger (HHE) topology and pipes
@@ -102,7 +106,7 @@ NP = len(PIPES);                                                    # Number of 
 # Output to prompt
 print(' ');
 print('******************************************************************')
-print('*********************** ThermonetDim v0.72 ***********************')
+print('*********************** ThermonetDim v0.73 ***********************')
 print('******************************************************************')
 print(' ');
 print('Project:', PID);
@@ -145,10 +149,10 @@ TP = A*mt.exp(-zd*mt.sqrt(o/2/ast));                                # Temperatur
 PIPES = PIPES/1000;                                                 # Convert PIPES from mm to m (m)
 
 # Allocate variables
-indh = np.zeros(NPG);                                                # Index vector for pipe groups
-indc = np.zeros(NPG);                                                # Index vector for pipe groupss
-PIPESELH = np.zeros(NPG);                                            # Pipes selected from dimensioning for heating
-PIPESELC = np.zeros(NPG);                                            # Pipes selected from dimensioning for cooling
+indh = np.zeros(NPG);                                                # Index vector for pipe groups heating (-)
+indc = np.zeros(NPG);                                                # Index vector for pipe groups cooling (-)
+PIPESELH = np.zeros(NPG);                                            # Pipes selected from dimensioning for heating (length)
+PIPESELC = np.zeros(NPG);                                            # Pipes selected from dimensioning for cooling (length)
 PSH = np.zeros((NHP,3));                                             # Thermal load from heating on the ground (W)
 QPGH = np.zeros(NPG);                                                # Design flow heating (m3/s)
 QPGC = np.zeros(NPG);                                                # Design flow cooling (m3/s)
@@ -196,8 +200,8 @@ if SS == 1:
         w[:,NXi-1] = 0.5*w[:,NXi-1];
     
     if np.mod(NY/2,1) > 0:
-
         w[NYi-1,:] = 0.5*w[NYi-1,:];
+        
     wv = np.concatenate(w);
     swv = sum(wv);
     xi = np.linspace(0,NXi-1,NXi)*dx;                                 # x-coordinates of BHEs (m)                     
@@ -217,37 +221,36 @@ if SS == 1:
 # Convert thermal load profile on HPs to flow rates
 for i in range(3):
     PSH[:,i] = ps(S[i]*HPS[:,i+1],HPS[:,i+4]);                      # Annual (0), monthly (1) and daily (2) thermal load on the ground (W)
-PSH[:,0] = PSH[:,0] - CPS[:,0];
-Qdimh = PSH[:,2]/HPS[:,7]/rhob/cb;                                  # Design flow (m3/s)
-Qdimc = S[2]*CPS[:,2]/CPS[:,4]/rhob/cb;                             # Design flow (m3/s)
+PSH[:,0] = PSH[:,0] - CPS[:,0];                                     # Annual imbalance between heating and cooling, positive for heating (W)
+Qdimh = PSH[:,2]/HPS[:,7]/rhob/cb;                                  # Design flow heating (m3/s)
+Qdimc = S[2]*CPS[:,2]/CPS[:,4]/rhob/cb;                             # Design flow cooling (m3/s). Using simultaneity factor!
 HPS = np.c_[HPS,Qdimh];                                             # Append to heat pump data structure for heating
 CPS = np.c_[CPS,Qdimc];                                             # Append to heat pump data structure for cooling
 
-# Heat pump
+# Heat pump and temperature conditions in the sizing equation
 Tho = Thi - sum(Qdimh*HPS[:,7])/sum(Qdimh);                         # Volumetric flow rate weighted average brine delta-T (C)
 TCH1 = T0 - (Thi + Tho)/2 - TP;                                     # Temperature condition for with heating termonet. Eq. 2.19 Advances in GSHP systems. Tp in the book refers to the influence from adjacent BHEs. This effect ignored in this tool.
 Tco = Tci + sum(Qdimc*CPS[:,4])/sum(Qdimc);                         # Volumetric flow rate weighted average brine delta-T (C)
-TCC1 = (Tci + Tco)/2 - T0 - TP;                                     # Temperature condition for with heating termonet. Eq. 2.19 Advances in GSHP systems. Tp in the book refers to the influence from adjacent BHEs. This effect ignored in this tool.
-
-if SS == 1:                                                         
-    TCH2 = T0BHE - (Thi + Tho)/2;                                   # Temperature condition for heating with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs
-    TCC2 = (Tci + Tco)/2 - T0BHE;                                   # Temperature condition for heating with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs
+TCC1 = (Tci + Tco)/2 - T0 - TP;                                     # Temperature condition for with heating termonet. Eq. 2.19 Advances in GSHP systems. Tp in the book refers to the influence from adjacent BHEs. This effect ignored in this tool.                                                    
     
-# Compute flow and pressure loss in BHEs and HHEs under peak load conditions
+# Compute flow and pressure loss in BHEs and HHEs under peak load conditions. Temperature conditions are computed as well.
 if SS == 0:
     # HHE heating
     QHHEH = sum(Qdimh)/NHHE;                                        # Peak flow in HHE pipes (m3/s)
     vhheh = QHHEH/np.pi/rihhe**2;                                   # Peak flow velocity in HHE pipes (m/s)
     RENHHEH = Re(rhob,mub,vhheh,2*rihhe);                           # Peak Reynolds numbers in HHE pipes (-)
-    dpHHEH = float(dp(rhob,mub,QHHEH,2*rihhe));                     # Peak pressure loss in HHE pipes (Pa/m)
+    dpHHEH = dp(rhob,mub,QHHEH,2*rihhe);                            # Peak pressure loss in HHE pipes (Pa/m)
 
     # HHE cooling
     QHHEC = sum(Qdimc)/NHHE;                                        # Peak flow in HHE pipes (m3/s)
     vhhec = QHHEC/np.pi/rihhe**2;                                   # Peak flow velocity in HHE pipes (m/s)
     RENHHEC = Re(rhob,mub,vhhec,2*rihhe);                           # Peak Reynolds numbers in HHE pipes (-)
-    dpHHEC = float(dp(rhob,mub,QHHEC,2*rihhe));                     # Peak pressure loss in HHE pipes (Pa/m)
+    dpHHEC = dp(rhob,mub,QHHEC,2*rihhe);                            # Peak pressure loss in HHE pipes (Pa/m)
 
 if SS == 1:
+    TCH2 = T0BHE - (Thi + Tho)/2;                                   # Temperature condition for heating with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs
+    TCC2 = (Tci + Tco)/2 - T0BHE;                                   # Temperature condition for heating with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs
+    
     # BHE heating
     QBHEH = sum(Qdimh)/NBHE;                                        # Peak flow in BHE pipes (m3/s)
     vbheh = QBHEH/np.pi/ri**2;                                      # Flow velocity in BHEs (m/s)
@@ -330,7 +333,7 @@ cdPSC = np.cumsum(dPSC,0);
 # Compute aggregated temperature responses in heating and cooling mode
 GTHMH = np.zeros([NPG,3]);
 GTHMC = np.zeros([NPG,3]);
-K1 = ils(ast,t,PWD) - ils(ast,t,2*zd) - ils(ast,t,np.sqrt(PWD**2+zd**2));
+K1 = ils(ast,t,PWD) - ils(ast,t,2*zd) - ils(ast,t,np.sqrt(PWD**2+4*zd**2));
 for i in range(NPG):
   GTHMH[i,:] = CSM(PIPESELH[i]/2,PIPESELH[i]/2,t,ast) + K1;
   GTHMC[i,:] = CSM(PIPESELC[i]/2,PIPESELC[i]/2,t,ast) + K1;
@@ -349,11 +352,11 @@ THMqh = (sum(HPS[0:NSHPH+1,3]) + dHPH*HPS[NSHPH+1,3])/TLENGTH;      # Compute th
 dPSH[NSHPH+1,:]=(1-dHPH)*dPSH[NSHPH+1,:];                           # Compute the fraction of that heat pumps ground thermal load that must be supplied by BHEs or HHEs and update dPS (W)
 PHEH = sum(dPSH[(NSHPH+1):,:],0);                                   # Compute the ground thermal load to be supplied by BHE or HHE (W)
 
-NSHPC = np.argmax(TC>TCC1)-1;                                       # Find the first heat pump in the cumsum that exceeds the temperature condition and subtract one from this index (-)
-dHPC = (TCC1 - TC[NSHPH])/(TC[NSHPH+1]-TC[NSHPH]);
-THMqc = (sum(CPS[0:NSHPH+1,2])+dHPC*CPS[NSHPH+1,2])/TLENGTH;        # Compute the heat pump power supplied supplied on the hot side of the HP per meter thermonet (W/m)
-dPSC[NSHPH+1,:]=(1-dHPC)*dPSC[NSHPH+1,:];                           # Compute the fraction of that heat pumps ground thermal load that must be supplied by BHEs or HHEs and update dPS (W)
-PHEC = sum(dPSC[(NSHPH+1):,:],0);                                   # Compute the ground thermal load to be supplied by BHE or HHE (W)
+NSHPC = np.argmax(TC > TCC1)-1;                                       # Find the first heat pump in the cumsum that exceeds the temperature condition and subtract one from this index (-)
+dHPC = (TCC1 - TC[NSHPC])/(TC[NSHPC+1]-TC[NSHPC]);
+THMqc = (sum(CPS[0:NSHPC+1,2])+dHPC*CPS[NSHPC+1,2])/TLENGTH;        # Compute the heat pump power supplied supplied on the hot side of the HP per meter thermonet (W/m)
+dPSC[NSHPC+1,:]=(1-dHPC)*dPSC[NSHPC+1,:];                           # Compute the fraction of that heat pumps ground thermal load that must be supplied by BHEs or HHEs and update dPS (W)
+PHEC = sum(dPSC[(NSHPC+1):,:],0);                                   # Compute the ground thermal load to be supplied by BHE or HHE (W)
 
 ########################## Display results in console #########################
 print('************** Thermonet energy production capacity **************'); 
@@ -377,22 +380,22 @@ if SS == 1:
     GBHE = CSM(rb,rb,t[0:2],ass);                                   # Compute g-functions for t[0] and t[1] with the cylindrical source model (-)
     s1 = 0;                                                         # Summation variable for t[0] G-function (-)
     s2 = 0;                                                         # Summation variable for t[1] G-function (-)
-    for i in range(NXi*NYi):                                           # Line source superposition for all neighbour boreholes
-        DIST = np.sqrt((XX-Xvi[i])**2 + (YY-Yvi[i])**2);              # Compute distance matrix (to neighbour boreholes) (m)
-        DIST = DIST[DIST>0];
-        s1 = s1 + wv[i]*sum(ils(ass,t[0],DIST));                          # Compute the sum of all thermal disturbances from neighbour boreholes (G-function contributions) for t[0] (-)
-        s2 = s2 + wv[i]*sum(ils(ass,t[1],DIST));                          # Compute the sum of all thermal disturbances from neighbour boreholes (G-function contributions) for t[0] (-)
-    GBHE[0] = GBHE[0] + s1/swv;                                    # Add the average neighbour contribution to the borehole field G-function for t[0] (-)
-    GBHE[1] = GBHE[1] + s2/swv;                                    # Add the average neighbour contribution to the borehole field G-function for t[1] (-)
+    for i in range(NXi*NYi):                                        # Line source superposition for all neighbour boreholes for 1/4 of the BHE field (symmetry)
+        DIST = np.sqrt((XX-Xvi[i])**2 + (YY-Yvi[i])**2);            # Compute distance matrix (to neighbour boreholes) (m)
+        DIST = DIST[DIST>0];                                        # Exclude the considered borehole to avoid r = 0 m
+        s1 = s1 + wv[i]*sum(ils(ass,t[0],DIST));                    # Compute the sum of all thermal disturbances from neighbour boreholes (G-function contributions) for t[0] (-)
+        s2 = s2 + wv[i]*sum(ils(ass,t[1],DIST));                    # Compute the sum of all thermal disturbances from neighbour boreholes (G-function contributions) for t[0] (-)
+    GBHE[0] = GBHE[0] + s1/swv;                                     # Add the average neighbour contribution to the borehole field G-function for t[0] (-)
+    GBHE[1] = GBHE[1] + s2/swv;                                     # Add the average neighbour contribution to the borehole field G-function for t[1] (-)
 
     # Compute borehole resistance with the first order multipole method ignoring flow and length effects
-    Rbh = RbMP(lb,lp,lg,lss,rb,rp,ri,PD,RENBHEH,Pr);                 # Compute the borehole thermal resistance (m*K/W)
-    Rbc = RbMP(lb,lp,lg,lss,rb,rp,ri,PD,RENBHEC,Pr);                 # Compute the borehole thermal resistance (m*K/W)
+    Rbh = RbMP(lb,lp,lg,lss,rb,rp,ri,PD,RENBHEH,Pr);                # Compute the borehole thermal resistance (m*K/W)
+    Rbc = RbMP(lb,lp,lg,lss,rb,rp,ri,PD,RENBHEC,Pr);                # Compute the borehole thermal resistance (m*K/W)
     #Rb = 0.12;                                                     # TRT estimate can be supplied instread (m*K/W)
 
     # Composite cylindrical source model GCLS() for short term response. Hu et al. 2014. Paper here: https://www.sciencedirect.com/science/article/abs/pii/S0378778814005866?via#3Dihub
-    reh = rb/np.exp(2*np.pi*lg*Rbh);                                  # Heating: Compute the equivalent pipe radius for cylindrical symmetry (m). This is how Hu et al. 2014 define it.
-    rec = rb/np.exp(2*np.pi*lg*Rbc);                                  # Cooling: Compute the equivalent pipe radius for cylindrical symmetry (m). This is how Hu et al. 2014 define it.
+    reh = rb/np.exp(2*np.pi*lg*Rbh);                                # Heating: Compute the equivalent pipe radius for cylindrical symmetry (m). This is how Hu et al. 2014 define it.
+    rec = rb/np.exp(2*np.pi*lg*Rbc);                                # Cooling: Compute the equivalent pipe radius for cylindrical symmetry (m). This is how Hu et al. 2014 define it.
 
     # The Fourier numbers Fo1-Fo3 are neccesary for computing the solution 
     Fo1 = ass*t[2]/rb**2;                                    
@@ -407,19 +410,18 @@ if SS == 1:
     Fo3 = ag*t[2]/rb**2;
     G3 = GCLS(Fo3);
 
-    Rwh = G1/lss + G2h/lg - G3/lg;                                    # Step response for short term model on the form q*Rw = T (m*K/W). Rw indicates that it is in fact a thermal resistance
-    Rwc = G1/lss + G2c/lg - G3/lg;                                    # Step response for short term model on the form q*Rw = T (m*K/W). Rw indicates that it is in fact a thermal resistance
+    Rwh = G1/lss + G2h/lg - G3/lg;                                  # Step response for short term model on the form q*Rw = T (m*K/W). Rw indicates that it is in fact a thermal resistance
+    Rwc = G1/lss + G2c/lg - G3/lg;                                  # Step response for short term model on the form q*Rw = T (m*K/W). Rw indicates that it is in fact a thermal resistance
 
     # Compute approximate combined length of BHES (length effects not considered)
     GBHEF = GBHE;                                                   # Retain a copy of the G function for length correction later on (-)
-    GBHEH = np.asarray([GBHE[0]/lss+Rbh,GBHE[1]/lss+Rbh, Rwh]);        # Heating G-function
-    GBHEC = np.asarray([GBHE[0]/lss+Rbc,GBHE[1]/lss+Rbc, Rwc]);        # Heating G-function
-    LBHEH = np.dot(PHEH,GBHEH/TCH2);                                    # Sizing equation for computing the required borehole meters (m)
-    LBHEC = np.dot(PHEC,GBHEC/TCC2);                                    # Sizing equation for computing the required borehole meters (m)
-    #BHEq = (sum(HPS[NSHPH+2:,3])+(1-dx)*HPS[NSHPH+1,3])/LBHE;         # Compute the peak heat pump power supplied on the hot side of the HP per meter BHE relative to the nominal effect of the heat pump (W/m)
+    GBHEH = np.asarray([GBHE[0]/lss+Rbh,GBHE[1]/lss+Rbh, Rwh]);     # Heating G-function
+    GBHEC = np.asarray([GBHE[0]/lss+Rbc,GBHE[1]/lss+Rbc, Rwc]);     # Cooling G-function
+    LBHEH = np.dot(PHEH,GBHEH/TCH2);                                # Sizing equation for computing the required borehole meters for heating (m)
+    LBHEC = np.dot(PHEC,GBHEC/TCC2);                                # Sizing equation for computing the required borehole meters for cooling (m)
     
-    # Determine the exact solution by searching the neighbourhood of the approximate length solution
-    # Heating model
+    # Determine the solution by searching the neighbourhood of the approximate length solution
+    # Heating mode
     LBHEHv = LBHEH/NBHE + np.arange(0,LL,dL);
     NLBHEHv = len(LBHEHv);
     Rbhv = np.zeros(NLBHEHv);
@@ -432,23 +434,25 @@ if SS == 1:
     Tsolc = np.zeros(NLBHECv);
     
     for i in range(NLBHEHv):                                         # Compute Rb for the specified number of boreholes and lengths considering flow and length effects (m*K/W)
-        Rbhv[i] = RbMPflc(lb,lp,lg,lss,rhob,cb,rb,rp,ri,LBHEHv[i],PD,QBHEH,RENBHEH,Pr);    #K. Compute BHE length and flow corrected multipole estimates of Rb for all candidate solutions (m*K/W)
+        Rbhv[i] = RbMPflc(lb,lp,lg,lss,rhob,cb,rb,rp,ri,LBHEHv[i],PD,QBHEH,RENBHEH,Pr);    # Compute BHE length and flow corrected multipole estimates of Rb for all candidate solutions (m*K/W)
         Tsolh[i] = np.dot(PHEH,np.array([GBHEF[0]/lss + Rbhv[i], GBHEF[1]/lss + Rbhv[i], Rwh]))/LBHEHv[i]/NBHE;                             #OK. Use Spitlers sizing formula for computing the corresponding temperature response for all candidate solutions (C)
-    indLBHEH = np.argmax(Tsolh<TCH2);                                    # OK. Get rid of candidates that undersize the system. 
-    LBHEH = LBHEHv[indLBHEH]*NBHE;                                     # Exact solution BHE length (m)
+    indLBHEH = np.argmax(Tsolh<TCH2);                                # Get rid of candidates that undersize the system. 
+    LBHEH = LBHEHv[indLBHEH]*NBHE;                                   # Solution to BHE length for heating (m)
     BHEqh = (sum(HPS[NSHPH+2:,3])+(1-dHPH)*HPS[NSHPH+1,3])/LBHEH;    
     
     if (Tsolh[indLBHEH]-TCH2) > 0.1:
-        print('Warning - the length steps used for computing the exact length for heating are too big. Reduce the stepsize and recompute a solution.');
+        print('Warning - the length steps used for computing the BHE length for heating are too big. Reduce the stepsize and recompute a solution.');
     
     for i in range(NLBHECv):                                         # Compute Rb for the specified number of boreholes and lengths considering flow and length effects (m*K/W)
         Rbcv[i] = RbMPflc(lb,lp,lg,lss,rhob,cb,rb,rp,ri,LBHECv[i],PD,QBHEC,RENBHEC,Pr);    #K. Compute BHE length and flow corrected multipole estimates of Rb for all candidate solutions (m*K/W)
         Tsolc[i] = np.dot(PHEC,np.array([GBHEF[0]/lss + Rbcv[i], GBHEF[1]/lss + Rbcv[i], Rwc]))/LBHECv[i]/NBHE;                             #OK. Use Spitlers sizing formula for computing the corresponding temperature response for all candidate solutions (C)
-    indLBHEC = np.argmax(Tsolc<TCC2);                                    # OK. Get rid of candidates that undersize the system. 
-    LBHEC = LBHECv[indLBHEC]*NBHE;                                     # Exact solution BHE length (m)
+    indLBHEC = np.argmax(Tsolc<TCC2);                                # Get rid of candidates that undersize the system. 
+    LBHEC = LBHECv[indLBHEC]*NBHE;                                   # Solution BHE length for cooling (m)
     BHEqc = (sum(CPS[NSHPH+2:,2])+(1-dHPC)*CPS[NSHPH+1,2])/LBHEC;
+    
     if (Tsolc[indLBHEC]-TCC2) > 0.1:
-        print('Warning - the length steps used for computing the exact length for cooling are too big. Reduce the stepsize and recompute a solution.');    
+        print('Warning - the length steps used for computing the BHE length for cooling are too big. Reduce the stepsize and recompute a solution.');    
+    
     # Display output in console
     print('******* Suggested length of borehole heat exchangers (BHE) *******'); 
     print(f'Required length of each of the {int(NBHE)} BHEs = {int(np.ceil(LBHEH/NBHE))} m for heating');
@@ -466,10 +470,10 @@ if SS == 0:
     ind = np.linspace(0,2*NHHE-1,2*NHHE);                           # Unit distance vector for HHE (-)
     s = np.zeros(2);                                                # s is a temperature summation variable, s[0]: annual, s[1] monthly, hourly effects are insignificant and ignored (C)
     DIST = dd*ind;                                                  # Distance vector for HHE (m)
-    for i in range(NHHE):                                           # For all pipe segments (2 per loop)
+    for i in range(NHHE):                                           # For half the pipe segments (2 per loop). Advantage from symmetry.
         s[0] = s[0] + sum(ils(ast,t[0],abs(DIST[ind!=i]-i*dd))) - sum(ils(ast,t[0],np.sqrt((DIST-i*dd)**2 + 4*zd**2))); # Sum annual temperature responses from distant pipes (C)
         s[1] = s[1] + sum(ils(ast,t[1],abs(DIST[ind!=i]-i*dd))) - sum(ils(ast,t[1],np.sqrt((DIST-i*dd)**2 + 4*zd**2))); # Sum monthly temperature responses from distant pipes (C)
-    GHHE = CSM(rohhe,rohhe,t,ast);                                  # Add the average temperature disturbance at a distance s (C) at t[0] to the BHE wall temperature G[0] (C)
+    GHHE = CSM(rohhe,rohhe,t,ast);                                  # Pipe wall response (-)
     GHHE[0:2] = GHHE[0:2] + s/NHHE;                                 # Add thermal disturbance from neighbour pipes (-)
     
     #Heating

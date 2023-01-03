@@ -1,4 +1,4 @@
 Section	SDR	Trace_(m)	Number_of_traces	HP_ID_vector
 Main_line	17	42	1	1,2,3,4,5,6,7
 Branch	17	30	1	5,6,7
-Connection_pipe_8_kW	17	15	7	1,2,3,4,5,6,7
+Connection_pipe_6_kW	17	15	7	1,2,3,4,5,6,7

@@ -26,7 +26,7 @@ PID = 'Energiakademiet, Samsø';                                     # Project n
 
 # Input files
 HPFN = 'HPS_Samso3.dat';                                                  # Input file containing heat pump information
-TOPOFN = 'Samso_TOPO.dat';                                           # Input file containing topology information 
+TOPOFN = 'Samso_TOPO.dat';                                          # Input file containing topology information 
 
 # Brine
 rhob = 965;                                                         # Brine density (kg/m3), T = 0C. https://www.handymath.com/cgi-bin/isopropanolwghtvoltble5.cgi?submit=Entry
@@ -40,42 +40,42 @@ lp = 0.4;                                                           # Pipe therm
 # Thermonet
 PWD = 0.3;                                                          # Distance between forward and return pipe centers (m)
 dpt = 90;                                                           # Target pressure loss in thermonet (Pa/m). 10# reduction to account for loss in fittings. Source: Oklahoma State University, Closed-loop/ground source heat pump systems. Installation guide., (1988). Interval: 98-298 Pa/m
-lsh = 2;                                                          # Soil thermal conductivity thermonet and HHE (W/m/K) OK. Guestimate (0.8-1.2 W/m/K)
-lsc = 2;                                                          # Soil thermal conductivity thermonet and HHE (W/m/K) OK. Guestimate (0.8-1.2 W/m/K)
-rhocs = 2.5e6;                                                        # Soil volumetric heat capacity  thermonet and HHE (J/m3/K) OK. Guestimate
+lsh = 2;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) OK. Guestimate (0.8-1.2 W/m/K)
+lsc = 2;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) OK. Guestimate (0.8-1.2 W/m/K)
+rhocs = 2.5e6;                                                      # Soil volumetric heat capacity  thermonet and HHE (J/m3/K) OK. Guestimate
 zd = 1;                                                             # Burial depth of thermonet and HHE (m)
 
 # Heat pump
-Thi = -2.5;                                                            # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
-Tci = 20;                                                            # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
-SF = 1;                                                              # Ratio of peak heating demand to be covered by the heat pump [0-1]. If SF = 0.8 then the heat pump delivers 80% of the peak heating load. The deficit is then supplied by an auxilliary heating device
+Thi = -2.5;                                                         # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
+Tci = 20;                                                           # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
+SF = 1;                                                             # Ratio of peak heating demand to be covered by the heat pump [0-1]. If SF = 0.8 then the heat pump delivers 80% of the peak heating load. The deficit is then supplied by an auxilliary heating device
 
 # Source selection
-SS = 0;                                                              # SS = 1: Borehole heat exchangers; SS = 0: Horizontal heat exchangers  
+SS = 1;                                                             # SS = 1: Borehole heat exchangers; SS = 0: Horizontal heat exchangers  
 
 if SS == 0:
     # Horizontal heat exchanger (HHE) topology and pipes
-    NHHE = 5;                                                           # Number of HE loops (-)
-    PDHE = 0.04;                                                          # Outer diameter of HE pipe (m)                   
-    HHESDR = 17;                                                        # SDR for HE pipes (-)
-    dd = 1.5;                                                           # Pipe segment spacing (m)                            
+    NHHE = 5;                                                       # Number of HE loops (-)
+    PDHE = 0.04;                                                    # Outer diameter of HE pipe (m)                   
+    HHESDR = 17;                                                    # SDR for HE pipes (-)
+    dd = 1.5;                                                       # Pipe segment spacing (m)                            
 
 if SS == 1:
     # Borehole heat exchangers (BHE)
-    rb = 0.152/2;                                                       # Borehole radius (m)                              
-    rp = 0.02;                                                          # Outer radius of U pipe (m)                        
-    BHESDR = 11;                                                        # SDR for U-pipe (-)                               
-    lss = 2.36;                                                         # Soil thermal conductivity along BHEs (W/m/K)     
-    rhocss = 2.65e6;                                                    # Volumetric heat capacity of soil (along BHE). Assuming 70# quartz and 30# water (J/m3/K) #OK
-    lg = 1.75;                                                          # Grout thermal conductivity (W/m/K)               
-    rhocg = 3e6;                                                        # Grout volumetric heat capacity (J/m3/K)          
-    PD = 0.015;                                                         # Wall to wall distance U-pipe legs (m)                                
+    rb = 0.152/2;                                                   # Borehole radius (m)                              
+    rp = 0.02;                                                      # Outer radius of U pipe (m)                        
+    BHESDR = 11;                                                    # SDR for U-pipe (-)                               
+    lss = 2.36;                                                     # Soil thermal conductivity along BHEs (W/m/K)     
+    rhocss = 2.65e6;                                                # Volumetric heat capacity of soil (along BHE). Assuming 70# quartz and 30# water (J/m3/K) #OK
+    lg = 1.75;                                                      # Grout thermal conductivity (W/m/K)               
+    rhocg = 3e6;                                                    # Grout volumetric heat capacity (J/m3/K)          
+    PD = 0.015;                                                     # Wall to wall distance U-pipe legs (m)                                
 
     # BHE field
-    NX = 2;                                                             # Number of boreholes in the x-direction (-)
-    dx = 15;                                                            # Spacing between boreholes in the x-direction (m)
-    NY = 8;                                                             # Number of boreholes in the y-direction (-)
-    dy = 15;                                                            # Spacing between boreholes in the y-direction (m)
+    NX = 3;                                                         # Number of boreholes in the x-direction (-)
+    dx = 15;                                                        # Spacing between boreholes in the x-direction (m)
+    NY = 3;                                                         # Number of boreholes in the y-direction (-)
+    dy = 15;                                                        # Spacing between boreholes in the y-direction (m)
 
 ############### User set flow and thermal parameters by medium END ############
 
@@ -105,9 +105,9 @@ NP = len(PIPES);                                                    # Number of 
 
 # Output to prompt
 print(' ');
-print('******************************************************************')
-print('*********************** ThermonetDim v0.73 ***********************')
-print('******************************************************************')
+print('************************************************************************')
+print('************************** ThermonetDim v0.73 **************************')
+print('************************************************************************')
 print(' ');
 print('Project:', PID);
 
@@ -192,27 +192,28 @@ if SS == 1:
     Yv = np.concatenate(YY);                                        # YY concatenated (m)
     Xv = np.concatenate(XX);                                        # XX concatenated (m)
     
-    NXi = int(np.ceil(NX/2));
-    NYi = int(np.ceil(NY/2));
-    w = np.ones((NYi,NXi));
+    # Logistics for symmetry considerations and associated efficiency gains
+    NXi = int(np.ceil(NX/2));                                       # Find half the number of boreholes in the x-direction. If not an equal number then round up to complete symmetry.
+    NYi = int(np.ceil(NY/2));                                       # Find half the number of boreholes in the y-direction. If not an equal number then round up to complete symmetry.
+    w = np.ones((NYi,NXi));                                         # Define weight matrix for temperature responses at a distance (-)
+    wtemp = np.ones((NYi,NXi));                                     # Copy of weight matrix for logistics (-)
+    if np.mod(NX/2,1) > 0:                                          # If NX is an unequal integer then the weight on the temperature responses from the boreholes on the center line is equal to 0.5 for symmetry reasons
+        w[:,NXi-1] = 0.5*wtemp[:,NXi-1];
     
-    if np.mod(NX/2,1) > 0:
-        w[:,NXi-1] = 0.5*w[:,NXi-1];
-    
-    if np.mod(NY/2,1) > 0:
-        w[NYi-1,:] = 0.5*w[NYi-1,:];
+    if np.mod(NY/2,1) > 0:                                          # If NY is an unequal integer then the weight on the temperature responses from the boreholes on the center line is equal to 0.5 for symmetry reasons
+        w[NYi-1,:] = 0.5*wtemp[NYi-1,:];
         
-    wv = np.concatenate(w);
-    swv = sum(wv);
-    xi = np.linspace(0,NXi-1,NXi)*dx;                                 # x-coordinates of BHEs (m)                     
-    yi = np.linspace(0,NYi-1,NYi)*dy;                                 # y-coordinates of BHEs (m)
-    [XXi,YYi] = np.meshgrid(xi,yi);                                   # Meshgrid arrays for distance calculations (m)
-    Yvi = np.concatenate(YYi);                                        # YY concatenated (m)
-    Xvi = np.concatenate(XXi);                                        # XX concatenated (m)
+    wv = np.concatenate(w);                                         # Concatenate the weight matrix (-)
+    swv = sum(wv);                                                  # Sum all weights (-)
+    xi = np.linspace(0,NXi-1,NXi)*dx;                               # x-coordinates of BHEs (m)                     
+    yi = np.linspace(0,NYi-1,NYi)*dy;                               # y-coordinates of BHEs (m)
+    [XXi,YYi] = np.meshgrid(xi,yi);                                 # Meshgrid arrays for distance calculations (m)
+    Yvi = np.concatenate(YYi);                                      # YY concatenated (m)
+    Xvi = np.concatenate(XXi);                                      # XX concatenated (m)
     
     # Solver settings for computing the flow and length corrected length of BHEs
-    dL = 0.1;                                                           # Step length for trial trial solutions (m)
-    LL = 10;                                                            # Additional length segment for which trial solutions are generated (m)
+    dL = 0.1;                                                       # Step length for trial trial solutions (m)
+    LL = 10;                                                        # Additional length segment for which trial solutions are generated (m)
 
 ######### Precomputations and variables that should not be changed END ########
 
@@ -248,8 +249,8 @@ if SS == 0:
     dpHHEC = dp(rhob,mub,QHHEC,2*rihhe);                            # Peak pressure loss in HHE pipes (Pa/m)
 
 if SS == 1:
-    TCH2 = T0BHE - (Thi + Tho)/2;                                   # Temperature condition for heating with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs
-    TCC2 = (Tci + Tco)/2 - T0BHE;                                   # Temperature condition for heating with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs
+    TCH2 = T0BHE - (Thi + Tho)/2;                                   # Temperature condition for heating with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs (C)
+    TCC2 = (Tci + Tco)/2 - T0BHE;                                   # Temperature condition for cooling with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs (C)
     
     # BHE heating
     QBHEH = sum(Qdimh)/NBHE;                                        # Peak flow in BHE pipes (m3/s)
@@ -271,23 +272,23 @@ for i in range(NPG):
 # Select the smallest diameter pipe that fulfills the pressure drop criterion
 for i in range(NPG):                                 
     PIPESI = PIPES*(1-2/TOPOH[i,0]);                                # Compute inner diameters (m). Variable TOPOH or TOPOC are identical here.
-    indh[i] = np.argmax(dp(rhob,mub,QPGH[i],PIPESI)<dpt);           # Find first pipe with a pressure loss less than the target (-)
-    indc[i] = np.argmax(dp(rhob,mub,QPGC[i],PIPESI)<dpt);           # Find first pipe with a pressure loss less than the target (-)
-    PIPESELH[i] = PIPES[int(indh[i])];                              # Store pipe selection in new variable (m)
-    PIPESELC[i] = PIPES[int(indc[i])];                              # Store pipe selection in new variable (m)
+    indh[i] = np.argmax(dp(rhob,mub,QPGH[i],PIPESI)<dpt);           # Find first pipe with a pressure loss less than the target for heating (-)
+    indc[i] = np.argmax(dp(rhob,mub,QPGC[i],PIPESI)<dpt);           # Find first pipe with a pressure loss less than the target for cooling (-)
+    PIPESELH[i] = PIPES[int(indh[i])];                              # Store pipe selection for heating in new variable (m)
+    PIPESELC[i] = PIPES[int(indc[i])];                              # Store pipe selection for cooling in new variable (m)
 indh = indh.astype(int);                            
 indc = indc.astype(int);
 
 # Output the pipe sizing
 print(' ');
-print('*************** Suggested pipe dimensions heating ***************'); 
+print('******************* Suggested pipe dimensions heating ******************'); 
 for i in range(NPG):
-    print(f' {PGROUP.iloc[i]}: Ø{int(1000*PIPESELH[i])} mm SDR {int(TOPOH[i,0])}');
+    print(f'{PGROUP.iloc[i]}: Ø{int(1000*PIPESELH[i])} mm SDR {int(TOPOH[i,0])}');
 print(' ');
 
-print('*************** Suggested pipe dimensions cooling ***************');
+print('******************* Suggested pipe dimensions cooling ******************');
 for i in range(NPG):
-    print(f' {PGROUP.iloc[i]}: Ø{int(1000*PIPESELC[i])} mm SDR {int(TOPOC[i,0])}');
+    print(f'{PGROUP.iloc[i]}: Ø{int(1000*PIPESELC[i])} mm SDR {int(TOPOC[i,0])}');
 print(' ');
 
 ############################### Pipe sizing END ###############################
@@ -324,7 +325,7 @@ dPSH[:,0] = PSH[:,0];                                               # First entr
 dPSH[:,1:] = np.diff(PSH);                                          # Differences between year-month and month-hour are added (W)
 cdPSH = np.cumsum(dPSH,0);
 
-# Compute delta-qs for superposition of cooling load responses.
+# Compute delta-qs for superposition of cooling load responses
 dPSC = np.zeros((NHP,3));                                           # Allocate power difference matrix for tempoeral superposition (W)
 dPSC = np.c_[-PSH[:,0],CPS[:,1:3]];
 dPSC[:,1:] = np.diff(dPSC);                                         # Differences between year-month and month-hour are added (W)
@@ -359,7 +360,8 @@ dPSC[NSHPC+1,:]=(1-dHPC)*dPSC[NSHPC+1,:];                           # Compute th
 PHEC = sum(dPSC[(NSHPC+1):,:],0);                                   # Compute the ground thermal load to be supplied by BHE or HHE (W)
 
 ########################## Display results in console #########################
-print('************** Thermonet energy production capacity **************'); 
+
+print('***************** Thermonet energy production capacity *****************'); 
 #print('The thermonet supplies ' + str(round(THMq)) + ' W/m on the condenser sides of the HPs');
 print(f'The thermonet supplies {round(100*TLENGTH*THMqh/sum(HPS[:,3],0))}% of the peak heating demand');  
 print(f'The thermonet fully supplies the heat pumps with IDs 1 - {int(np.floor(NSHPH+1))} with heating' ) ;
@@ -454,7 +456,7 @@ if SS == 1:
         print('Warning - the length steps used for computing the BHE length for cooling are too big. Reduce the stepsize and recompute a solution.');    
     
     # Display output in console
-    print('******* Suggested length of borehole heat exchangers (BHE) *******'); 
+    print('********** Suggested length of borehole heat exchangers (BHE) **********'); 
     print(f'Required length of each of the {int(NBHE)} BHEs = {int(np.ceil(LBHEH/NBHE))} m for heating');
     print(f'Required length of each of the {int(NBHE)} BHEs = {int(np.ceil(LBHEC/NBHE))} m for cooling');
     print(f'Maximum pressure loss in BHEs in heating mode = {int(np.ceil(dpBHEH))} Pa/m');
@@ -489,7 +491,7 @@ if SS == 0:
     HHEqc = (sum(CPS[NSHPC+2:,2])+(1-dHPC)*CPS[NSHPC+1,2])/LHHEC;   # Compute the heat pump power supplied on the hot side of the HP per meter BHE (W/m)
     
     # Output results to console
-    print('****** Suggested length of horizontal heat exchangers (HHE) ******');
+    print('********* Suggested length of horizontal heat exchangers (HHE) *********');
     print(f'Required length of each of the {int(NHHE)} horizontal loops = {int(np.ceil(LHHEH/NHHE))} m for heating');
     print(f'Required length of each of the {int(NHHE)} horizontal loops = {int(np.ceil(LHHEC/NHHE))} m for cooling');
     print(f'Maximum pressure loss in HHE pipes = {int(np.ceil(dpHHEH))} Pa/m during peak heating loads');
@@ -499,7 +501,7 @@ if SS == 0:
 
 # Output computation time to console
 print(' ');
-print('************************ Computation time ************************');
+print('*************************** Computation time ***************************');
 toc = time.time();                                                  # Track computation time (S)
 print(f'Elapsed time: {round(toc-tic,6)} seconds');
 
@@ -542,4 +544,18 @@ print(f'Elapsed time: {round(toc-tic,6)} seconds');
 # 
 # Mirror sources (above the ground surfaces) enforce Dirichlet BC on ground surface - similar to thermonet model
 
+####################### Conceptual model for BHE field ########################
+#
+# Only compute temperature response for one of the four sub rectangles below as there is symmetry between them (identical rectangles)
+#
+#   weight = 1
+#       o           o     |     o           o         
+#       o           o     |     o           o
+#       o           o     |     o           o
+# ------o-----------o-----------o-----------o----- weight = 0.5      
+#       o           o     |     o           o         
+#       o           o     |     o           o
+#       o           o     |     o           o
+#
+#       o : BHE
 ################# Conceptual model for HHE in the ground END ##################

@@ -196,12 +196,11 @@ if SS == 1:
     NXi = int(np.ceil(NX/2));                                       # Find half the number of boreholes in the x-direction. If not an equal number then round up to complete symmetry.
     NYi = int(np.ceil(NY/2));                                       # Find half the number of boreholes in the y-direction. If not an equal number then round up to complete symmetry.
     w = np.ones((NYi,NXi));                                         # Define weight matrix for temperature responses at a distance (-)
-    wtemp = np.ones((NYi,NXi));                                     # Copy of weight matrix for logistics (-)
     if np.mod(NX/2,1) > 0:                                          # If NX is an unequal integer then the weight on the temperature responses from the boreholes on the center line is equal to 0.5 for symmetry reasons
-        w[:,NXi-1] = 0.5*wtemp[:,NXi-1];
+        w[:,NXi-1] = 0.5*w[:,NXi-1];
     
     if np.mod(NY/2,1) > 0:                                          # If NY is an unequal integer then the weight on the temperature responses from the boreholes on the center line is equal to 0.5 for symmetry reasons
-        w[NYi-1,:] = 0.5*wtemp[NYi-1,:];
+        w[NYi-1,:] = 0.5*w[NYi-1,:];
         
     wv = np.concatenate(w);                                         # Concatenate the weight matrix (-)
     swv = sum(wv);                                                  # Sum all weights (-)

@@ -4,10 +4,11 @@ Created on Fri Nov  4 08:53:07 2022
 
 @author: SOEB
 """
-
+##########################
 # To consider or implement
+##########################
 # 1: Samtidighedsfaktor anvendes også på køling. Er det en god ide?
-# 2: Der designes to rørsystemer - et for varme og et for køling. Det skal gøres konsistent
+# 2: Der designes to rørsystemer - et for varme og et for køling. Bør ændres?
 
 # Conceptual model drawings are found below the code
 
@@ -37,13 +38,13 @@ lb = 0.45;                                                          # Brine ther
 # PE Pipes
 lp = 0.4;                                                           # Pipe thermal conductivity (W/m/K). https://www.wavin.com/da-dk/catalog/Varme/Jordvarme/PE-80-lige-ror/40mm-jordvarme-PE-80PN6-100m
 
-# Thermonet
-PWD = 0.3;                                                          # Distance between forward and return pipe centers (m)
+# Thermonet and HHE
+PWD = 1;                                                            # Distance between forward and return pipe centers (m)
 dpt = 90;                                                           # Target pressure loss in thermonet (Pa/m). 10# reduction to account for loss in fittings. Source: Oklahoma State University, Closed-loop/ground source heat pump systems. Installation guide., (1988). Interval: 98-298 Pa/m
-lsh = 2;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) OK. Guestimate (0.8-1.2 W/m/K)
-lsc = 2;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) OK. Guestimate (0.8-1.2 W/m/K)
+lsh = 2;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
+lsc = 2;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
 rhocs = 2.5e6;                                                      # Soil volumetric heat capacity  thermonet and HHE (J/m3/K) OK. Guestimate
-zd = 1;                                                             # Burial depth of thermonet and HHE (m)
+zd = 1.2;                                                           # Burial depth of thermonet and HHE (m)
 
 # Heat pump
 Thi = -2.5;                                                         # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
@@ -72,9 +73,9 @@ if SS == 1:
     PD = 0.015;                                                     # Wall to wall distance U-pipe legs (m)                                
 
     # BHE field
-    NX = 3;                                                         # Number of boreholes in the x-direction (-)
+    NX = 7;                                                         # Number of boreholes in the x-direction (-)
     dx = 15;                                                        # Spacing between boreholes in the x-direction (m)
-    NY = 3;                                                         # Number of boreholes in the y-direction (-)
+    NY = 8;                                                         # Number of boreholes in the y-direction (-)
     dy = 15;                                                        # Spacing between boreholes in the y-direction (m)
 
 ############### User set flow and thermal parameters by medium END ############
@@ -85,7 +86,7 @@ if SS == 1:
 HPS = pd.read_csv(HPFN, sep = '\t');                                # Heat pump input file
 
 # Load grid topology
-TOPOH = np.loadtxt(TOPOFN,skiprows = 1,usecols = (1,2,3));            # Load numeric data from topology file
+TOPOH = np.loadtxt(TOPOFN,skiprows = 1,usecols = (1,2,3));          # Load numeric data from topology file
 TOPOC = TOPOH;
 IPG = pd.read_csv(TOPOFN, sep = '\t');                              # Load the entire file into Panda dataframe
 PGROUP = IPG.iloc[:,0];                                             # Extract pipe group IDs
@@ -142,26 +143,26 @@ Pr = kinb/ab;                                                       # Prandtl nu
 A = 7.900272987633280;                                              # Surface temperature amplitude (K) 
 T0 = 9.028258373009810;                                             # Undisturbed soil temperature (C) 
 o = 2*np.pi/86400/365.25;                                           # Angular velocity of surface temperature variation (rad/s) 
-ast = lsh/rhocs;                                                     # Shallow soil thermal diffusivity (m2/s) - ONLY for pipes!!! 
+ast = lsh/rhocs;                                                    # Shallow soil thermal diffusivity (m2/s) - ONLY for pipes!!! 
 TP = A*mt.exp(-zd*mt.sqrt(o/2/ast));                                # Temperature penalty at burial depth from surface temperature variation (K). Minimum undisturbed temperature is assumed . 
 
 # Convert pipe diameter database to meters
 PIPES = PIPES/1000;                                                 # Convert PIPES from mm to m (m)
 
 # Allocate variables
-indh = np.zeros(NPG);                                                # Index vector for pipe groups heating (-)
-indc = np.zeros(NPG);                                                # Index vector for pipe groups cooling (-)
-PIPESELH = np.zeros(NPG);                                            # Pipes selected from dimensioning for heating (length)
-PIPESELC = np.zeros(NPG);                                            # Pipes selected from dimensioning for cooling (length)
-PSH = np.zeros((NHP,3));                                             # Thermal load from heating on the ground (W)
-QPGH = np.zeros(NPG);                                                # Design flow heating (m3/s)
-QPGC = np.zeros(NPG);                                                # Design flow cooling (m3/s)
-Rh = np.zeros(NPG);                                                  # Allocate pipe thermal resistance vector for heating (m*K/W)
-Rc = np.zeros(NPG);                                                  # Allocate pipe thermal resistance vector for cooling (m*K/W)
-TPGH = np.zeros(NPG);                                                # UHF delta temperature reponse of thermonet in heating mode for each pipe (K)
-TPGC = np.zeros(NPG);                                                # UHF delta temperature reponse of thermonet in cooling mode for each pipe (K)
-TH = np.zeros(NHP);                                                  # Volume weighted average of TPGH to compute mean temperature response of thermonet for cumumlated thermal heating load from HPs
-TC = np.zeros(NHP);                                                  # Volume weighted average of TPGH to compute mean temperature response of thermonet for cumumlated thermal cooling load from HPs
+indh = np.zeros(NPG);                                               # Index vector for pipe groups heating (-)
+indc = np.zeros(NPG);                                               # Index vector for pipe groups cooling (-)
+PIPESELH = np.zeros(NPG);                                           # Pipes selected from dimensioning for heating (length)
+PIPESELC = np.zeros(NPG);                                           # Pipes selected from dimensioning for cooling (length)
+PSH = np.zeros((NHP,3));                                            # Thermal load from heating on the ground (W)
+QPGH = np.zeros(NPG);                                               # Design flow heating (m3/s)
+QPGC = np.zeros(NPG);                                               # Design flow cooling (m3/s)
+Rh = np.zeros(NPG);                                                 # Allocate pipe thermal resistance vector for heating (m*K/W)
+Rc = np.zeros(NPG);                                                 # Allocate pipe thermal resistance vector for cooling (m*K/W)
+TPGH = np.zeros(NPG);                                               # UHF delta temperature reponse of thermonet in heating mode for each pipe (K)
+TPGC = np.zeros(NPG);                                               # UHF delta temperature reponse of thermonet in cooling mode for each pipe (K)
+TH = np.zeros(NHP);                                                 # Volume weighted average of TPGH to compute mean temperature response of thermonet for cumumlated thermal heating load from HPs
+TC = np.zeros(NHP);                                                 # Volume weighted average of TPGH to compute mean temperature response of thermonet for cumumlated thermal cooling load from HPs
 
 # Simultaneity factors to apply to annual, monthly and hourly heating and cooling demands
 S = np.zeros(3);
@@ -173,7 +174,7 @@ S[1]  = 1; #S(1);                                                   # Monthly. V
 if SS == 0:
     # Horizontal heat exchangers
     rihhe = PDHE*(1 - 2/HHESDR)/2;                                  # Inner radius of HHE pipes (m)
-    rohhe = PDHE/2;
+    rohhe = PDHE/2;                                                 # Outer radius of HHE pipes (m)
 
 # If borehole heat exchangers are selected
 if SS == 1:
@@ -479,13 +480,13 @@ if SS == 0:
     
     #Heating
     RHHEH = float(Rp(2*rihhe,2*rohhe,RENHHEH,Pr,lb,lp));            # Compute the pipe thermal resistance (m*K/W)
-    GHHEH = np.asarray(GHHE/lsh+RHHEH);                             # Add annual and monthly thermal resistances to GHHE (m*K/W)
+    GHHEH = GHHE/lsh+RHHEH;                             # Add annual and monthly thermal resistances to GHHE (m*K/W)
     LHHEH = np.dot(PHEH,GHHE/TCH1);                                 # Sizing equation for computing the required borehole meters (m)
     HHEqh = (sum(HPS[NSHPH+2:,3])+(1-dHPH)*HPS[NSHPH+1,3])/LHHEH;   # Compute the heat pump power supplied on the hot side of the HP per meter BHE (W/m)
     
     #Cooling
     RHHEC = float(Rp(2*rihhe,2*rohhe,RENHHEC,Pr,lb,lp));            # Compute the pipe thermal resistance (m*K/W)
-    GHHEC = np.asarray(GHHE/lsc+RHHEC);                             # Add annual and monthly thermal resistances to GHHE (m*K/W)
+    GHHEC = GHHE/lsc+RHHEC;                             # Add annual and monthly thermal resistances to GHHE (m*K/W)
     LHHEC = np.dot(PHEC,GHHE/TCC1);                                 # Sizing equation for computing the required borehole meters (m)
     HHEqc = (sum(CPS[NSHPC+2:,2])+(1-dHPC)*CPS[NSHPC+1,2])/LHHEC;   # Compute the heat pump power supplied on the hot side of the HP per meter BHE (W/m)
     
@@ -545,16 +546,26 @@ print(f'Elapsed time: {round(toc-tic,6)} seconds');
 
 ####################### Conceptual model for BHE field ########################
 #
-# Only compute temperature response for one of the four sub rectangles below as there is symmetry between them (identical rectangles)
+# Only compute the average temperature response for one of the four sub-rectangles below as there is symmetry between them
+#   
+#        weight = 1
+#            o           o     |     o           o
+#                              |
+#            o           o     |     o           o
+#                              |
+#            o           o     |     o           o
+#                              |
+# NY=7 ------o-----------o-----------o-----------o----- weight = 0.5 (if both NX and NY are unequal, then the center BHE has a weight of 0.25)    
+#                              |
+#            o           o     |     o           o         
+#                              |
+#            o           o     |     o           o
+#                              |
+#            o           o     |     o           o
+#                            
+#                            NX=4
 #
-#   weight = 1
-#       o           o     |     o           o         
-#       o           o     |     o           o
-#       o           o     |     o           o
-# ------o-----------o-----------o-----------o----- weight = 0.5      
-#       o           o     |     o           o         
-#       o           o     |     o           o
-#       o           o     |     o           o
-#
+#       Legend
 #       o : BHE
+#       -- or | : axes of symmetry
 ################# Conceptual model for HHE in the ground END ##################

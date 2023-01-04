@@ -1,0 +1,8 @@
+Heat pump ID	Yearly heating load (W)	Winter heating load (W)	Daily heating load (W)	Year COP	Winter COP	Hour COP	dT HP Heating	Yearly cooling demand (W)	Summer cooling load (W)	Daily cooling load (W)	EER	dt HP Cooling
+1	1825	2920	6000	3.2	3.2	3	3	0	1	1	25	4
+2	1825	2920	6001	3.2	3.2	3	3	0	1	1	25	4
+3	1825	2920	6002	3.2	3.2	3	3	0	1	1	25	4
+4	1825	2920	6003	3.2	3.2	3	3	0	1	1	25	4
+5	1825	2920	6004	3.2	3.2	3	3	0	1	1	25	4
+6	1825	2920	6005	3.2	3.2	3	3	0	1	1	25	4
+7	1825	2920	6006	3.2	3.2	3	3	0	1	1	25	4

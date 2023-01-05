@@ -40,7 +40,7 @@ lp = 0.4;                                                           # Pipe therm
 
 # Thermonet and HHE
 PWD = 0.3;                                                          # Distance between forward and return pipe centers (m)
-dpt = 270;                                                          # Target pressure loss in thermonet (Pa/m). 10# reduction to account for loss in fittings. Source: Oklahoma State University, Closed-loop/ground source heat pump systems. Installation guide., (1988). Interval: 98-298 Pa/m
+dpt = 90;                                                          # Target pressure loss in thermonet (Pa/m). 10# reduction to account for loss in fittings. Source: Oklahoma State University, Closed-loop/ground source heat pump systems. Installation guide., (1988). Interval: 98-298 Pa/m
 lsh = 2;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
 lsc = 2;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
 rhocs = 2.5e6;                                                      # Soil volumetric heat capacity  thermonet and HHE (J/m3/K) OK. Guestimate
@@ -279,16 +279,27 @@ for i in range(NPG):
 indh = indh.astype(int);                            
 indc = indc.astype(int);
 
+# Compute Reynolds number for selected pipes for heating
+DiSELH = PIPESELH*(1-2/TOPOH[:,0]);                                 # Compute inner diameter of selected pipes (m)
+vh = QPGH/np.pi/DiSELH**2*4;                                        # Compute flow velocity for selected pipes (m/s)
+RENH = Re(rhob,mub,vh,DiSELH);                                      # Compute Reynolds numbers for the selected pipes (-)
+
+# Compute Reynolds number for selected pipes for cooling
+DiSELC = PIPESELC*(1-2/TOPOC[:,0]);                                 # Compute inner diameter of selected pipes (m)
+vc = QPGC/np.pi/DiSELC**2*4;                                        # Compute flow velocity for selected pipes (m/s)
+RENC = Re(rhob,mub,vc,DiSELC);                                      # Compute Reynolds numbers for the selected pipes (-)
+
+
 # Output the pipe sizing
 print(' ');
 print('******************* Suggested pipe dimensions heating ******************'); 
 for i in range(NPG):
-    print(f'{PGROUP.iloc[i]}: Ø{int(1000*PIPESELH[i])} mm SDR {int(TOPOH[i,0])}');
+    print(f'{PGROUP.iloc[i]}: Ø{int(1000*PIPESELH[i])} mm SDR {int(TOPOH[i,0])}, Re = {int(round(RENH[i]))}');
 print(' ');
 
 print('******************* Suggested pipe dimensions cooling ******************');
 for i in range(NPG):
-    print(f'{PGROUP.iloc[i]}: Ø{int(1000*PIPESELC[i])} mm SDR {int(TOPOC[i,0])}');
+    print(f'{PGROUP.iloc[i]}: Ø{int(1000*PIPESELC[i])} mm SDR {int(TOPOC[i,0])}, Re = {int(round(RENC[i]))}');
 print(' ');
 
 ############################### Pipe sizing END ###############################
@@ -296,9 +307,6 @@ print(' ');
 ################## Compute temperature response of thermonet ##################
 
 # Compute thermal resistances for pipes in heating mode
-DiSELH = PIPESELH*(1-2/TOPOH[:,0]);                                 # Compute inner diameter of selected pipes (m)
-vh = QPGH/np.pi/DiSELH**2*4;                                        # Compute flow velocity for selected pipes (m/s)
-RENH = Re(rhob,mub,vh,DiSELH);                                      # Compute Reynolds numbers for the selected pipes (-)
 LENGTHS = 2*TOPOH[:,1]*TOPOH[:,2];                                  # Total lengths of different pipe segments (m)
 TLENGTH = sum(LENGTHS);                                             # Total length of termonet (m)
 VOLH = LENGTHS*np.pi*DiSELH**2/4;                                   # Brine volume per pipe segment (m3)
@@ -309,9 +317,6 @@ for i in range(NPG):                                                # For all pi
 TOPOH = np.c_[TOPOH, Rh];                                           # Append thermal resistances to pipe groups as a column in TOPO (m*K/W)
 
 # Compute thermal resistances for pipes in cooling mode
-DiSELC = PIPESELC*(1-2/TOPOC[:,0]);                                 # Compute inner diameter of selected pipes (m)
-vc = QPGC/np.pi/DiSELC**2*4;                                        # Compute flow velocity for selected pipes (m/s)
-RENC = Re(rhob,mub,vc,DiSELC);                                      # Compute Reynolds numbers for the selected pipes (-)
 VOLC = LENGTHS*np.pi*DiSELC**2/4;                                   # Brine volume per pipe segment (m3)
 TVOLC = sum(VOLC);                                                  # Total brine voume (m3)
 TOPOC = np.c_[TOPOC,PIPESELC,RENC,LENGTHS];                         # Add pipe selection diameters (m), Reynolds numbers (-) and lengths as columns to the TOPO array

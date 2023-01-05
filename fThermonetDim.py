@@ -59,7 +59,7 @@ def Rp(Di,Do,REN,Pr,lb,lp):
     
     #################### Compute heat transfer coefficients #############
     # Reference: 
-    if REN>2300:                                        # Test for laminar or transitional/turbulent flow regime
+    if REN > 2300:                                      # Test for laminar or transitional/turbulent flow regime
         fD = fD_beier(REN);                             # Darcy friction factor (-)
         h = lb*0.125*fD*(REN-1000)*Pr/(1+12.7*np.sqrt(0.125*fD)*(Pr**(2/3)-1))/Di;      
     else:

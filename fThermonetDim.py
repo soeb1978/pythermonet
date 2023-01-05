@@ -11,37 +11,52 @@ import mpmath as mpt;
 from scipy.integrate import quad
 
 def ils(a,t,r):
-    return 1/4/mt.pi*f.exp1(r**2/4/a/t);
+    # Dimensionless line source model (-)
+    # r : radius (m)
+    # a : thermal diffusivity (m2/s)
+    # t : time (s)
+    return 1/4/mt.pi*f.exp1(r**2/4/a/t);        
 
 def ps(PT,COP):
-    # Computes ground load from total building load and COP
-    #   pt = total building thermal load (W);
-    #   COP = Coefficient of Performance (-);
-    return (COP-1)*PT/COP;
+    # Computes ground load from total building load and COP (W)
+    # pt : total building thermal load (W);
+    # COP : Coefficient of Performance (-);
+    return (COP-1)*PT/COP;                  
 
 def Re(rho,dyn,v,d):
-    #Re Calculates Reynolds number
-    return rho*v*d/dyn;
+    # Computes the Reynolds number for a pipe (-)
+    # rho : fluid density (kg/m3)
+    # dyn : dynamic viscosity (Pa*s)
+    # v : fluid velocity (m/s)
+    # d : pipe diameter (m)
+    return rho*v*d/dyn;                     
     
 def fD_beier(REN):
-    #Beregner Darcys friktionsfaktor til beregning af tryktab
+    #Computes the Darcy friction factor (-)
+    # REN : Reynolds number (-)
     return 8*(1/((8/REN)**10 + (REN/36500)**20)**0.5 + (2.21*np.log(REN/7))**10)**(-1/5);
-    # NB! Beier ser ud til at bruge Fanning friction factor, Darcy er 4 gange
-    # større!!
-    
-def dp(rho,mu,Q,Di):
-# Computes the pressure loss per length of pipe (typically Pa/m)
-# Update with reference to Beier
-    v = Q/mt.pi/(Di/2)**2;                            #Flow velocity (m/s)
-    K = rho/2*v**2;                                   #Computational constants (Pa)
-    REN = Re(rho,mu,v,Di);                            #Reynolds number (-)
-    fD = fD_beier(REN);                               #Darcy friction factor (-)
-    return fD*K/Di;                                   #Pressure loss per meter pipe (Pa/m)
+        
+def dp(rho,mu,Q,Di):    # Omskriv til funktion af Reynolds tal
+    # Computes the pressure loss per length of pipe (typically Pa/m)
+    # rho : fluid density (kg/m3)
+    # REN : Reynolds number (-)
+    v = Q/mt.pi/(Di/2)**2;                            # Flow velocity (m/s)
+    K = rho/2*v**2;                                   # Computational constants (Pa)
+    REN = Re(rho,mu,v,Di);                            # Reynolds number (-)
+    fD = fD_beier(REN);                               # Darcy friction factor (-)
+    return fD*K/Di;                                   # Pressure loss per meter pipe (Pa/m)
 
 def Rp(Di,Do,REN,Pr,lb,lp):
     # Compute the combined conductive and convective thermal resistance of a
-    # pipe with a flowing fluid with a certain Reynolds number ´. Unit: m*K/W
-    #   For laminar flow equation see p. 70 in "Advances in GSHP systems".     
+    # pipe with a fluid with a certain Reynolds number ´. Unit: m*K/W
+    # For laminar flow equation see p. 70 in "Advances in GSHP systems".     
+    # Di : pipe inner diameter (m)
+    # Do : pipe outer diameter (m)
+    # REN : Reynolds number (-)
+    # Pr : Prandtl number (-)
+    # lb : fluid thermal conductivity (W/m/K)
+    # lp : pipe material thermal conductivity (W/m/K)
+    
     #################### Compute heat transfer coefficients #############
     if REN>2300:                                # Test for transitional or turbulent flow regime
         fD = fD_beier(REN);                     # Darcy friction factor

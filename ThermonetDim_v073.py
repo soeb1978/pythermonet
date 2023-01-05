@@ -26,7 +26,7 @@ tic = time.time();                                                    # Track co
 PID = 'Energiakademiet, Samsø';                                     # Project name
 
 # Input files
-HPFN = 'HPS_Samso3.dat';                                                  # Input file containing heat pump information
+HPFN = 'HPS_Samso3.dat';                                            # Input file containing heat pump information
 TOPOFN = 'Samso_TOPO.dat';                                          # Input file containing topology information 
 
 # Brine
@@ -39,8 +39,8 @@ lb = 0.45;                                                          # Brine ther
 lp = 0.4;                                                           # Pipe thermal conductivity (W/m/K). https://www.wavin.com/da-dk/catalog/Varme/Jordvarme/PE-80-lige-ror/40mm-jordvarme-PE-80PN6-100m
 
 # Thermonet and HHE
-PWD = 1;                                                            # Distance between forward and return pipe centers (m)
-dpt = 90;                                                           # Target pressure loss in thermonet (Pa/m). 10# reduction to account for loss in fittings. Source: Oklahoma State University, Closed-loop/ground source heat pump systems. Installation guide., (1988). Interval: 98-298 Pa/m
+PWD = 0.3;                                                          # Distance between forward and return pipe centers (m)
+dpt = 270;                                                          # Target pressure loss in thermonet (Pa/m). 10# reduction to account for loss in fittings. Source: Oklahoma State University, Closed-loop/ground source heat pump systems. Installation guide., (1988). Interval: 98-298 Pa/m
 lsh = 2;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
 lsc = 2;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
 rhocs = 2.5e6;                                                      # Soil volumetric heat capacity  thermonet and HHE (J/m3/K) OK. Guestimate
@@ -52,7 +52,7 @@ Tci = 20;                                                           # Design tem
 SF = 1;                                                             # Ratio of peak heating demand to be covered by the heat pump [0-1]. If SF = 0.8 then the heat pump delivers 80% of the peak heating load. The deficit is then supplied by an auxilliary heating device
 
 # Source selection
-SS = 1;                                                             # SS = 1: Borehole heat exchangers; SS = 0: Horizontal heat exchangers  
+SS = 0;                                                             # SS = 1: Borehole heat exchangers; SS = 0: Horizontal heat exchangers  
 
 if SS == 0:
     # Horizontal heat exchanger (HHE) topology and pipes
@@ -478,15 +478,15 @@ if SS == 0:
     GHHE = CSM(rohhe,rohhe,t,ast);                                  # Pipe wall response (-)
     GHHE[0:2] = GHHE[0:2] + s/NHHE;                                 # Add thermal disturbance from neighbour pipes (-)
     
-    #Heating
-    RHHEH = float(Rp(2*rihhe,2*rohhe,RENHHEH,Pr,lb,lp));            # Compute the pipe thermal resistance (m*K/W)
-    GHHEH = GHHE/lsh+RHHEH;                             # Add annual and monthly thermal resistances to GHHE (m*K/W)
+    # Heating
+    RHHEH = Rp(2*rihhe,2*rohhe,RENHHEH,Pr,lb,lp);                   # Compute the pipe thermal resistance (m*K/W)
+    GHHEH = GHHE/lsh+RHHEH;                                         # Add annual and monthly thermal resistances to GHHE (m*K/W)
     LHHEH = np.dot(PHEH,GHHE/TCH1);                                 # Sizing equation for computing the required borehole meters (m)
     HHEqh = (sum(HPS[NSHPH+2:,3])+(1-dHPH)*HPS[NSHPH+1,3])/LHHEH;   # Compute the heat pump power supplied on the hot side of the HP per meter BHE (W/m)
     
-    #Cooling
-    RHHEC = float(Rp(2*rihhe,2*rohhe,RENHHEC,Pr,lb,lp));            # Compute the pipe thermal resistance (m*K/W)
-    GHHEC = GHHE/lsc+RHHEC;                             # Add annual and monthly thermal resistances to GHHE (m*K/W)
+    # Cooling
+    RHHEC = Rp(2*rihhe,2*rohhe,RENHHEC,Pr,lb,lp);                    # Compute the pipe thermal resistance (m*K/W)
+    GHHEC = GHHE/lsc+RHHEC;                                         # Add annual and monthly thermal resistances to GHHE (m*K/W)
     LHHEC = np.dot(PHEC,GHHE/TCC1);                                 # Sizing equation for computing the required borehole meters (m)
     HHEqc = (sum(CPS[NSHPC+2:,2])+(1-dHPC)*CPS[NSHPC+1,2])/LHHEC;   # Compute the heat pump power supplied on the hot side of the HP per meter BHE (W/m)
     
@@ -519,9 +519,9 @@ print(f'Elapsed time: {round(toc-tic,6)} seconds');
 #       o1      o2
 #
 #       Legend:
-#       x : mirror source
-#       o : real source (actual pipe)
-#     --- : the ground surface where T = 0. Actual ground temperatures are then superimposed
+#       x : mirror source, opposite sign of real source
+#       o : real source, actual pipe
+#     --- : the ground surface where T = 0. Actual ground temperatures are then superimposed.
 #       
 #       T(o1) = q*(R(o1) + R(o2) - R(x1) - R(x2)) + Tu(t)
 #       Tu(t) is the undisturbed seasonal temperature variation at depth

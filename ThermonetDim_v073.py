@@ -26,7 +26,7 @@ tic = time.time();                                                    # Track co
 PID = 'Energiakademiet, Samsø';                                     # Project name
 
 # Input files
-HPFN = 'HPS_Samso3.dat';                                            # Input file containing heat pump information
+HPFN = 'HPS_Samso5.dat';                                            # Input file containing heat pump information
 TOPOFN = 'Samso_TOPO.dat';                                          # Input file containing topology information 
 
 # Brine
@@ -40,14 +40,14 @@ lp = 0.4;                                                           # Pipe therm
 
 # Thermonet and HHE
 PWD = 0.3;                                                          # Distance between forward and return pipe centers (m)
-dpt = 90;                                                          # Target pressure loss in thermonet (Pa/m). 10# reduction to account for loss in fittings. Source: Oklahoma State University, Closed-loop/ground source heat pump systems. Installation guide., (1988). Interval: 98-298 Pa/m
+dpt = 90;                                                           # Target pressure loss in thermonet (Pa/m). 10# reduction to account for loss in fittings. Source: Oklahoma State University, Closed-loop/ground source heat pump systems. Installation guide., (1988). Interval: 98-298 Pa/m
 lsh = 2;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
 lsc = 2;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
 rhocs = 2.5e6;                                                      # Soil volumetric heat capacity  thermonet and HHE (J/m3/K) OK. Guestimate
 zd = 1.2;                                                           # Burial depth of thermonet and HHE (m)
 
 # Heat pump
-Thi = -2.5;                                                         # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
+Thi = -3;                                                           # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
 Tci = 20;                                                           # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
 SF = 1;                                                             # Ratio of peak heating demand to be covered by the heat pump [0-1]. If SF = 0.8 then the heat pump delivers 80% of the peak heating load. The deficit is then supplied by an auxilliary heating device
 
@@ -56,7 +56,7 @@ SS = 0;                                                             # SS = 1: Bo
 
 if SS == 0:
     # Horizontal heat exchanger (HHE) topology and pipes
-    NHHE = 5;                                                       # Number of HE loops (-)
+    NHHE = 8;                                                       # Number of HE loops (-)
     PDHE = 0.04;                                                    # Outer diameter of HE pipe (m)                   
     HHESDR = 17;                                                    # SDR for HE pipes (-)
     dd = 1.5;                                                       # Pipe segment spacing (m)                            
@@ -358,7 +358,7 @@ THMqh = (sum(HPS[0:NSHPH+1,3]) + dHPH*HPS[NSHPH+1,3])/TLENGTH;      # Compute th
 dPSH[NSHPH+1,:]=(1-dHPH)*dPSH[NSHPH+1,:];                           # Compute the fraction of that heat pumps ground thermal load that must be supplied by BHEs or HHEs and update dPS (W)
 PHEH = sum(dPSH[(NSHPH+1):,:],0);                                   # Compute the ground thermal load to be supplied by BHE or HHE (W)
 
-NSHPC = np.argmax(TC > TCC1)-1;                                       # Find the first heat pump in the cumsum that exceeds the temperature condition and subtract one from this index (-)
+NSHPC = np.argmax(TC > TCC1)-1;                                     # Find the first heat pump in the cumsum that exceeds the temperature condition and subtract one from this index (-)
 dHPC = (TCC1 - TC[NSHPC])/(TC[NSHPC+1]-TC[NSHPC]);
 THMqc = (sum(CPS[0:NSHPC+1,2])+dHPC*CPS[NSHPC+1,2])/TLENGTH;        # Compute the heat pump power supplied supplied on the hot side of the HP per meter thermonet (W/m)
 dPSC[NSHPC+1,:]=(1-dHPC)*dPSC[NSHPC+1,:];                           # Compute the fraction of that heat pumps ground thermal load that must be supplied by BHEs or HHEs and update dPS (W)
@@ -490,7 +490,7 @@ if SS == 0:
     HHEqh = (sum(HPS[NSHPH+2:,3])+(1-dHPH)*HPS[NSHPH+1,3])/LHHEH;   # Compute the heat pump power supplied on the hot side of the HP per meter BHE (W/m)
     
     # Cooling
-    RHHEC = Rp(2*rihhe,2*rohhe,RENHHEC,Pr,lb,lp);                    # Compute the pipe thermal resistance (m*K/W)
+    RHHEC = Rp(2*rihhe,2*rohhe,RENHHEC,Pr,lb,lp);                   # Compute the pipe thermal resistance (m*K/W)
     GHHEC = GHHE/lsc+RHHEC;                                         # Add annual and monthly thermal resistances to GHHE (m*K/W)
     LHHEC = np.dot(PHEC,GHHE/TCC1);                                 # Sizing equation for computing the required borehole meters (m)
     HHEqc = (sum(CPS[NSHPC+2:,2])+(1-dHPC)*CPS[NSHPC+1,2])/LHHEC;   # Compute the heat pump power supplied on the hot side of the HP per meter BHE (W/m)

@@ -26,8 +26,8 @@ tic = time.time();                                                    # Track co
 PID = 'Energiakademiet, Samsø';                                     # Project name
 
 # Input files
-HPFN = 'HPS_Samso5.dat';                                            # Input file containing heat pump information
-TOPOFN = 'Samso_TOPO.dat';                                          # Input file containing topology information 
+HPFN = 'Vejerslev_HPS1.dat';                                            # Input file containing heat pump information
+TOPOFN = 'Vejerslev_TOPO1.dat';                                          # Input file containing topology information 
 
 # Brine
 rhob = 965;                                                         # Brine density (kg/m3), T = 0C. https://www.handymath.com/cgi-bin/isopropanolwghtvoltble5.cgi?submit=Entry
@@ -41,8 +41,8 @@ lp = 0.4;                                                           # Pipe therm
 # Thermonet and HHE
 PWD = 0.3;                                                          # Distance between forward and return pipe centers (m)
 dpt = 90;                                                           # Target pressure loss in thermonet (Pa/m). 10# reduction to account for loss in fittings. Source: Oklahoma State University, Closed-loop/ground source heat pump systems. Installation guide., (1988). Interval: 98-298 Pa/m
-lsh = 2;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
-lsc = 2;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
+lsh = 1.25;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
+lsc = 1.25;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
 rhocs = 2.5e6;                                                      # Soil volumetric heat capacity  thermonet and HHE (J/m3/K) OK. Guestimate
 zd = 1.2;                                                           # Burial depth of thermonet and HHE (m)
 
@@ -52,11 +52,11 @@ Tci = 20;                                                           # Design tem
 SF = 1;                                                             # Ratio of peak heating demand to be covered by the heat pump [0-1]. If SF = 0.8 then the heat pump delivers 80% of the peak heating load. The deficit is then supplied by an auxilliary heating device
 
 # Source selection
-SS = 1;                                                             # SS = 1: Borehole heat exchangers; SS = 0: Horizontal heat exchangers  
+SS = 0;                                                             # SS = 1: Borehole heat exchangers; SS = 0: Horizontal heat exchangers  
 
 if SS == 0:
     # Horizontal heat exchanger (HHE) topology and pipes
-    NHHE = 8;                                                       # Number of HE loops (-)
+    NHHE = 20;                                                       # Number of HE loops (-)
     PDHE = 0.04;                                                    # Outer diameter of HE pipe (m)                   
     HHESDR = 17;                                                    # SDR for HE pipes (-)
     dd = 1.5;                                                       # Pipe segment spacing (m)                            
@@ -115,32 +115,22 @@ print(f'Project: {PID}');
 ########### Precomputations and variables that should not be changed ##########
 
 # Heat pump information
-# Heat pump information
 HPS = HPS.values  # Load numeric data from HP file
 CPS = HPS[:, 8:]  # Place cooling demand data in separate array
 HPS = HPS[:, :8]  # Remove cooling demand data from HPS array
 NHP = len(HPS)  # Number of heat pumps
 
 # Add circulation pump power consumption to cooling load (W)
-CPS[:, :3] = CPS[:, 3:4] / (CPS[:, 3:4] - 1) * CPS[:, :3]
-
-
-# HPS = HPS.values;                                                   # Load numeric data from HP file
-# CPS = HPS[:,8:];                                                    # Place cooling demand data in separate array
-# for i in range(3):                                                  # For monthly and hourly cooling demands do
-#     CPS[:,i] = CPS[:,3]/(CPS[:,3]-1)*CPS[:,i];                      # Add circulation pump power consumption to cooling load (W)
-# HPS = HPS[:,0:8];                                                   # Remove cooling demand data from HPS array
-# NHP = len(HPS);                                                     # Number of heat pumps
+CPS[:, :3] = CPS[:, 3:4] / (CPS[:, 3:4] - 1) * CPS[:, :3]                                            # Number of heat pumps
 
 # G-function evaluation times (DO NOT MODIFY!!!!!!!)
-t = np.asarray([323479800, 7903800, 14400],dtype=float);            # time = [10 years + 3 months + 4 hours; 3 months + 4 hours; 4 hours]. Time vector for the temporal superposition (s).   
+SECONDS_IN_YEAR = 31536000;
+SECONDS_IN_MONTH = 2628000;
+SECONDS_IN_HOUR = 3600;
+t = np.asarray([10 * SECONDS_IN_YEAR + 3 * SECONDS_IN_MONTH + 4 * SECONDS_IN_HOUR, 3 * SECONDS_IN_MONTH + 4 * SECONDS_IN_HOUR, 4 * SECONDS_IN_HOUR], dtype=float);            # time = [10 years + 3 months + 4 hours; 3 months + 4 hours; 4 hours]. Time vector for the temporal superposition (s).   
 
 # Create array containing arrays of integers with HP IDs for all pipe sections
-IPGA = [];  
-for i in range(NPG):                                                # For all pipe groups
-    tmp = IPG.iloc[i].split(',');                                   # Split the heat pump IDs in to a list of strings
-    tmp = np.asarray(tmp);                                          # Convert strings to ndarray
-    IPGA.append(tmp.astype(int)-1);                                 # Add integer arrays containing IDs to IPGA ndarray
+IPGA = [np.asarray(IPG.iloc[i].split(',')).astype(int) - 1 for i in range(NPG)]
 IPG=IPGA                                                            # Redefine IPG
 del IPGA;                                                           # Get rid of IPGA
 
@@ -230,8 +220,7 @@ if SS == 1:
 ################################# Pipe sizing #################################
 
 # Convert thermal load profile on HPs to flow rates
-for i in range(3):
-    PSH[:,i] = ps(S[i]*HPS[:,i+1],HPS[:,i+4]);                      # Annual (0), monthly (1) and daily (2) thermal load on the ground (W)
+PSH = ps(S*HPS[:,1:4],HPS[:,4:7]);                                  # Annual (0), monthly (1) and daily (2) thermal load on the ground (W)
 PSH[:,0] = PSH[:,0] - CPS[:,0];                                     # Annual imbalance between heating and cooling, positive for heating (W)
 Qdimh = PSH[:,2]/HPS[:,7]/rhob/cb;                                  # Design flow heating (m3/s)
 Qdimc = S[2]*CPS[:,2]/CPS[:,4]/rhob/cb;                             # Design flow cooling (m3/s). Using simultaneity factor!
@@ -299,7 +288,6 @@ DiSELC = PIPESELC*(1-2/TOPOC[:,0]);                                 # Compute in
 vc = QPGC/np.pi/DiSELC**2*4;                                        # Compute flow velocity for selected pipes (m/s)
 RENC = Re(rhob,mub,vc,DiSELC);                                      # Compute Reynolds numbers for the selected pipes (-)
 
-
 # Output the pipe sizing
 print(' ');
 print('******************* Suggested pipe dimensions heating ******************'); 
@@ -361,6 +349,11 @@ for j in range(NHP):
         TPGC[i] = np.dot(cdPSC[j]/TLENGTH,GTHMC[i]/lsc + Rc[i])*VOLC[i];
     TH[j] = sum(TPGH)/TVOLH;
     TC[j] = sum(TPGC)/TVOLC;
+
+FPH = np.zeros(NPG);
+
+for i in range(NPG):
+    FPH[i] = TCH1*LENGTHS[i]/np.dot(cdPSH[NHP-1],GTHMH[i]/lsh + Rh[i]);
         
 NSHPH = np.argmax(TH > TCH1)-1;                                     # Find the first heat pump in the cumsum that exceeds the temperature condition and subtract one from this index (-)
 dHPH = (TCH1 - TH[NSHPH])/(TH[NSHPH+1]-TH[NSHPH]);

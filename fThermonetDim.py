@@ -10,12 +10,21 @@ import numpy as np;
 import mpmath as mpt;
 from scipy.integrate import quad
 
-def ils(a,t,r):
-    # Dimensionless line source model (-)
-    # r : radius (m)
-    # a : thermal diffusivity (m2/s)
-    # t : time (s)
-    return 1/4/mt.pi*f.exp1(r**2/4/a/t);        
+def ils(a, t, r):
+    """
+    Calculate the dimensionless line source model.
+    
+    This function calculates the dimensionless line source model based on the input parameters.
+    
+    Args:
+        a (float): Soil thermal diffusivity (m^2/s).
+        t (float): Time (s).
+        r (float): Radius (m).
+        
+    Returns:
+        float: The dimensionless line source model temperature (-).
+    """
+    return 1/4/mt.pi*f.exp1(r**2/4/a/t)
 
 def ps(PT,COP):
     # Computes ground load from total building load and COP (W)

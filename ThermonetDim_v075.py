@@ -26,7 +26,7 @@ tic = time.time();                                                    # Track co
 PID = 'Energiakademiet, Samsø';                                     # Project name
 
 # Input files
-HPFN = 'HPS_Samso5.dat';                                            # Input file containing heat pump information
+HPFN = 'Samso_HPSC.dat';                                            # Input file containing heat pump information
 TOPOFN = 'Samso_TOPO.dat';                                          # Input file containing topology information 
 
 # Brine
@@ -41,8 +41,8 @@ lp = 0.4;                                                           # Pipe therm
 # Thermonet and HHE
 PWD = 0.3;                                                          # Distance between forward and return pipe centers (m)
 dpt = 90;                                                           # Target pressure loss in thermonet (Pa/m). 10# reduction to account for loss in fittings. Source: Oklahoma State University, Closed-loop/ground source heat pump systems. Installation guide., (1988). Interval: 98-298 Pa/m
-lsh = 2;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
-lsc = 2;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
+lsh = 1.25;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
+lsc = 1.25;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
 rhocs = 2.5e6;                                                      # Soil volumetric heat capacity  thermonet and HHE (J/m3/K) OK. Guestimate
 zd = 1.2;                                                           # Burial depth of thermonet and HHE (m)
 
@@ -52,11 +52,11 @@ Tci = 20;                                                           # Design tem
 SF = 1;                                                             # Ratio of peak heating demand to be covered by the heat pump [0-1]. If SF = 0.8 then the heat pump delivers 80% of the peak heating load. The deficit is then supplied by an auxilliary heating device
 
 # Source selection
-SS = 1;                                                             # SS = 1: Borehole heat exchangers; SS = 0: Horizontal heat exchangers  
+SS = 0;                                                             # SS = 1: Borehole heat exchangers; SS = 0: Horizontal heat exchangers  
 
 if SS == 0:
     # Horizontal heat exchanger (HHE) topology and pipes
-    NHHE = 8;                                                       # Number of HE loops (-)
+    NHHE = 3;                                                       # Number of HE loops (-)
     PDHE = 0.04;                                                    # Outer diameter of HE pipe (m)                   
     HHESDR = 17;                                                    # SDR for HE pipes (-)
     dd = 1.5;                                                       # Pipe segment spacing (m)                            
@@ -73,9 +73,9 @@ if SS == 1:
     PD = 0.015;                                                     # Wall to wall distance U-pipe legs (m)                                
 
     # BHE field
-    NX = 4;                                                         # Number of boreholes in the x-direction (-)
+    NX = 1;                                                         # Number of boreholes in the x-direction (-)
     dx = 15;                                                        # Spacing between boreholes in the x-direction (m)
-    NY = 2;                                                         # Number of boreholes in the y-direction (-)
+    NY = 6;                                                         # Number of boreholes in the y-direction (-)
     dy = 15;                                                        # Spacing between boreholes in the y-direction (m)
 
 ############### User set flow and thermal parameters by medium END ############
@@ -115,32 +115,22 @@ print(f'Project: {PID}');
 ########### Precomputations and variables that should not be changed ##########
 
 # Heat pump information
-# Heat pump information
 HPS = HPS.values  # Load numeric data from HP file
 CPS = HPS[:, 8:]  # Place cooling demand data in separate array
 HPS = HPS[:, :8]  # Remove cooling demand data from HPS array
 NHP = len(HPS)  # Number of heat pumps
 
 # Add circulation pump power consumption to cooling load (W)
-CPS[:, :3] = CPS[:, 3:4] / (CPS[:, 3:4] - 1) * CPS[:, :3]
-
-
-# HPS = HPS.values;                                                   # Load numeric data from HP file
-# CPS = HPS[:,8:];                                                    # Place cooling demand data in separate array
-# for i in range(3):                                                  # For monthly and hourly cooling demands do
-#     CPS[:,i] = CPS[:,3]/(CPS[:,3]-1)*CPS[:,i];                      # Add circulation pump power consumption to cooling load (W)
-# HPS = HPS[:,0:8];                                                   # Remove cooling demand data from HPS array
-# NHP = len(HPS);                                                     # Number of heat pumps
+CPS[:, :3] = CPS[:, 3:4] / (CPS[:, 3:4] - 1) * CPS[:, :3]                                            # Number of heat pumps
 
 # G-function evaluation times (DO NOT MODIFY!!!!!!!)
-t = np.asarray([323479800, 7903800, 14400],dtype=float);            # time = [10 years + 3 months + 4 hours; 3 months + 4 hours; 4 hours]. Time vector for the temporal superposition (s).   
+SECONDS_IN_YEAR = 31536000;
+SECONDS_IN_MONTH = 2628000;
+SECONDS_IN_HOUR = 3600;
+t = np.asarray([10 * SECONDS_IN_YEAR + 3 * SECONDS_IN_MONTH + 4 * SECONDS_IN_HOUR, 3 * SECONDS_IN_MONTH + 4 * SECONDS_IN_HOUR, 4 * SECONDS_IN_HOUR], dtype=float);            # time = [10 years + 3 months + 4 hours; 3 months + 4 hours; 4 hours]. Time vector for the temporal superposition (s).   
 
 # Create array containing arrays of integers with HP IDs for all pipe sections
-IPGA = [];  
-for i in range(NPG):                                                # For all pipe groups
-    tmp = IPG.iloc[i].split(',');                                   # Split the heat pump IDs in to a list of strings
-    tmp = np.asarray(tmp);                                          # Convert strings to ndarray
-    IPGA.append(tmp.astype(int)-1);                                 # Add integer arrays containing IDs to IPGA ndarray
+IPGA = [np.asarray(IPG.iloc[i].split(',')).astype(int) - 1 for i in range(NPG)]
 IPG=IPGA                                                            # Redefine IPG
 del IPGA;                                                           # Get rid of IPGA
 
@@ -169,10 +159,10 @@ QPGH = np.zeros(NPG);                                               # Design flo
 QPGC = np.zeros(NPG);                                               # Design flow cooling (m3/s)
 Rh = np.zeros(NPG);                                                 # Allocate pipe thermal resistance vector for heating (m*K/W)
 Rc = np.zeros(NPG);                                                 # Allocate pipe thermal resistance vector for cooling (m*K/W)
-TPGH = np.zeros(NPG);                                               # UHF delta temperature reponse of thermonet in heating mode for each pipe (K)
-TPGC = np.zeros(NPG);                                               # UHF delta temperature reponse of thermonet in cooling mode for each pipe (K)
-TH = np.zeros(NHP);                                                 # Volume weighted average of TPGH to compute mean temperature response of thermonet for cumumlated thermal heating load from HPs
-TC = np.zeros(NHP);                                                 # Volume weighted average of TPGH to compute mean temperature response of thermonet for cumumlated thermal cooling load from HPs
+FPH = np.zeros(NPG);                                                # Vector with total heating load fractions supplied by each pipe segment (-)
+FPC = np.zeros(NPG);                                                # Vector with total cooling load fractions supplied by each pipe segment (-)
+GTHMH = np.zeros([NPG,3]);
+GTHMC = np.zeros([NPG,3]);
 
 # Simultaneity factors to apply to annual, monthly and hourly heating and cooling demands
 S = np.zeros(3);
@@ -230,8 +220,7 @@ if SS == 1:
 ################################# Pipe sizing #################################
 
 # Convert thermal load profile on HPs to flow rates
-for i in range(3):
-    PSH[:,i] = ps(S[i]*HPS[:,i+1],HPS[:,i+4]);                      # Annual (0), monthly (1) and daily (2) thermal load on the ground (W)
+PSH = ps(S*HPS[:,1:4],HPS[:,4:7]);                                  # Annual (0), monthly (1) and daily (2) thermal load on the ground (W)
 PSH[:,0] = PSH[:,0] - CPS[:,0];                                     # Annual imbalance between heating and cooling, positive for heating (W)
 Qdimh = PSH[:,2]/HPS[:,7]/rhob/cb;                                  # Design flow heating (m3/s)
 Qdimc = S[2]*CPS[:,2]/CPS[:,4]/rhob/cb;                             # Design flow cooling (m3/s). Using simultaneity factor!
@@ -299,14 +288,12 @@ DiSELC = PIPESELC*(1-2/TOPOC[:,0]);                                 # Compute in
 vc = QPGC/np.pi/DiSELC**2*4;                                        # Compute flow velocity for selected pipes (m/s)
 RENC = Re(rhob,mub,vc,DiSELC);                                      # Compute Reynolds numbers for the selected pipes (-)
 
-
 # Output the pipe sizing
 print(' ');
 print('******************* Suggested pipe dimensions heating ******************'); 
 for i in range(NPG):
     print(f'{PGROUP.iloc[i]}: Ø{int(1000*PIPESELH[i])} mm SDR {int(TOPOH[i,0])}, Re = {int(round(RENH[i]))}');
 print(' ');
-
 print('******************* Suggested pipe dimensions cooling ******************');
 for i in range(NPG):
     print(f'{PGROUP.iloc[i]}: Ø{int(1000*PIPESELC[i])} mm SDR {int(TOPOC[i,0])}, Re = {int(round(RENC[i]))}');
@@ -319,16 +306,12 @@ print(' ');
 # Compute thermal resistances for pipes in heating mode
 LENGTHS = 2*TOPOH[:,1]*TOPOH[:,2];                                  # Total lengths of different pipe segments (m)
 TLENGTH = sum(LENGTHS);                                             # Total length of termonet (m)
-VOLH = LENGTHS*np.pi*DiSELH**2/4;                                   # Brine volume per pipe segment (m3)
-TVOLH = sum(VOLH);                                                  # Total brine voume (m3)
 TOPOH = np.c_[TOPOH,PIPESELH,RENH,LENGTHS];                         # Add pipe selection diameters (m), Reynolds numbers (-) and lengths as columns to the TOPO array
 for i in range(NPG):                                                # For all pipe groups
     Rh[i] = Rp(DiSELH[i],PIPESELH[i],RENH[i],Pr,lb,lp);             # Compute thermal resistances (m*K/W)
 TOPOH = np.c_[TOPOH, Rh];                                           # Append thermal resistances to pipe groups as a column in TOPO (m*K/W)
 
 # Compute thermal resistances for pipes in cooling mode
-VOLC = LENGTHS*np.pi*DiSELC**2/4;                                   # Brine volume per pipe segment (m3)
-TVOLC = sum(VOLC);                                                  # Total brine voume (m3)
 TOPOC = np.c_[TOPOC,PIPESELC,RENC,LENGTHS];                         # Add pipe selection diameters (m), Reynolds numbers (-) and lengths as columns to the TOPO array
 for i in range(NPG):                                                # For all pipe groups
     Rc[i] = Rp(DiSELC[i],PIPESELC[i],RENC[i],Pr,lb,lp);             # Compute thermal resistances (m*K/W)
@@ -338,50 +321,34 @@ TOPOC = np.c_[TOPOC, Rc];                                           # Append the
 dPSH = np.zeros((NHP,3));                                           # Allocate power difference matrix for tempoeral superposition (W)
 dPSH[:,0] = PSH[:,0];                                               # First entry is just the annual average power (W)
 dPSH[:,1:] = np.diff(PSH);                                          # Differences between year-month and month-hour are added (W)
-cdPSH = np.cumsum(dPSH,0);
+cdPSH = np.sum(dPSH,0);
 
 # Compute delta-qs for superposition of cooling load responses
 dPSC = np.zeros((NHP,3));                                           # Allocate power difference matrix for tempoeral superposition (W)
 dPSC = np.c_[-PSH[:,0],CPS[:,1:3]];
 dPSC[:,1:] = np.diff(dPSC);                                         # Differences between year-month and month-hour are added (W)
-cdPSC = np.cumsum(dPSC,0);
+cdPSC = np.sum(dPSC,0);
 
-# Compute aggregated temperature responses in heating and cooling mode
-GTHMH = np.zeros([NPG,3]);
-GTHMC = np.zeros([NPG,3]);
+# Compute temperature responses in heating and cooling mode for all pipes
 K1 = ils(ast,t,PWD) - ils(ast,t,2*zd) - ils(ast,t,np.sqrt(PWD**2+4*zd**2));
 for i in range(NPG):
-  GTHMH[i,:] = CSM(PIPESELH[i]/2,PIPESELH[i]/2,t,ast) + K1;
-  GTHMC[i,:] = CSM(PIPESELC[i]/2,PIPESELC[i]/2,t,ast) + K1;
- 
-# Compute the caliometric (volume) average brine temperature. This is a more consistent implementation of the UHF condition 
-for j in range(NHP):
-    for i in range(NPG):
-        TPGH[i] = np.dot(cdPSH[j]/TLENGTH,GTHMH[i]/lsh + Rh[i])*VOLH[i];
-        TPGC[i] = np.dot(cdPSC[j]/TLENGTH,GTHMC[i]/lsc + Rc[i])*VOLC[i];
-    TH[j] = sum(TPGH)/TVOLH;
-    TC[j] = sum(TPGC)/TVOLC;
-        
-NSHPH = np.argmax(TH > TCH1)-1;                                     # Find the first heat pump in the cumsum that exceeds the temperature condition and subtract one from this index (-)
-dHPH = (TCH1 - TH[NSHPH])/(TH[NSHPH+1]-TH[NSHPH]);
-THMqh = (sum(HPS[0:NSHPH+1,3]) + dHPH*HPS[NSHPH+1,3])/TLENGTH;      # Compute the heat pump power supplied supplied on the hot side of the HP per meter thermonet (W/m)
-dPSH[NSHPH+1,:]=(1-dHPH)*dPSH[NSHPH+1,:];                           # Compute the fraction of that heat pumps ground thermal load that must be supplied by BHEs or HHEs and update dPS (W)
-PHEH = sum(dPSH[(NSHPH+1):,:],0);                                   # Compute the ground thermal load to be supplied by BHE or HHE (W)
+    GTHMH[i,:] = CSM(PIPESELH[i]/2,PIPESELH[i]/2,t,ast) + K1;
+    GTHMC[i,:] = CSM(PIPESELC[i]/2,PIPESELC[i]/2,t,ast) + K1;
+    FPH[i] = TCH1*LENGTHS[i]/np.dot(cdPSH,GTHMH[i]/lsh + Rh[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
+    FPC[i] = TCC1*LENGTHS[i]/np.dot(cdPSC,GTHMC[i]/lsc + Rc[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
 
-NSHPC = np.argmax(TC > TCC1)-1;                                     # Find the first heat pump in the cumsum that exceeds the temperature condition and subtract one from this index (-)
-dHPC = (TCC1 - TC[NSHPC])/(TC[NSHPC+1]-TC[NSHPC]);
-THMqc = (sum(CPS[0:NSHPC+1,2])+dHPC*CPS[NSHPC+1,2])/TLENGTH;        # Compute the heat pump power supplied supplied on the hot side of the HP per meter thermonet (W/m)
-dPSC[NSHPC+1,:]=(1-dHPC)*dPSC[NSHPC+1,:];                           # Compute the fraction of that heat pumps ground thermal load that must be supplied by BHEs or HHEs and update dPS (W)
-PHEC = sum(dPSC[(NSHPC+1):,:],0);                                   # Compute the ground thermal load to be supplied by BHE or HHE (W)
+# Heating supplied by thermonet 
+FPH = sum(FPH);                                                     # Total fraction of heating supplied by thermonet (-)
+PHEH = (1-FPH)*cdPSH;                                               # Residual heat demand (W)
+
+# Cooling supplied by thermonet
+FPC = sum(FPC);                                                     # Total fraction of cooling supplied by thermonet (-)
+PHEC = (1-FPC)*cdPSC;                                               # Residual heat demand (W)
 
 ########################## Display results in console #########################
-
 print('***************** Thermonet energy production capacity *****************'); 
-#print('The thermonet supplies ' + str(round(THMq)) + ' W/m on the condenser sides of the HPs');
-print(f'The thermonet supplies {round(100*TLENGTH*THMqh/sum(HPS[:,3],0))}% of the peak heating demand');  
-print(f'The thermonet fully supplies the heat pumps with IDs 1 - {int(np.floor(NSHPH+1))} with heating' ) ;
-print(f'The thermonet supplies {round(100*TLENGTH*THMqc/sum(CPS[:,2],0))}% of the peak cooling demand');  
-print(f'The thermonet fully supplies the heat pumps with IDs 1 - {int(np.floor(NSHPC+1))} with cooling' );
+print(f'The thermonet supplies {round(100*FPH)}% of the peak heating demand');  #print(f'The thermonet fully supplies the heat pumps with IDs 1 - {int(np.floor(NSHPH+1))} with heating' ) ;
+print(f'The thermonet supplies {round(100*FPC)}% of the peak cooling demand');  
 print(' ');
 ######################## Display results in console END #######################
 
@@ -455,7 +422,6 @@ if SS == 1:
         Tsolh[i] = np.dot(PHEH,np.array([GBHEF[0]/lss + Rbhv[i], GBHEF[1]/lss + Rbhv[i], Rwh]))/LBHEHv[i]/NBHE;                             #OK. Use Spitlers sizing formula for computing the corresponding temperature response for all candidate solutions (C)
     indLBHEH = np.argmax(Tsolh<TCH2);                                # Get rid of candidates that undersize the system. 
     LBHEH = LBHEHv[indLBHEH]*NBHE;                                   # Solution to BHE length for heating (m)
-    BHEqh = (sum(HPS[NSHPH+2:,3])+(1-dHPH)*HPS[NSHPH+1,3])/LBHEH;    
     
     if (Tsolh[indLBHEH]-TCH2) > 0.1:
         print('Warning - the length steps used for computing the BHE length for heating are too big. Reduce the stepsize and recompute a solution.');
@@ -465,7 +431,6 @@ if SS == 1:
         Tsolc[i] = np.dot(PHEC,np.array([GBHEF[0]/lss + Rbcv[i], GBHEF[1]/lss + Rbcv[i], Rwc]))/LBHECv[i]/NBHE;                             #OK. Use Spitlers sizing formula for computing the corresponding temperature response for all candidate solutions (C)
     indLBHEC = np.argmax(Tsolc<TCC2);                                # Get rid of candidates that undersize the system. 
     LBHEC = LBHECv[indLBHEC]*NBHE;                                   # Solution BHE length for cooling (m)
-    BHEqc = (sum(CPS[NSHPH+2:,2])+(1-dHPC)*CPS[NSHPH+1,2])/LBHEC;
     
     if (Tsolc[indLBHEC]-TCC2) > 0.1:
         print('Warning - the length steps used for computing the BHE length for cooling are too big. Reduce the stepsize and recompute a solution.');    
@@ -496,14 +461,12 @@ if SS == 0:
     # Heating
     RHHEH = Rp(2*rihhe,2*rohhe,RENHHEH,Pr,lb,lp);                   # Compute the pipe thermal resistance (m*K/W)
     GHHEH = GHHE/lsh+RHHEH;                                         # Add annual and monthly thermal resistances to GHHE (m*K/W)
-    LHHEH = np.dot(PHEH,GHHE/TCH1);                                 # Sizing equation for computing the required borehole meters (m)
-    HHEqh = (sum(HPS[NSHPH+2:,3])+(1-dHPH)*HPS[NSHPH+1,3])/LHHEH;   # Compute the heat pump power supplied on the hot side of the HP per meter BHE (W/m)
+    LHHEH = np.dot(PHEH,GHHEH/TCH1);                                 # Sizing equation for computing the required borehole meters (m)
     
     # Cooling
     RHHEC = Rp(2*rihhe,2*rohhe,RENHHEC,Pr,lb,lp);                   # Compute the pipe thermal resistance (m*K/W)
     GHHEC = GHHE/lsc+RHHEC;                                         # Add annual and monthly thermal resistances to GHHE (m*K/W)
-    LHHEC = np.dot(PHEC,GHHE/TCC1);                                 # Sizing equation for computing the required borehole meters (m)
-    HHEqc = (sum(CPS[NSHPC+2:,2])+(1-dHPC)*CPS[NSHPC+1,2])/LHHEC;   # Compute the heat pump power supplied on the hot side of the HP per meter BHE (W/m)
+    LHHEC = np.dot(PHEC,GHHEC/TCC1);                                 # Sizing equation for computing the required borehole meters (m)
     
     # Output results to console
     print('********* Suggested length of horizontal heat exchangers (HHE) *********');

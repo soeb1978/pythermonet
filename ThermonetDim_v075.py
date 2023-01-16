@@ -26,8 +26,8 @@ tic = time.time();                                                    # Track co
 PID = 'Energiakademiet, Samsø';                                     # Project name
 
 # Input files
-HPFN = 'Samso_HPSC.dat';                                            # Input file containing heat pump information
-TOPOFN = 'Samso_TOPO.dat';                                          # Input file containing topology information 
+HPFN = 'Silkeborg_HPSC.dat';                                            # Input file containing heat pump information
+TOPOFN = 'Silkeborg_TOPO.dat';                                          # Input file containing topology information 
 
 # Brine
 rhob = 965;                                                         # Brine density (kg/m3), T = 0C. https://www.handymath.com/cgi-bin/isopropanolwghtvoltble5.cgi?submit=Entry
@@ -52,11 +52,11 @@ Tci = 20;                                                           # Design tem
 SF = 1;                                                             # Ratio of peak heating demand to be covered by the heat pump [0-1]. If SF = 0.8 then the heat pump delivers 80% of the peak heating load. The deficit is then supplied by an auxilliary heating device
 
 # Source selection
-SS = 0;                                                             # SS = 1: Borehole heat exchangers; SS = 0: Horizontal heat exchangers  
+SS = 1;                                                             # SS = 1: Borehole heat exchangers; SS = 0: Horizontal heat exchangers  
 
 if SS == 0:
     # Horizontal heat exchanger (HHE) topology and pipes
-    NHHE = 3;                                                       # Number of HE loops (-)
+    NHHE = 6;                                                       # Number of HE loops (-)
     PDHE = 0.04;                                                    # Outer diameter of HE pipe (m)                   
     HHESDR = 17;                                                    # SDR for HE pipes (-)
     dd = 1.5;                                                       # Pipe segment spacing (m)                            

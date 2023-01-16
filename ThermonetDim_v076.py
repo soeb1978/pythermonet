@@ -52,6 +52,7 @@ class HHE:
         self.dd = dd
         
 class BHE:
+    
     def __init__(self,rb,rp,SDR,lss,rhocss,lg,rhocg,PD,NX,dx,NY,dy):
         self.rb = rb
         self.rp = rp
@@ -73,7 +74,7 @@ def ThermonetDim(PID,HPFN,TOPOFN,BRINE,LPE,THERMONET,HEAT_PUMPS,SOURCE_SELECTION
     ############### User set flow and thermal parameters by medium ################
     
     # Project ID
-    PID = PID;                                     # Project name
+    #PID = PID;                                     # Project name
     
     # Input files
     HPFN = HPFN;                                            # Input file containing heat pump information
@@ -94,7 +95,7 @@ def ThermonetDim(PID,HPFN,TOPOFN,BRINE,LPE,THERMONET,HEAT_PUMPS,SOURCE_SELECTION
     lsh = THERMONET.lsh;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
     lsc = THERMONET.lsc;                                                            # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
     rhocs = THERMONET.rhocs;                                                      # Soil volumetric heat capacity  thermonet and HHE (J/m3/K) OK. Guestimate
-    zd = THERMONET.rhocs;                                                           # Burial depth of thermonet and HHE (m)
+    zd = THERMONET.zd;                                                           # Burial depth of thermonet and HHE (m)
     
     # Heat pump
     Thi = HEAT_PUMPS.Thi;                                                           # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
@@ -106,27 +107,27 @@ def ThermonetDim(PID,HPFN,TOPOFN,BRINE,LPE,THERMONET,HEAT_PUMPS,SOURCE_SELECTION
     
     if SS == 0:
         # Horizontal heat exchanger (HHE) topology and pipes
-        NHHE = HHE.NH;                                                       # Number of HE loops (-)
-        PDHE = HHE.PD;                                                    # Outer diameter of HE pipe (m)                   
-        HHESDR = HHE.SDR;                                                    # SDR for HE pipes (-)
-        dd = HHE.dd;                                                       # Pipe segment spacing (m)                            
+        NHHE = SOURCE.N;                                                       # Number of HE loops (-)
+        PDHE = SOURCE.PD;                                                    # Outer diameter of HE pipe (m)                   
+        HHESDR = SOURCE.SDR;                                                    # SDR for HE pipes (-)
+        dd = SOURCE.dd;                                                       # Pipe segment spacing (m)                            
     
     if SS == 1:
         # Borehole heat exchangers (BHE)
-        rb = BHE.rb;                                                   # Borehole radius (m)                              
-        rp = BHE.rp;                                                      # Outer radius of U pipe (m)                        
-        BHESDR = BHE.SDR;                                                    # SDR for U-pipe (-)                               
-        lss = BHE.lss;                                                     # Soil thermal conductivity along BHEs (W/m/K)     
-        rhocss = BHE.rhocss;                                                # Volumetric heat capacity of soil (along BHE). Assuming 70# quartz and 30# water (J/m3/K) #OK
-        lg = BHE.lg;                                                      # Grout thermal conductivity (W/m/K)               
-        rhocg = BHE.rhocg;                                                    # Grout volumetric heat capacity (J/m3/K)          
-        PD = BHE.PD;                                                     # Wall to wall distance U-pipe legs (m)                                
+        rb = SOURCE.rb;                                                   # Borehole radius (m)                              
+        rp = SOURCE.rp;                                                      # Outer radius of U pipe (m)                        
+        BHESDR = SOURCE.SDR;                                                    # SDR for U-pipe (-)                               
+        lss = SOURCE.lss;                                                     # Soil thermal conductivity along BHEs (W/m/K)     
+        rhocss = SOURCE.rhocss;                                                # Volumetric heat capacity of soil (along BHE). Assuming 70# quartz and 30# water (J/m3/K) #OK
+        lg = SOURCE.lg;                                                      # Grout thermal conductivity (W/m/K)               
+        rhocg = SOURCE.rhocg;                                                    # Grout volumetric heat capacity (J/m3/K)          
+        PD = SOURCE.PD;                                                     # Wall to wall distance U-pipe legs (m)                                
     
         # BHE field
-        NX = BHE.NX;                                                         # Number of boreholes in the x-direction (-)
-        dx = BHE.dx;                                                        # Spacing between boreholes in the x-direction (m)
-        NY = BHE.NY;                                                         # Number of boreholes in the y-direction (-)
-        dy = BHE.dy;                                                        # Spacing between boreholes in the y-direction (m)
+        NX = SOURCE.NX;                                                         # Number of boreholes in the x-direction (-)
+        dx = SOURCE.dx;                                                        # Spacing between boreholes in the x-direction (m)
+        NY = SOURCE.NY;                                                         # Number of boreholes in the y-direction (-)
+        dy = SOURCE.dy;                                                        # Spacing between boreholes in the y-direction (m)
     
     ############### User set flow and thermal parameters by medium END ############
     
@@ -146,7 +147,7 @@ def ThermonetDim(PID,HPFN,TOPOFN,BRINE,LPE,THERMONET,HEAT_PUMPS,SOURCE_SELECTION
     # Load pipe database
     PIPES = pd.read_csv('PIPES.dat', sep = '\t');                       # Open file with available pipe outer diameters (mm). This file can be expanded with additional pipes and used directly.
     PIPES = PIPES.values;                                               # Get numerical values from pipes excluding the headers
-    NP = len(PIPES);                                                    # Number of available pipes
+    #NP = len(PIPES);                                                    # Number of available pipes
     
     ########################### Load all input data END ###########################
     
@@ -240,8 +241,8 @@ def ThermonetDim(PID,HPFN,TOPOFN,BRINE,LPE,THERMONET,HEAT_PUMPS,SOURCE_SELECTION
         y = np.linspace(0,NY-1,NY)*dy;                                  # y-coordinates of BHEs (m)
         NBHE = NX*NY;                                                   # Number of BHEs (-)
         [XX,YY] = np.meshgrid(x,y);                                     # Meshgrid arrays for distance calculations (m)    
-        Yv = np.concatenate(YY);                                        # YY concatenated (m)
-        Xv = np.concatenate(XX);                                        # XX concatenated (m)
+        #Yv = np.concatenate(YY);                                        # YY concatenated (m)
+        #Xv = np.concatenate(XX);                                        # XX concatenated (m)
         
         # Logistics for symmetry considerations and associated efficiency gains
         NXi = int(np.ceil(NX/2));                                       # Find half the number of boreholes in the x-direction. If not an equal number then round up to complete symmetry.
@@ -355,7 +356,7 @@ def ThermonetDim(PID,HPFN,TOPOFN,BRINE,LPE,THERMONET,HEAT_PUMPS,SOURCE_SELECTION
     
     # Compute thermal resistances for pipes in heating mode
     LENGTHS = 2*TOPOH[:,1]*TOPOH[:,2];                                  # Total lengths of different pipe segments (m)
-    TLENGTH = sum(LENGTHS);                                             # Total length of termonet (m)
+    #TLENGTH = sum(LENGTHS);                                             # Total length of termonet (m)
     TOPOH = np.c_[TOPOH,PIPESELH,RENH,LENGTHS];                         # Add pipe selection diameters (m), Reynolds numbers (-) and lengths as columns to the TOPO array
     for i in range(NPG):                                                # For all pipe groups
         Rh[i] = Rp(DiSELH[i],PIPESELH[i],RENH[i],Pr,lb,lp);             # Compute thermal resistances (m*K/W)
@@ -479,18 +480,20 @@ def ThermonetDim(PID,HPFN,TOPOFN,BRINE,LPE,THERMONET,HEAT_PUMPS,SOURCE_SELECTION
         for i in range(NLBHECv):                                         # Compute Rb for the specified number of boreholes and lengths considering flow and length effects (m*K/W)
             Rbcv[i] = RbMPflc(lb,lp,lg,lss,rhob,cb,rb,rp,ri,LBHECv[i],PD,QBHEC,RENBHEC,Pr);    #K. Compute BHE length and flow corrected multipole estimates of Rb for all candidate solutions (m*K/W)
             Tsolc[i] = np.dot(PHEC,np.array([GBHEF[0]/lss + Rbcv[i], GBHEF[1]/lss + Rbcv[i], Rwc]))/LBHECv[i]/NBHE;                             #OK. Use Spitlers sizing formula for computing the corresponding temperature response for all candidate solutions (C)
-        indLBHEC = np.argmax(Tsolc<TCC2);                                # Get rid of candidates that undersize the system. 
-        LBHEC = LBHECv[indLBHEC]*NBHE;                                   # Solution BHE length for cooling (m)
+        indLBHEC = np.argmax(Tsolc < TCC2);                                # Get rid of candidates that undersize the system. 
+        LBHEC = LBHECv[indLBHEC] * NBHE;                                   # Solution BHE length for cooling (m)
         
         if (Tsolc[indLBHEC]-TCC2) > 0.1:
             print('Warning - the length steps used for computing the BHE length for cooling are too big. Reduce the stepsize and recompute a solution.');    
-        
+    
         # Display output in console
         print('********** Suggested length of borehole heat exchangers (BHE) **********'); 
         print(f'Required length of each of the {int(NBHE)} BHEs = {int(np.ceil(LBHEH/NBHE))} m for heating');
         print(f'Required length of each of the {int(NBHE)} BHEs = {int(np.ceil(LBHEC/NBHE))} m for cooling');
         print(f'Maximum pressure loss in BHEs in heating mode = {int(np.ceil(dpBHEH))} Pa/m, Re = {int(round(RENBHEH))}');
         print(f'Maximum pressure loss in BHEs in cooling mode = {int(np.ceil(dpBHEC))} Pa/m, Re = {int(round(RENBHEC))}');
+        
+        return NBHE, LBHEH, LBHEC
     
     # If HHEs are selected as source
     if SS == 0:
@@ -524,6 +527,8 @@ def ThermonetDim(PID,HPFN,TOPOFN,BRINE,LPE,THERMONET,HEAT_PUMPS,SOURCE_SELECTION
         print(f'Required length of each of the {int(NHHE)} horizontal loops = {int(np.ceil(LHHEC/NHHE))} m for cooling');
         print(f'Maximum pressure loss in HHE pipes in heating mode = {int(np.ceil(dpHHEH))} Pa/m, Re = {int(round(RENHHEH))}');
         print(f'Maximum pressure loss in HHE pipes in cooling mode {int(np.ceil(dpHHEC))} Pa/m, Re = {int(round(RENHHEC))}');
+        
+        return NHHE, LHHEH, LHHEC
         
     ############################## Source sizing END ##############################
     

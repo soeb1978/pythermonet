@@ -274,7 +274,7 @@ def ThermonetDim(PID,HPFN,TOPOFN,BRINE,LPE,THERMONET,HEAT_PUMPS,SOURCE_SELECTION
     PSH = ps(S*HPS[:,1:4],HPS[:,4:7]);                                  # Annual (0), monthly (1) and daily (2) thermal load on the ground (W)
     PSH[:,0] = PSH[:,0] - CPS[:,0];                                     # Annual imbalance between heating and cooling, positive for heating (W)
     Qdimh = PSH[:,2]/HPS[:,7]/rhob/cb;                                  # Design flow heating (m3/s)
-    Qdimc = S[2]*CPS[:,2]/CPS[:,4]/rhob/cb;                             # Design flow cooling (m3/s). Using simultaneity factor!
+    Qdimc = CPS[:,2]/CPS[:,4]/rhob/cb;                             # Design flow cooling (m3/s). Using simultaneity factor!
     HPS = np.c_[HPS,Qdimh];                                             # Append to heat pump data structure for heating
     CPS = np.c_[CPS,Qdimc];                                             # Append to heat pump data structure for cooling
     
@@ -493,7 +493,7 @@ def ThermonetDim(PID,HPFN,TOPOFN,BRINE,LPE,THERMONET,HEAT_PUMPS,SOURCE_SELECTION
         print(f'Maximum pressure loss in BHEs in heating mode = {int(np.ceil(dpBHEH))} Pa/m, Re = {int(round(RENBHEH))}');
         print(f'Maximum pressure loss in BHEs in cooling mode = {int(np.ceil(dpBHEC))} Pa/m, Re = {int(round(RENBHEC))}');
         
-        return NBHE, LBHEH, LBHEC
+        return NBHE, LBHEH, LBHEC, LENGTHS, Tco
     
     # If HHEs are selected as source
     if SS == 0:
@@ -528,7 +528,7 @@ def ThermonetDim(PID,HPFN,TOPOFN,BRINE,LPE,THERMONET,HEAT_PUMPS,SOURCE_SELECTION
         print(f'Maximum pressure loss in HHE pipes in heating mode = {int(np.ceil(dpHHEH))} Pa/m, Re = {int(round(RENHHEH))}');
         print(f'Maximum pressure loss in HHE pipes in cooling mode {int(np.ceil(dpHHEC))} Pa/m, Re = {int(round(RENHHEC))}');
         
-        return NHHE, LHHEH, LHHEC
+        return NHHE, LHHEH, LHHEC, LENGTHS, Tco
         
     ############################## Source sizing END ##############################
     

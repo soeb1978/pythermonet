@@ -4,7 +4,7 @@ Created on Wed Jan 11 15:05:17 2023
 
 @author: SOEB
 """
-import numpy as np
+
 from ThermonetDim_v076 import ThermonetDim, BRINE, THERMONET, HEAT_PUMPS, HHE, BHE
 
 ############### User set flow and thermal parameters by medium ################
@@ -43,7 +43,7 @@ SS = 0;                                                             # SS = 1: Bo
 
 if SS == 0:
     # Horizontal heat exchanger (HHE) topology and pipes
-    NHHE = 4;                                                       # Number of HE loops (-)
+    NHHE = 7;                                                       # Number of HE loops (-)
     PDHE = 0.04;                                                    # Outer diameter of HE pipe (m)                   
     HHESDR = 17;                                                    # SDR for HE pipes (-)
     dd = 1.5;                                                       # Pipe segment spacing (m)                            

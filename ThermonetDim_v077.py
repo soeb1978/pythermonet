@@ -29,6 +29,10 @@ PID = 'Energiakademiet, Samsø';                                     # Project n
 HPFN = 'Silkeborg_HPSC.dat';                                            # Input file containing heat pump information
 TOPOFN = 'Silkeborg_TOPO.dat';                                          # Input file containing topology information 
 
+
+DMFN = 'VM_DM.dat';
+TPQFN = 'VM_TPQ.dat';
+
 # Brine
 rhob = 965;                                                         # Brine density (kg/m3), T = 0C. https://www.handymath.com/cgi-bin/isopropanolwghtvoltble5.cgi?submit=Entry
 cb = 4450;                                                          # Brine specific heat (J/kg/K). 4450 J/kg/K is loosly based on Ignatowicz, M., Mazzotti, W., Acuña, J., Melinder, A., & Palm, B. (2017). Different ethyl alcohol secondary fluids used for GSHP in Europe. Presented at the 12th IEA Heat Pump Conference, Rotterdam, 2017. Retrieved from http://urn.kb.se/resolve?urn=urn:nbn:se:kth:diva-215752
@@ -50,6 +54,7 @@ zd = 1.2;                                                           # Burial dep
 Thi = -3;                                                           # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
 Tci = 20;                                                           # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
 SF = 1;                                                             # Ratio of peak heating demand to be covered by the heat pump [0-1]. If SF = 0.8 then the heat pump delivers 80% of the peak heating load. The deficit is then supplied by an auxilliary heating device
+SIZE_PIPE = 0;
 
 # Source selection
 SS = 1;                                                             # SS = 1: Borehole heat exchangers; SS = 0: Horizontal heat exchangers  
@@ -80,59 +85,87 @@ if SS == 1:
 
 ############### User set flow and thermal parameters by medium END ############
 
-############################# Load all input data #############################
-
-# Load heat pump data
-HPS = pd.read_csv(HPFN, sep = '\t+', engine='python');                                # Heat pump input file
-
-# Load grid topology
-TOPOH = np.loadtxt(TOPOFN,skiprows = 1,usecols = (1,2,3));          # Load numeric data from topology file
-TOPOC = TOPOH;
-IPG = pd.read_csv(TOPOFN, sep = '\t+', engine='python');                              # Load the entire file into Panda dataframe
-PGROUP = IPG.iloc[:,0];                                             # Extract pipe group IDs
-IPG = IPG.iloc[:,4];                                                # Extract IDs of HPs connected to the different pipe groups
-NPG = len(IPG);                                                     # Number of pipe groups
-
-# Load pipe database
-PIPES = pd.read_csv('PIPES.dat', sep = '\t');                       # Open file with available pipe outer diameters (mm). This file can be expanded with additional pipes and used directly.
-PIPES = PIPES.values;                                               # Get numerical values from pipes excluding the headers
-NP = len(PIPES);                                                    # Number of available pipes
-
-########################### Load all input data END ###########################
-
-###############################################################################
-################################## INPUT END ##################################
-###############################################################################
-
 # Output to prompt
 print(' ');
 print('************************************************************************')
-print('************************** ThermonetDim v0.75 **************************')
+print('************************** ThermonetDim v0.77 **************************')
 print('************************************************************************')
 print(' ');
 print(f'Project: {PID}');
 
-########### Precomputations and variables that should not be changed ##########
+if SIZE_PIPE == 1:
+    ############################# Load all input data #############################
+    
+    # Load heat pump data
+    HPS = pd.read_csv(HPFN, sep = '\t+', engine='python');                                # Heat pump input file
+    
+    # Load grid topology
+    TOPOH = np.loadtxt(TOPOFN,skiprows = 1,usecols = (1,2,3));          # Load numeric data from topology file
+    TOPOC = TOPOH;
+    IPG = pd.read_csv(TOPOFN, sep = '\t+', engine='python');                              # Load the entire file into Panda dataframe
+    PGROUP = IPG.iloc[:,0];                                             # Extract pipe group IDs
+    IPG = IPG.iloc[:,4];                                                # Extract IDs of HPs connected to the different pipe groups
+    NPG = len(IPG);                                                     # Number of pipe groups
+    
+    # Load pipe database
+    PIPES = pd.read_csv('PIPES.dat', sep = '\t');                       # Open file with available pipe outer diameters (mm). This file can be expanded with additional pipes and used directly.
+    PIPES = PIPES.values;                                               # Get numerical values from pipes excluding the headers
+    NP = len(PIPES);                                                    # Number of available pipes
+    
+    ########################### Load all input data END ###########################
+    
+    ###############################################################################
+    ################################## INPUT END ##################################
+    ###############################################################################
+    
+    ########### Precomputations and variables that should not be changed ##########
+    
+    # Convert pipe diameter database to meters
+    PIPES = PIPES/1000;                                                 # Convert PIPES from mm to m (m)
+    
+    # Heat pump information
+    HPS = HPS.values  # Load numeric data from HP file
+    CPS = HPS[:, 8:]  # Place cooling demand data in separate array
+    HPS = HPS[:, :8]  # Remove cooling demand data from HPS array
+    NHP = len(HPS)  # Number of heat pumps
+    
+    # Add circulation pump power consumption to cooling load (W)
+    CPS[:, :3] = CPS[:, 3:4] / (CPS[:, 3:4] - 1) * CPS[:, :3]                                            # Number of heat pumps
+    
+    # Create array containing arrays of integers with HP IDs for all pipe sections
+    IPGA = [np.asarray(IPG.iloc[i].split(',')).astype(int) - 1 for i in range(NPG)]
+    IPG=IPGA                                                            # Redefine IPG
+    del IPGA;                                                           # Get rid of IPGA
+    
+    # Allocate variables
+    indh = np.zeros(NPG);                                               # Index vector for pipe groups heating (-)
+    indc = np.zeros(NPG);                                               # Index vector for pipe groups cooling (-)
+    PIPESELH = np.zeros(NPG);                                           # Pipes selected from dimensioning for heating (length)
+    PIPESELC = np.zeros(NPG);                                           # Pipes selected from dimensioning for cooling (length)
+    PSH = np.zeros((NHP,3));                                            # Thermal load from heating on the ground (W)
+    QPGH = np.zeros(NPG);                                               # Design flow heating (m3/s)
+    QPGC = np.zeros(NPG);                                               # Design flow cooling (m3/s)
+    Rh = np.zeros(NPG);                                                 # Allocate pipe thermal resistance vector for heating (m*K/W)
+    Rc = np.zeros(NPG);                                                 # Allocate pipe thermal resistance vector for cooling (m*K/W)
+    FPH = np.zeros(NPG);                                                # Vector with total heating load fractions supplied by each pipe segment (-)
+    FPC = np.zeros(NPG);                                                # Vector with total cooling load fractions supplied by each pipe segment (-)
+    
+    GTHMH = np.zeros([NPG,3]);
+    GTHMC = np.zeros([NPG,3]);
+    
+    # Simultaneity factors to apply to annual, monthly and hourly heating and cooling demands
+    S = np.zeros(3);
+    S[2] = SF*(0.62 + 0.38/NHP);                                        # Hourly. Varme Ståbi. Ligning 3 i "Effekt- og samtidighedsforhold ved fjernvarmeforsyning af nye boligområder"
+    S[0]  = 1; #0.62 + 0.38/NHP;                                        # Annual. Varme Ståbi. Ligning 3 i "Effekt- og samtidighedsforhold ved fjernvarmeforsyning af nye boligområder"
+    S[1]  = 1; #S(1);                                                   # Monthly. Varme Ståbi. Ligning 3 i "Effekt- og samtidighedsforhold ved fjernvarmeforsyning af nye boligområder"
 
-# Heat pump information
-HPS = HPS.values  # Load numeric data from HP file
-CPS = HPS[:, 8:]  # Place cooling demand data in separate array
-HPS = HPS[:, :8]  # Remove cooling demand data from HPS array
-NHP = len(HPS)  # Number of heat pumps
-
-# Add circulation pump power consumption to cooling load (W)
-CPS[:, :3] = CPS[:, 3:4] / (CPS[:, 3:4] - 1) * CPS[:, :3]                                            # Number of heat pumps
+################### Skillelinje til if statement ####################
 
 # G-function evaluation times (DO NOT MODIFY!!!!!!!)
 SECONDS_IN_YEAR = 31536000;
 SECONDS_IN_MONTH = 2628000;
 SECONDS_IN_HOUR = 3600;
 t = np.asarray([10 * SECONDS_IN_YEAR + 3 * SECONDS_IN_MONTH + 4 * SECONDS_IN_HOUR, 3 * SECONDS_IN_MONTH + 4 * SECONDS_IN_HOUR, 4 * SECONDS_IN_HOUR], dtype=float);            # time = [10 years + 3 months + 4 hours; 3 months + 4 hours; 4 hours]. Time vector for the temporal superposition (s).   
-
-# Create array containing arrays of integers with HP IDs for all pipe sections
-IPGA = [np.asarray(IPG.iloc[i].split(',')).astype(int) - 1 for i in range(NPG)]
-IPG=IPGA                                                            # Redefine IPG
-del IPGA;                                                           # Get rid of IPGA
 
 # Brine
 kinb = mub/rhob;                                                    # Brine kinematic viscosity (m2/s)  
@@ -144,31 +177,7 @@ A = 7.900272987633280;                                              # Surface te
 T0 = 9.028258373009810;                                             # Undisturbed soil temperature (C) 
 o = 2*np.pi/86400/365.25;                                           # Angular velocity of surface temperature variation (rad/s) 
 ast = lsh/rhocs;                                                    # Shallow soil thermal diffusivity (m2/s) - ONLY for pipes!!! 
-TP = A*mt.exp(-zd*mt.sqrt(o/2/ast));                                # Temperature penalty at burial depth from surface temperature variation (K). Minimum undisturbed temperature is assumed . 
-
-# Convert pipe diameter database to meters
-PIPES = PIPES/1000;                                                 # Convert PIPES from mm to m (m)
-
-# Allocate variables
-indh = np.zeros(NPG);                                               # Index vector for pipe groups heating (-)
-indc = np.zeros(NPG);                                               # Index vector for pipe groups cooling (-)
-PIPESELH = np.zeros(NPG);                                           # Pipes selected from dimensioning for heating (length)
-PIPESELC = np.zeros(NPG);                                           # Pipes selected from dimensioning for cooling (length)
-PSH = np.zeros((NHP,3));                                            # Thermal load from heating on the ground (W)
-QPGH = np.zeros(NPG);                                               # Design flow heating (m3/s)
-QPGC = np.zeros(NPG);                                               # Design flow cooling (m3/s)
-Rh = np.zeros(NPG);                                                 # Allocate pipe thermal resistance vector for heating (m*K/W)
-Rc = np.zeros(NPG);                                                 # Allocate pipe thermal resistance vector for cooling (m*K/W)
-FPH = np.zeros(NPG);                                                # Vector with total heating load fractions supplied by each pipe segment (-)
-FPC = np.zeros(NPG);                                                # Vector with total cooling load fractions supplied by each pipe segment (-)
-GTHMH = np.zeros([NPG,3]);
-GTHMC = np.zeros([NPG,3]);
-
-# Simultaneity factors to apply to annual, monthly and hourly heating and cooling demands
-S = np.zeros(3);
-S[2] = SF*(0.62 + 0.38/NHP);                                        # Hourly. Varme Ståbi. Ligning 3 i "Effekt- og samtidighedsforhold ved fjernvarmeforsyning af nye boligområder"
-S[0]  = 1; #0.62 + 0.38/NHP;                                        # Annual. Varme Ståbi. Ligning 3 i "Effekt- og samtidighedsforhold ved fjernvarmeforsyning af nye boligområder"
-S[1]  = 1; #S(1);                                                   # Monthly. Varme Ståbi. Ligning 3 i "Effekt- og samtidighedsforhold ved fjernvarmeforsyning af nye boligområder"
+TP = A*mt.exp(-zd*mt.sqrt(o/2/ast));                                # Temperature penalty at burial depth from surface temperature variation (K). Minimum undisturbed temperature is assumed .
 
 # If horizontal heat exchangers are selected
 if SS == 0:
@@ -217,89 +226,101 @@ if SS == 1:
 
 ######### Precomputations and variables that should not be changed END ########
 
-################################# Pipe sizing #################################
-
-# Convert thermal load profile on HPs to flow rates
-PSH = ps(S*HPS[:,1:4],HPS[:,4:7]);                                  # Annual (0), monthly (1) and daily (2) thermal load on the ground (W)
-PSH[:,0] = PSH[:,0] - CPS[:,0];                                     # Annual imbalance between heating and cooling, positive for heating (W)
-Qdimh = PSH[:,2]/HPS[:,7]/rhob/cb;                                  # Design flow heating (m3/s)
-Qdimc = CPS[:,2]/CPS[:,4]/rhob/cb;                             # Design flow cooling (m3/s). Using simultaneity factor!
-HPS = np.c_[HPS,Qdimh];                                             # Append to heat pump data structure for heating
-CPS = np.c_[CPS,Qdimc];                                             # Append to heat pump data structure for cooling
-
-# Heat pump and temperature conditions in the sizing equation
-Tho = Thi - sum(Qdimh*HPS[:,7])/sum(Qdimh);                         # Volumetric flow rate weighted average brine delta-T (C)
-TCH1 = T0 - (Thi + Tho)/2 - TP;                                     # Temperature condition for with heating termonet. Eq. 2.19 Advances in GSHP systems. Tp in the book refers to the influence from adjacent BHEs. This effect ignored in this tool.
-Tco = Tci + sum(Qdimc*CPS[:,4])/sum(Qdimc);                         # Volumetric flow rate weighted average brine delta-T (C)
-TCC1 = (Tci + Tco)/2 - T0 - TP;                                     # Temperature condition for with heating termonet. Eq. 2.19 Advances in GSHP systems. Tp in the book refers to the influence from adjacent BHEs. This effect ignored in this tool.                                                    
+if SIZE_PIPES == 1:
+    ################################# Pipe sizing #################################
     
-# Compute flow and pressure loss in BHEs and HHEs under peak load conditions. Temperature conditions are computed as well.
-if SS == 0:
-    # HHE heating
-    QHHEH = sum(Qdimh)/NHHE;                                        # Peak flow in HHE pipes (m3/s)
-    vhheh = QHHEH/np.pi/rihhe**2;                                   # Peak flow velocity in HHE pipes (m/s)
-    RENHHEH = Re(rhob,mub,vhheh,2*rihhe);                           # Peak Reynolds numbers in HHE pipes (-)
-    dpHHEH = dp(rhob,mub,QHHEH,2*rihhe);                            # Peak pressure loss in HHE pipes (Pa/m)
-
-    # HHE cooling
-    QHHEC = sum(Qdimc)/NHHE;                                        # Peak flow in HHE pipes (m3/s)
-    vhhec = QHHEC/np.pi/rihhe**2;                                   # Peak flow velocity in HHE pipes (m/s)
-    RENHHEC = Re(rhob,mub,vhhec,2*rihhe);                           # Peak Reynolds numbers in HHE pipes (-)
-    dpHHEC = dp(rhob,mub,QHHEC,2*rihhe);                            # Peak pressure loss in HHE pipes (Pa/m)
-
-if SS == 1:
-    TCH2 = T0BHE - (Thi + Tho)/2;                                   # Temperature condition for heating with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs (C)
-    TCC2 = (Tci + Tco)/2 - T0BHE;                                   # Temperature condition for cooling with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs (C)
+    # Convert thermal load profile on HPs to flow rates
+    PSH = ps(S*HPS[:,1:4],HPS[:,4:7]);                                  # Annual (0), monthly (1) and daily (2) thermal load on the ground (W)
+    PSH[:,0] = PSH[:,0] - CPS[:,0];                                     # Annual imbalance between heating and cooling, positive for heating (W)
+    Qdimh = PSH[:,2]/HPS[:,7]/rhob/cb;                                  # Design flow heating (m3/s)
+    Qdimc = CPS[:,2]/CPS[:,4]/rhob/cb;                                  # Design flow cooling (m3/s). Using simultaneity factor!
+    HPS = np.c_[HPS,Qdimh];                                             # Append to heat pump data structure for heating
+    CPS = np.c_[CPS,Qdimc];                                             # Append to heat pump data structure for cooling
     
-    # BHE heating
-    QBHEH = sum(Qdimh)/NBHE;                                        # Peak flow in BHE pipes (m3/s)
-    vbheh = QBHEH/np.pi/ri**2;                                      # Flow velocity in BHEs (m/s)
-    RENBHEH = Re(rhob,mub,vbheh,2*ri);                              # Reynold number in BHEs (-)
-    dpBHEH = dp(rhob,mub,QBHEH,2*ri);                               # Pressure loss in BHE (Pa/m)
+    # Heat pump and temperature conditions in the sizing equation
+    Tho = Thi - sum(Qdimh*HPS[:,7])/sum(Qdimh);                         # Volumetric flow rate weighted average brine delta-T (C)
+    TCH1 = T0 - (Thi + Tho)/2 - TP;                                     # Temperature condition for with heating termonet. Eq. 2.19 Advances in GSHP systems. Tp in the book refers to the influence from adjacent BHEs. This effect ignored in this tool.
+    Tco = Tci + sum(Qdimc*CPS[:,4])/sum(Qdimc);                         # Volumetric flow rate weighted average brine delta-T (C)
+    TCC1 = (Tci + Tco)/2 - T0 - TP;                                     # Temperature condition for with heating termonet. Eq. 2.19 Advances in GSHP systems. Tp in the book refers to the influence from adjacent BHEs. This effect ignored in this tool.                                                    
+        
+    # Compute flow and pressure loss in BHEs and HHEs under peak load conditions. Temperature conditions are computed as well.
+    if SS == 0:
+        # HHE heating
+        QHHEH = sum(Qdimh)/NHHE;                                        # Peak flow in HHE pipes (m3/s)
+        vhheh = QHHEH/np.pi/rihhe**2;                                   # Peak flow velocity in HHE pipes (m/s)
+        RENHHEH = Re(rhob,mub,vhheh,2*rihhe);                           # Peak Reynolds numbers in HHE pipes (-)
+        dpHHEH = dp(rhob,mub,QHHEH,2*rihhe);                            # Peak pressure loss in HHE pipes (Pa/m)
     
-    # BHE cooling
-    QBHEC = sum(Qdimc)/NBHE;                                        # Peak flow in BHE pipes (m3/s)
-    vbhec = QBHEC/np.pi/ri**2;                                      # Flow velocity in BHEs (m/s)
-    RENBHEC = Re(rhob,mub,vbhec,2*ri);                              # Reynold number in BHEs (-)
-    dpBHEC = dp(rhob,mub,QBHEC,2*ri);                               # Pressure loss in BHE (Pa/m)
+        # HHE cooling
+        QHHEC = sum(Qdimc)/NHHE;                                        # Peak flow in HHE pipes (m3/s)
+        vhhec = QHHEC/np.pi/rihhe**2;                                   # Peak flow velocity in HHE pipes (m/s)
+        RENHHEC = Re(rhob,mub,vhhec,2*rihhe);                           # Peak Reynolds numbers in HHE pipes (-)
+        dpHHEC = dp(rhob,mub,QHHEC,2*rihhe);                            # Peak pressure loss in HHE pipes (Pa/m)
+    
+    if SS == 1:
+        TCH2 = T0BHE - (Thi + Tho)/2;                                   # Temperature condition for heating with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs (C)
+        TCC2 = (Tci + Tco)/2 - T0BHE;                                   # Temperature condition for cooling with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs (C)
+        
+        # BHE heating
+        QBHEH = sum(Qdimh)/NBHE;                                        # Peak flow in BHE pipes (m3/s)
+        vbheh = QBHEH/np.pi/ri**2;                                      # Flow velocity in BHEs (m/s)
+        RENBHEH = Re(rhob,mub,vbheh,2*ri);                              # Reynold number in BHEs (-)
+        dpBHEH = dp(rhob,mub,QBHEH,2*ri);                               # Pressure loss in BHE (Pa/m)
+        
+        # BHE cooling
+        QBHEC = sum(Qdimc)/NBHE;                                        # Peak flow in BHE pipes (m3/s)
+        vbhec = QBHEC/np.pi/ri**2;                                      # Flow velocity in BHEs (m/s)
+        RENBHEC = Re(rhob,mub,vbhec,2*ri);                              # Reynold number in BHEs (-)
+        dpBHEC = dp(rhob,mub,QBHEC,2*ri);                               # Pressure loss in BHE (Pa/m)
+    
+    # Compute design flow for the pipes
+    for i in range(NPG):
+       QPGH[i]=sum(HPS[np.ndarray.tolist(IPG[i]),8])/TOPOH[i,2];        # Sum the heating brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
+       QPGC[i]=sum(CPS[np.ndarray.tolist(IPG[i]),5])/TOPOC[i,2];        # Sum the cooling brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
+    
+    # Select the smallest diameter pipe that fulfills the pressure drop criterion
+    for i in range(NPG):                                 
+        PIPESI = PIPES*(1-2/TOPOH[i,0]);                                # Compute inner diameters (m). Variable TOPOH or TOPOC are identical here.
+        indh[i] = np.argmax(dp(rhob,mub,QPGH[i],PIPESI)<dpt);           # Find first pipe with a pressure loss less than the target for heating (-)
+        indc[i] = np.argmax(dp(rhob,mub,QPGC[i],PIPESI)<dpt);           # Find first pipe with a pressure loss less than the target for cooling (-)
+        PIPESELH[i] = PIPES[int(indh[i])];                              # Store pipe selection for heating in new variable (m)
+        PIPESELC[i] = PIPES[int(indc[i])];                              # Store pipe selection for cooling in new variable (m)
+    indh = indh.astype(int);                            
+    indc = indc.astype(int);
+    
+    # Compute Reynolds number for selected pipes for heating
+    DiSELH = PIPESELH*(1-2/TOPOH[:,0]);                                 # Compute inner diameter of selected pipes (m)
+    vh = QPGH/np.pi/DiSELH**2*4;                                        # Compute flow velocity for selected pipes (m/s)
+    RENH = Re(rhob,mub,vh,DiSELH);                                      # Compute Reynolds numbers for the selected pipes (-)
+    
+    # Compute Reynolds number for selected pipes for cooling
+    DiSELC = PIPESELC*(1-2/TOPOC[:,0]);                                 # Compute inner diameter of selected pipes (m)
+    vc = QPGC/np.pi/DiSELC**2*4;                                        # Compute flow velocity for selected pipes (m/s)
+    RENC = Re(rhob,mub,vc,DiSELC);                                      # Compute Reynolds numbers for the selected pipes (-)
+    
+    # Output the pipe sizing
+    print(' ');
+    print('******************* Suggested pipe dimensions heating ******************'); 
+    for i in range(NPG):
+        print(f'{PGROUP.iloc[i]}: Ø{int(1000*PIPESELH[i])} mm SDR {int(TOPOH[i,0])}, Re = {int(round(RENH[i]))}');
+    print(' ');
+    print('******************* Suggested pipe dimensions cooling ******************');
+    for i in range(NPG):
+        print(f'{PGROUP.iloc[i]}: Ø{int(1000*PIPESELC[i])} mm SDR {int(TOPOC[i,0])}, Re = {int(round(RENC[i]))}');
+    print(' ');
+    
+    ############################### Pipe sizing END ###############################
 
-# Compute design flow for the pipes
-for i in range(NPG):
-   QPGH[i]=sum(HPS[np.ndarray.tolist(IPG[i]),8])/TOPOH[i,2];        # Sum the heating brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
-   QPGC[i]=sum(CPS[np.ndarray.tolist(IPG[i]),5])/TOPOC[i,2];        # Sum the cooling brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
+# Load demand profile
+DM = pd.read_csv(DMFN, sep = '\t+', engine='python');                                # Demand profile input file
 
-# Select the smallest diameter pipe that fulfills the pressure drop criterion
-for i in range(NPG):                                 
-    PIPESI = PIPES*(1-2/TOPOH[i,0]);                                # Compute inner diameters (m). Variable TOPOH or TOPOC are identical here.
-    indh[i] = np.argmax(dp(rhob,mub,QPGH[i],PIPESI)<dpt);           # Find first pipe with a pressure loss less than the target for heating (-)
-    indc[i] = np.argmax(dp(rhob,mub,QPGC[i],PIPESI)<dpt);           # Find first pipe with a pressure loss less than the target for cooling (-)
-    PIPESELH[i] = PIPES[int(indh[i])];                              # Store pipe selection for heating in new variable (m)
-    PIPESELC[i] = PIPES[int(indc[i])];                              # Store pipe selection for cooling in new variable (m)
-indh = indh.astype(int);                            
-indc = indc.astype(int);
-
-# Compute Reynolds number for selected pipes for heating
-DiSELH = PIPESELH*(1-2/TOPOH[:,0]);                                 # Compute inner diameter of selected pipes (m)
-vh = QPGH/np.pi/DiSELH**2*4;                                        # Compute flow velocity for selected pipes (m/s)
-RENH = Re(rhob,mub,vh,DiSELH);                                      # Compute Reynolds numbers for the selected pipes (-)
-
-# Compute Reynolds number for selected pipes for cooling
-DiSELC = PIPESELC*(1-2/TOPOC[:,0]);                                 # Compute inner diameter of selected pipes (m)
-vc = QPGC/np.pi/DiSELC**2*4;                                        # Compute flow velocity for selected pipes (m/s)
-RENC = Re(rhob,mub,vc,DiSELC);                                      # Compute Reynolds numbers for the selected pipes (-)
-
-# Output the pipe sizing
-print(' ');
-print('******************* Suggested pipe dimensions heating ******************'); 
-for i in range(NPG):
-    print(f'{PGROUP.iloc[i]}: Ø{int(1000*PIPESELH[i])} mm SDR {int(TOPOH[i,0])}, Re = {int(round(RENH[i]))}');
-print(' ');
-print('******************* Suggested pipe dimensions cooling ******************');
-for i in range(NPG):
-    print(f'{PGROUP.iloc[i]}: Ø{int(1000*PIPESELC[i])} mm SDR {int(TOPOC[i,0])}, Re = {int(round(RENC[i]))}');
-print(' ');
-
-############################### Pipe sizing END ###############################
+# Load grid topology and brine flow file
+TOPOH = np.loadtxt(TPQFN,skiprows = 1,usecols = (1,2,3,4,5,6));          # Load numeric data from topology file
+TOPOC = TOPOH;
+IPG = pd.read_csv(TOPOFN, sep = '\t+', engine='python');                              # Load the entire file into Panda dataframe
+PGROUP = IPG.iloc[:,0];                                             # Extract pipe group IDs
+IPG = IPG.iloc[:,4];                                                # Extract IDs of HPs connected to the different pipe groups
+NPG = len(IPG);                                                     # Number of pipe groups
 
 ################## Compute temperature response of thermonet ##################
 

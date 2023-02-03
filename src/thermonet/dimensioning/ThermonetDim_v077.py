@@ -108,7 +108,7 @@ if SIZE_PIPE == 1:
     NPG = len(IPG);                                                     # Number of pipe groups
     
     # Load pipe database
-    PIPES = pd.read_csv('PIPES.dat', sep = '\t');                       # Open file with available pipe outer diameters (mm). This file can be expanded with additional pipes and used directly.
+    PIPES = pd.read_csv('data/equipment/PIPES.dat', sep ='\t');                       # Open file with available pipe outer diameters (mm). This file can be expanded with additional pipes and used directly.
     PIPES = PIPES.values;                                               # Get numerical values from pipes excluding the headers
     NP = len(PIPES);                                                    # Number of available pipes
     

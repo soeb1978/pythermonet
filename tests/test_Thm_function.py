@@ -5,7 +5,7 @@ Created on Wed Jan 11 15:05:17 2023
 @author: SOEB
 """
 
-from ThermonetDim_v076 import ThermonetDim, BRINE, THERMONET, HEAT_PUMPS, HHE, BHE
+from src.thermonet.dimensioning.ThermonetDim_v076 import ThermonetDim, BRINE, THERMONET, HEAT_PUMPS, HHE, BHE
 
 ############### User set flow and thermal parameters by medium ################
 

@@ -26,8 +26,8 @@ tic = time.time();                                                    # Track co
 PID = 'Energiakademiet, Samsø';                                     # Project name
 
 # Input files
-HP_file = 'Silkeborg_HPSC.dat';                                            # Input file containing heat pump information
-TOPO_file = 'Silkeborg_TOPO.dat';                                          # Input file containing topology information 
+HP_file = 'examples/data/sites/Silkeborg_HPSC.dat';                                            # Input file containing heat pump information
+TOPO_file = 'examples/data/sites/Silkeborg_TOPO.dat';                                          # Input file containing topology information
 
 # Brine (fluid)
 rho_f = 965;                                                         # Brine density (kg/m3), T = 0C. https://www.handymath.com/cgi-bin/isopropanolwghtvoltble5.cgi?submit=Entry
@@ -94,7 +94,7 @@ I_PG = I_PG.iloc[:,4];                                                # Extract 
 N_PG = len(I_PG);                                                     # Number of pipe groups
 
 # Load pipe database
-d_pipes = pd.read_csv('PIPES.dat', sep = '\t');                       # Open file with available pipe outer diameters (mm). This file can be expanded with additional pipes and used directly.
+d_pipes = pd.read_csv('data/equipment/PIPES.dat', sep ='\t');                       # Open file with available pipe outer diameters (mm). This file can be expanded with additional pipes and used directly.
 d_pipes = d_pipes.values;                                               # Get numerical values from pipes excluding the headers
 #NP = len(d_pipes); #KART variablen bruges aldrig -> slet                                                   # Number of available pipes
 

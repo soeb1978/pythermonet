@@ -18,6 +18,7 @@ import math as mt
 from .fThermonetDim import ils, ps, Re, dp, Rp, CSM, RbMP, GCLS, RbMPflc
 import time
 from dataclasses import dataclass
+
 from pathlib import Path
 
 @dataclass
@@ -38,6 +39,7 @@ class BTESConfiguation:
     NY:int = 6 # Number of boreholes in the y-direction (-)
     dy:float = 15  # Spacing between boreholes in the y-direction (m)
 
+
 @dataclass
 class HorizontalConfiguration:
     # Horizontal heat exchanger (HHE) topology and pipes
@@ -45,6 +47,7 @@ class HorizontalConfiguration:
     PDHE:float = 0.04;  # Outer diameter of HE pipe (m)
     HHESDR:float = 17;  # SDR for HE pipes (-)
     dd:float = 1.5;  # Pipe segment spacing (m)
+
 
 @dataclass
 class DimensioningConfgiuration:
@@ -82,7 +85,7 @@ class DimensioningConfgiuration:
 
 
 
-def run_dimensioning(c: DimensioningConfgiuration):
+def run_dimensioning(c: DimensioningConfgiuration, print_computation_time=True):
     tic = time.time();  # Track computation time (s)
 
 
@@ -541,12 +544,12 @@ def run_dimensioning(c: DimensioningConfgiuration):
             f'Maximum pressure loss in HHE pipes in cooling mode {int(np.ceil(dpHHEC))} Pa/m, Re = {int(round(RENHHEC))}');
 
     ############################## Source sizing END ##############################
-
-    # Output computation time to console
-    print(' ');
-    print('*************************** Computation time ***************************');
-    toc = time.time();  # Track computation time (s)
-    print(f'Elapsed time: {round(toc - tic, 6)} seconds');
+    if print_computation_time:
+        # Output computation time to console
+        print(' ');
+        print('*************************** Computation time ***************************');
+        toc = time.time();  # Track computation time (s)
+        print(f'Elapsed time: {round(toc - tic, 6)} seconds');
 
 ################## CONCEPTUAL MODEL DRAWINGS FOR REFERENCE ####################
 

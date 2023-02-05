@@ -1,6 +1,6 @@
 from thermonet.dimensioning.dimensioning import run_dimensioning
 from thermonet.dimensioning.dimensioning_classes import BTESConfiguation, HorizontalConfiguration, Brine, Heatpump, \
-    Thermonet, DimensioningConfgiuration, DimensioningResults
+    Thermonet, DimensioningConfiguration, DimensioningResults
 from pathlib import Path
 import json
 
@@ -33,7 +33,7 @@ btes = BTESConfiguation(
     NY=6,  # Number of boreholes in the y-direction (-)
     dy=15,  # Spacing between boreholes in the y-direction (m)
 )
-basic_configuration = DimensioningConfgiuration(
+basic_configuration = DimensioningConfiguration(
 
 
 

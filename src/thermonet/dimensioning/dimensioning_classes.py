@@ -60,7 +60,7 @@ class Thermonet:
 
 
 @dataclass
-class DimensioningConfgiuration:
+class DimensioningConfiguration:
     PID:str
     # Input files
     HPFN:str  # Input file containing heat pump information

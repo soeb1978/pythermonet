@@ -1,6 +1,6 @@
 from thermonet.dimensioning.dimensioning import run_dimensioning
 from thermonet.dimensioning.dimensioning_classes import BTESConfiguation, HorizontalConfiguration, Brine, Heatpump, \
-    Thermonet, DimensioningConfgiuration
+    Thermonet, DimensioningConfiguration
 
 if __name__ == '__main__':
     # Source selection
@@ -31,7 +31,7 @@ if __name__ == '__main__':
         NY=6,                                                         # Number of boreholes in the y-direction (-)
         dy=15,                                                        # Spacing between boreholes in the y-direction (m)
     )
-    c = DimensioningConfgiuration(
+    c = DimensioningConfiguration(
 
 
     ############### User set flow and thermal parameters by medium ################

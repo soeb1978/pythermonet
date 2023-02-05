@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 import math as mt
 
-from .dimensioning_classes import BTESConfiguation, HorizontalConfiguration, DimensioningConfgiuration, \
+from .dimensioning_classes import BTESConfiguation, HorizontalConfiguration, DimensioningConfiguration, \
     DimensioningResults, PipeResult, EnergyProductionResult, HEResult, HEType
 from .fThermonetDim import ils, ps, Re, dp, Rp, CSM, RbMP, GCLS, RbMPflc
 import time
@@ -24,7 +24,7 @@ import time
 from pathlib import Path
 
 
-def run_dimensioning(c: DimensioningConfgiuration, print_computation_time=True):
+def run_dimensioning(c: DimensioningConfiguration, print_computation_time=True):
     tic = time.time();  # Track computation time (s)
 
     folder = Path(__file__).parent.joinpath("examples")

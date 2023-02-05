@@ -2,7 +2,9 @@ from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 from typing import List
 from enum import Enum
+from pathlib import Path
 
+@dataclass_json
 @dataclass
 class BTESConfiguation:
     # Borehole heat exchangers (BHE)
@@ -21,7 +23,7 @@ class BTESConfiguation:
     NY:int = 6 # Number of boreholes in the y-direction (-)
     dy:float = 15  # Spacing between boreholes in the y-direction (m)
 
-
+@dataclass_json
 @dataclass
 class HorizontalConfiguration:
     # Horizontal heat exchanger (HHE) topology and pipes
@@ -30,7 +32,7 @@ class HorizontalConfiguration:
     HHESDR:float = 17;  # SDR for HE pipes (-)
     dd:float = 1.5;  # Pipe segment spacing (m)
 
-
+@dataclass_json
 @dataclass
 class Brine:
     # Brine
@@ -39,7 +41,7 @@ class Brine:
     mub: float = 5e-3  # Brine dynamic viscosity (Pa*s). Source see above reference.
     lb: float = 0.45  # Brine thermal conductivity (W/m/K). https://www.researchgate.net/publication/291350729_Investigation_of_ethanol_based_secondary_fluids_with_denaturing_agents_and_other_additives_used_for_borehole_heat_exchangers
 
-
+@dataclass_json
 @dataclass
 class Heatpump:
     # Heat pump
@@ -48,6 +50,7 @@ class Heatpump:
     SF: float = 1  # Ratio of peak heating demand to be covered by the heat pump [0-1]. If SF = 0.8 then the heat pump delivers 80% of the peak heating load. The deficit is then supplied by an auxilliary heating device
 
 
+@dataclass_json
 @dataclass()
 class Thermonet:
     # Thermonet and HHE
@@ -58,13 +61,13 @@ class Thermonet:
     rhocs: float = 2.5e6  # Soil volumetric heat capacity  thermonet and HHE (J/m3/K) OK. Guestimate
     zd: float = 1.2  # Burial depth of thermonet and HHE (m)
 
-
+@dataclass_json
 @dataclass
 class DimensioningConfiguration:
     PID:str
     # Input files
-    HPFN:str  # Input file containing heat pump information
-    TOPOFN: str # Input file containing topology information
+    HPFN: Path  # Input file containing heat pump information
+    TOPOFN: Path # Input file containing topology information
 
     # Select source using the configuration type
     ground_heatexchanger_configuration: BTESConfiguation | HorizontalConfiguration

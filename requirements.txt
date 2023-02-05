@@ -4,3 +4,4 @@ scipy
 mpmath
 pytest
 dataclasses_json
+json2html

@@ -27,18 +27,18 @@ from pathlib import Path
 def run_dimensioning(c: DimensioningConfiguration, print_computation_time=True):
     tic = time.time();  # Track computation time (s)
 
-    folder = Path(__file__).parent.joinpath("examples")
+    #folder = Path(__file__).parent.joinpath("examples")
 
 
     ############################# Load all input data #############################
 
     # Load heat pump data
-    HPS = pd.read_csv(folder.joinpath(c.HPFN), sep='\t+', engine='python');  # Heat pump input file
+    HPS = pd.read_csv(c.HPFN, sep='\t+', engine='python');  # Heat pump input file
 
     # Load grid topology
-    TOPOH = np.loadtxt(folder.joinpath(c.TOPOFN), skiprows=1, usecols=(1, 2, 3));  # Load numeric data from topology file
+    TOPOH = np.loadtxt(c.TOPOFN, skiprows=1, usecols=(1, 2, 3));  # Load numeric data from topology file
     TOPOC = TOPOH;
-    IPG = pd.read_csv(folder.joinpath(c.TOPOFN), sep='\t+', engine='python');  # Load the entire file into Panda dataframe
+    IPG = pd.read_csv(c.TOPOFN, sep='\t+', engine='python');  # Load the entire file into Panda dataframe
     PGROUP = IPG.iloc[:, 0];  # Extract pipe group IDs
     IPG = IPG.iloc[:, 4];  # Extract IDs of HPs connected to the different pipe groups
     NPG = len(IPG);  # Number of pipe groups
@@ -226,21 +226,21 @@ def run_dimensioning(c: DimensioningConfiguration, print_computation_time=True):
         c_btes = c.ground_heatexchanger_configuration
 
         TCH2 = T0BHE - (
-                    c.Thi + Tho) / 2;  # Temperature condition for heating with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs (C)
+                    c.heatpump.Thi + Tho) / 2;  # Temperature condition for heating with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs (C)
         TCC2 = (
-                           c.Tci + Tco) / 2 - T0BHE;  # Temperature condition for cooling with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs (C)
+                           c.heatpump.Tci + Tco) / 2 - T0BHE;  # Temperature condition for cooling with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs (C)
 
         # BHE heating
         QBHEH = sum(Qdimh) / NBHE;  # Peak flow in BHE pipes (m3/s)
         vbheh = QBHEH / np.pi / ri ** 2;  # Flow velocity in BHEs (m/s)
-        RENBHEH = Re(c.rhob, c.mub, vbheh, 2 * ri);  # Reynold number in BHEs (-)
-        dpBHEH = dp(c.rhob, c.mub, QBHEH, 2 * ri);  # Pressure loss in BHE (Pa/m)
+        RENBHEH = Re(c.brine.rhob, c.brine.mub, vbheh, 2 * ri);  # Reynold number in BHEs (-)
+        dpBHEH = dp(c.brine.rhob, c.brine.mub, QBHEH, 2 * ri);  # Pressure loss in BHE (Pa/m)
 
         # BHE cooling
         QBHEC = sum(Qdimc) / NBHE;  # Peak flow in BHE pipes (m3/s)
         vbhec = QBHEC / np.pi / ri ** 2;  # Flow velocity in BHEs (m/s)
-        RENBHEC = Re(c.rhob, c.mub, vbhec, 2 * ri);  # Reynold number in BHEs (-)
-        dpBHEC = dp(c.rhob, c.mub, QBHEC, 2 * ri);  # Pressure loss in BHE (Pa/m)
+        RENBHEC = Re(c.brine.rhob, c.brine.mub, vbhec, 2 * ri);  # Reynold number in BHEs (-)
+        dpBHEC = dp(c.brine.rhob, c.brine.mub, QBHEC, 2 * ri);  # Pressure loss in BHE (Pa/m)
 
     # Compute design flow for the pipes
     for i in range(NPG):
@@ -356,7 +356,7 @@ def run_dimensioning(c: DimensioningConfiguration, print_computation_time=True):
         ###########################################################################
 
         ######################### Generate G-functions ############################
-        GBHE = CSM(c.rb, c.rb, t[0:2], ass);  # Compute g-functions for t[0] and t[1] with the cylindrical source model (-)
+        GBHE = CSM(c_btes.rb, c_btes.rb, t[0:2], ass);  # Compute g-functions for t[0] and t[1] with the cylindrical source model (-)
         s1 = 0;  # Summation variable for t[0] G-function (-)
         s2 = 0;  # Summation variable for t[1] G-function (-)
         for i in range(
@@ -373,18 +373,18 @@ def run_dimensioning(c: DimensioningConfiguration, print_computation_time=True):
                       1] + s2 / swv;  # Add the average neighbour contribution to the borehole field G-function for t[1] (-)
 
         # Compute borehole resistance with the first order multipole method ignoring flow and length effects
-        Rbh = RbMP(lb, lp, lg, lss, rb, rp, ri, PD, RENBHEH, Pr);  # Compute the borehole thermal resistance (m*K/W)
-        Rbc = RbMP(lb, lp, lg, lss, rb, rp, ri, PD, RENBHEC, Pr);  # Compute the borehole thermal resistance (m*K/W)
+        Rbh = RbMP(c.brine.lb, c.lp, c_btes.lg, c_btes.lss, c_btes.rb, c_btes.rp, ri, PD, RENBHEH, Pr);  # Compute the borehole thermal resistance (m*K/W)
+        Rbc = RbMP(c.brine.lb, c.lp, c_btes.lg, c_btes.lss, c_btes.rb, c_btes.rp, ri, PD, RENBHEC, Pr);  # Compute the borehole thermal resistance (m*K/W)
         # Rb = 0.12;                                                     # TRT estimate can be supplied instread (m*K/W)
 
         # Composite cylindrical source model GCLS() for short term response. Hu et al. 2014. Paper here: https://www.sciencedirect.com/science/article/abs/pii/S0378778814005866?via#3Dihub
-        reh = rb / np.exp(
-            2 * np.pi * lg * Rbh);  # Heating: Compute the equivalent pipe radius for cylindrical symmetry (m). This is how Hu et al. 2014 define it.
-        rec = rb / np.exp(
-            2 * np.pi * lg * Rbc);  # Cooling: Compute the equivalent pipe radius for cylindrical symmetry (m). This is how Hu et al. 2014 define it.
+        reh = c_btes.rb / np.exp(
+            2 * np.pi * c_btes.lg * Rbh);  # Heating: Compute the equivalent pipe radius for cylindrical symmetry (m). This is how Hu et al. 2014 define it.
+        rec = c_btes.rb / np.exp(
+            2 * np.pi * c_btes.lg * Rbc);  # Cooling: Compute the equivalent pipe radius for cylindrical symmetry (m). This is how Hu et al. 2014 define it.
 
         # The Fourier numbers Fo1-Fo3 are neccesary for computing the solution
-        Fo1 = ass * t[2] / rb ** 2;
+        Fo1 = ass * t[2] / c_btes.rb ** 2;
         G1 = GCLS(Fo1);
 
         Fo2h = ag * t[2] / reh ** 2;
@@ -393,16 +393,16 @@ def run_dimensioning(c: DimensioningConfiguration, print_computation_time=True):
         Fo2c = ag * t[2] / rec ** 2;
         G2c = GCLS(Fo2c);
 
-        Fo3 = ag * t[2] / rb ** 2;
+        Fo3 = ag * t[2] / c_btes.rb ** 2;
         G3 = GCLS(Fo3);
 
-        Rwh = G1 / lss + G2h / lg - G3 / lg;  # Step response for short term model on the form q*Rw = T (m*K/W). Rw indicates that it is in fact a thermal resistance
-        Rwc = G1 / lss + G2c / lg - G3 / lg;  # Step response for short term model on the form q*Rw = T (m*K/W). Rw indicates that it is in fact a thermal resistance
+        Rwh = G1 / c_btes.lss + G2h / c_btes.lg - G3 / c_btes.lg;  # Step response for short term model on the form q*Rw = T (m*K/W). Rw indicates that it is in fact a thermal resistance
+        Rwc = G1 / c_btes.lss + G2c / c_btes.lg - G3 / c_btes.lg;  # Step response for short term model on the form q*Rw = T (m*K/W). Rw indicates that it is in fact a thermal resistance
 
         # Compute approximate combined length of BHES (length effects not considered)
         GBHEF = GBHE;  # Retain a copy of the G function for length correction later on (-)
-        GBHEH = np.asarray([GBHE[0] / lss + Rbh, GBHE[1] / lss + Rbh, Rwh]);  # Heating G-function
-        GBHEC = np.asarray([GBHE[0] / lss + Rbc, GBHE[1] / lss + Rbc, Rwc]);  # Cooling G-function
+        GBHEH = np.asarray([GBHE[0] / c_btes.lss + Rbh, GBHE[1] / c_btes.lss + Rbh, Rwh]);  # Heating G-function
+        GBHEC = np.asarray([GBHE[0] / c_btes.lss + Rbc, GBHE[1] / c_btes.lss + Rbc, Rwc]);  # Cooling G-function
         LBHEH = np.dot(PHEH, GBHEH / TCH2);  # Sizing equation for computing the required borehole meters for heating (m)
         LBHEC = np.dot(PHEC, GBHEC / TCC2);  # Sizing equation for computing the required borehole meters for cooling (m)
 
@@ -421,9 +421,9 @@ def run_dimensioning(c: DimensioningConfiguration, print_computation_time=True):
 
         for i in range(
                 NLBHEHv):  # Compute Rb for the specified number of boreholes and lengths considering flow and length effects (m*K/W)
-            Rbhv[i] = RbMPflc(lb, lp, lg, lss, rhob, cb, rb, rp, ri, LBHEHv[i], PD, QBHEH, RENBHEH,
+            Rbhv[i] = RbMPflc(c.brine.lb, c.lp, c_btes.lg, c_btes.lss, c.brine.rhob, c.brine.cb, c_btes.rb, c_btes.rp, ri, LBHEHv[i], PD, QBHEH, RENBHEH,
                               Pr);  # Compute BHE length and flow corrected multipole estimates of Rb for all candidate solutions (m*K/W)
-            Tsolh[i] = np.dot(PHEH, np.array([GBHEF[0] / lss + Rbhv[i], GBHEF[1] / lss + Rbhv[i], Rwh])) / LBHEHv[
+            Tsolh[i] = np.dot(PHEH, np.array([GBHEF[0] / c_btes.lss + Rbhv[i], GBHEF[1] / c_btes.lss + Rbhv[i], Rwh])) / LBHEHv[
                 i] / NBHE;  # OK. Use Spitlers sizing formula for computing the corresponding temperature response for all candidate solutions (C)
         indLBHEH = np.argmax(Tsolh < TCH2);  # Get rid of candidates that undersize the system.
         LBHEH = LBHEHv[indLBHEH] * NBHE;  # Solution to BHE length for heating (m)
@@ -434,9 +434,9 @@ def run_dimensioning(c: DimensioningConfiguration, print_computation_time=True):
 
         for i in range(
                 NLBHECv):  # Compute Rb for the specified number of boreholes and lengths considering flow and length effects (m*K/W)
-            Rbcv[i] = RbMPflc(lb, lp, lg, lss, rhob, cb, rb, rp, ri, LBHECv[i], PD, QBHEC, RENBHEC,
+            Rbcv[i] = RbMPflc(c.brine.lb, c.lp, c_btes.lg, c_btes.lss, c.brine.rhob, c.brine.cb, c_btes.rb, c_btes.rp, ri, LBHECv[i], PD, QBHEC, RENBHEC,
                               Pr);  # K. Compute BHE length and flow corrected multipole estimates of Rb for all candidate solutions (m*K/W)
-            Tsolc[i] = np.dot(PHEC, np.array([GBHEF[0] / lss + Rbcv[i], GBHEF[1] / lss + Rbcv[i], Rwc])) / LBHECv[
+            Tsolc[i] = np.dot(PHEC, np.array([GBHEF[0] / c_btes.lss + Rbcv[i], GBHEF[1] / c_btes.lss + Rbcv[i], Rwc])) / LBHECv[
                 i] / NBHE;  # OK. Use Spitlers sizing formula for computing the corresponding temperature response for all candidate solutions (C)
         indLBHEC = np.argmax(Tsolc < TCC2);  # Get rid of candidates that undersize the system.
         LBHEC = LBHECv[indLBHEC] * NBHE;  # Solution BHE length for cooling (m)

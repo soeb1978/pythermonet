@@ -2,7 +2,6 @@ from thermonet.dimensioning.dimensioning import run_dimensioning
 from thermonet.dimensioning.dimensioning_classes import BTESConfiguation, HorizontalConfiguration, Brine, Heatpump, \
     Thermonet, DimensioningConfiguration, DimensioningResults
 from pathlib import Path
-import json
 
 # High level regression test on results verified manually
 # Source selection
@@ -43,8 +42,8 @@ basic_configuration = DimensioningConfiguration(
     PID='Energiakademiet, Samsø',                                     # Project name
 
     # Input files
-    HPFN='./data/sites/Silkeborg_HPSC.dat',                                            # Input file containing heat pump information
-    TOPOFN='./data/sites/Silkeborg_TOPO.dat',                                          # Input file containing topology information
+    HPFN=Path('../src/thermonet/dimensioning/examples/data/sites/Silkeborg_HPSC.dat'),                                            # Input file containing heat pump information
+    TOPOFN=Path('../src/thermonet/dimensioning/examples/data/sites/Silkeborg_TOPO.dat'),                                          # Input file containing topology information
 
     ground_heatexchanger_configuration=horizontal if SS else btes,
 

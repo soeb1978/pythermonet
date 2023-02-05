@@ -1,0 +1,3 @@
+numerous-image-tools
+plotly
+numerous-html-report-generator

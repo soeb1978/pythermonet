@@ -15,96 +15,36 @@ Created on Fri Nov  4 08:53:07 2022
 import numpy as np
 import pandas as pd
 import math as mt
+
+from .dimensioning_classes import BTESConfiguation, HorizontalConfiguration, DimensioningConfgiuration, \
+    DimensioningResults, PipeResult, EnergyProductionResult, HEResult, HEType
 from .fThermonetDim import ils, ps, Re, dp, Rp, CSM, RbMP, GCLS, RbMPflc
 import time
-from dataclasses import dataclass
 
 from pathlib import Path
-
-@dataclass
-class BTESConfiguation:
-    # Borehole heat exchangers (BHE)
-    rb:float = 0.152 / 2  # Borehole radius (m)
-    rp:float = 0.02  # Outer radius of U pipe (m)
-    BHESDR:float = 11  # SDR for U-pipe (-)
-    lss:float = 2.36  # Soil thermal conductivity along BHEs (W/m/K)
-    rhocss:float = 2.65e6  # Volumetric heat capacity of soil (along BHE). Assuming 70# quartz and 30# water (J/m3/K) #OK
-    lg:float = 1.75  # Grout thermal conductivity (W/m/K)
-    rhocg:float = 3e6  # Grout volumetric heat capacity (J/m3/K)
-    PD:float = 0.015  # Wall to wall distance U-pipe legs (m)
-
-    # BHE field
-    NX:int = 1  # Number of boreholes in the x-direction (-)
-    dx:float = 15  # Spacing between boreholes in the x-direction (m)
-    NY:int = 6 # Number of boreholes in the y-direction (-)
-    dy:float = 15  # Spacing between boreholes in the y-direction (m)
-
-
-@dataclass
-class HorizontalConfiguration:
-    # Horizontal heat exchanger (HHE) topology and pipes
-    NHHE:int = 6;  # Number of HE loops (-)
-    PDHE:float = 0.04;  # Outer diameter of HE pipe (m)
-    HHESDR:float = 17;  # SDR for HE pipes (-)
-    dd:float = 1.5;  # Pipe segment spacing (m)
-
-
-@dataclass
-class DimensioningConfgiuration:
-    PID:str
-    # Input files
-    HPFN:str  # Input file containing heat pump information
-    TOPOFN: str # Input file containing topology information
-
-    # Select source using the configuration type
-    ground_heatexchanger_configuration: BTESConfiguation | HorizontalConfiguration
-
-    # Brine
-    rhob: float = 965.0  # Brine density (kg/m3), T = 0C. https://www.handymath.com/cgi-bin/isopropanolwghtvoltble5.cgi?submit=Entry
-    cb:float = 4450.0  # Brine specific heat (J/kg/K). 4450 J/kg/K is loosly based on Ignatowicz, M., Mazzotti, W., Acuña, J., Melinder, A., & Palm, B. (2017). Different ethyl alcohol secondary fluids used for GSHP in Europe. Presented at the 12th IEA Heat Pump Conference, Rotterdam, 2017. Retrieved from http://urn.kb.se/resolve?urn=urn:nbn:se:kth:diva-215752
-    mub:float = 5e-3  # Brine dynamic viscosity (Pa*s). Source see above reference.
-    lb:float = 0.45  # Brine thermal conductivity (W/m/K). https://www.researchgate.net/publication/291350729_Investigation_of_ethanol_based_secondary_fluids_with_denaturing_agents_and_other_additives_used_for_borehole_heat_exchangers
-
-    # PE Pipes
-    lp:float = 0.4  # Pipe thermal conductivity (W/m/K). https://www.wavin.com/da-dk/catalog/Varme/Jordvarme/PE-80-lige-ror/40mm-jordvarme-PE-80PN6-100m
-
-    # Thermonet and HHE
-    PWD:float = 0.3  # Distance between forward and return pipe centers (m)
-    dpt:float = 90  # Target pressure loss in thermonet (Pa/m). 10# reduction to account for loss in fittings. Source: Oklahoma State University, Closed-loop/ground source heat pump systems. Installation guide., (1988). Interval: 98-298 Pa/m
-    lsh:float = 1.25  # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
-    lsc:float = 1.25  # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
-    rhocs:float = 2.5e6  # Soil volumetric heat capacity  thermonet and HHE (J/m3/K) OK. Guestimate
-    zd:float = 1.2  # Burial depth of thermonet and HHE (m)
-
-    # Heat pump
-    Thi:float = -3  # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
-    Tci:float = 20  # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
-    SF:float = 1  # Ratio of peak heating demand to be covered by the heat pump [0-1]. If SF = 0.8 then the heat pump delivers 80% of the peak heating load. The deficit is then supplied by an auxilliary heating device
-
-
-
 
 
 def run_dimensioning(c: DimensioningConfgiuration, print_computation_time=True):
     tic = time.time();  # Track computation time (s)
 
+    folder = Path(__file__).parent.joinpath("examples")
 
 
     ############################# Load all input data #############################
 
     # Load heat pump data
-    HPS = pd.read_csv(c.HPFN, sep='\t+', engine='python');  # Heat pump input file
+    HPS = pd.read_csv(folder.joinpath(c.HPFN), sep='\t+', engine='python');  # Heat pump input file
 
     # Load grid topology
-    TOPOH = np.loadtxt(c.TOPOFN, skiprows=1, usecols=(1, 2, 3));  # Load numeric data from topology file
+    TOPOH = np.loadtxt(folder.joinpath(c.TOPOFN), skiprows=1, usecols=(1, 2, 3));  # Load numeric data from topology file
     TOPOC = TOPOH;
-    IPG = pd.read_csv(c.TOPOFN, sep='\t+', engine='python');  # Load the entire file into Panda dataframe
+    IPG = pd.read_csv(folder.joinpath(c.TOPOFN), sep='\t+', engine='python');  # Load the entire file into Panda dataframe
     PGROUP = IPG.iloc[:, 0];  # Extract pipe group IDs
     IPG = IPG.iloc[:, 4];  # Extract IDs of HPs connected to the different pipe groups
     NPG = len(IPG);  # Number of pipe groups
 
     # Load pipe database
-    p = Path(__file__)
+
     file = Path(__file__).parent.joinpath('data/equipment/PIPES.dat')
     PIPES = pd.read_csv(file, sep='\t');  # Open file with available pipe outer diameters (mm). This file can be expanded with additional pipes and used directly.
     PIPES = PIPES.values;  # Get numerical values from pipes excluding the headers
@@ -150,16 +90,16 @@ def run_dimensioning(c: DimensioningConfgiuration, print_computation_time=True):
     del IPGA;  # Get rid of IPGA
 
     # Brine
-    kinb = c.mub / c.rhob;  # Brine kinematic viscosity (m2/s)
-    ab = c.lb / (c.rhob * c.cb);  # Brine thermal diffusivity (m2/s)
+    kinb = c.brine.mub / c.brine.rhob;  # Brine kinematic viscosity (m2/s)
+    ab = c.brine.lb / (c.brine.rhob * c.brine.cb);  # Brine thermal diffusivity (m2/s)
     Pr = kinb / ab;  # Prandtl number (-)
 
     # Shallow soil (not for BHEs! - see below)
     A = 7.900272987633280;  # Surface temperature amplitude (K)
     T0 = 9.028258373009810;  # Undisturbed soil temperature (C)
     o = 2 * np.pi / 86400 / 365.25;  # Angular velocity of surface temperature variation (rad/s)
-    ast = c.lsh / c.rhocs;  # Shallow soil thermal diffusivity (m2/s) - ONLY for pipes!!!
-    TP = A * mt.exp(-c.zd * mt.sqrt(
+    ast = c.thermonet.lsh / c.thermonet.rhocs;  # Shallow soil thermal diffusivity (m2/s) - ONLY for pipes!!!
+    TP = A * mt.exp(-c.thermonet.zd * mt.sqrt(
         o / 2 / ast));  # Temperature penalty at burial depth from surface temperature variation (K). Minimum undisturbed temperature is assumed .
 
     # Convert pipe diameter database to meters
@@ -182,7 +122,7 @@ def run_dimensioning(c: DimensioningConfgiuration, print_computation_time=True):
 
     # Simultaneity factors to apply to annual, monthly and hourly heating and cooling demands
     S = np.zeros(3);
-    S[2] = c.SF * (
+    S[2] = c.heatpump.SF * (
                 0.62 + 0.38 / NHP);  # Hourly. Varme Ståbi. Ligning 3 i "Effekt- og samtidighedsforhold ved fjernvarmeforsyning af nye boligområder"
     S[
         0] = 1;  # 0.62 + 0.38/NHP;                                        # Annual. Varme Ståbi. Ligning 3 i "Effekt- og samtidighedsforhold ved fjernvarmeforsyning af nye boligområder"
@@ -254,18 +194,18 @@ def run_dimensioning(c: DimensioningConfgiuration, print_computation_time=True):
     # Convert thermal load profile on HPs to flow rates
     PSH = ps(S * HPS[:, 1:4], HPS[:, 4:7]);  # Annual (0), monthly (1) and daily (2) thermal load on the ground (W)
     PSH[:, 0] = PSH[:, 0] - CPS[:, 0];  # Annual imbalance between heating and cooling, positive for heating (W)
-    Qdimh = PSH[:, 2] / HPS[:, 7] / c.rhob / c.cb;  # Design flow heating (m3/s)
-    Qdimc = CPS[:, 2] / CPS[:, 4] / c.rhob / c.cb;  # Design flow cooling (m3/s). Using simultaneity factor!
+    Qdimh = PSH[:, 2] / HPS[:, 7] / c.brine.rhob / c.brine.cb;  # Design flow heating (m3/s)
+    Qdimc = CPS[:, 2] / CPS[:, 4] / c.brine.rhob / c.brine.cb;  # Design flow cooling (m3/s). Using simultaneity factor!
     HPS = np.c_[HPS, Qdimh];  # Append to heat pump data structure for heating
     CPS = np.c_[CPS, Qdimc];  # Append to heat pump data structure for cooling
 
     # Heat pump and temperature conditions in the sizing equation
-    Tho = c.Thi - sum(Qdimh * HPS[:, 7]) / sum(Qdimh);  # Volumetric flow rate weighted average brine delta-T (C)
+    Tho = c.heatpump.Thi - sum(Qdimh * HPS[:, 7]) / sum(Qdimh);  # Volumetric flow rate weighted average brine delta-T (C)
     TCH1 = T0 - (
-                c.Thi + Tho) / 2 - TP;  # Temperature condition for with heating termonet. Eq. 2.19 Advances in GSHP systems. Tp in the book refers to the influence from adjacent BHEs. This effect ignored in this tool.
-    Tco = c.Tci + sum(Qdimc * CPS[:, 4]) / sum(Qdimc);  # Volumetric flow rate weighted average brine delta-T (C)
+                c.heatpump.Thi + Tho) / 2 - TP;  # Temperature condition for with heating termonet. Eq. 2.19 Advances in GSHP systems. Tp in the book refers to the influence from adjacent BHEs. This effect ignored in this tool.
+    Tco = c.heatpump.Tci + sum(Qdimc * CPS[:, 4]) / sum(Qdimc);  # Volumetric flow rate weighted average brine delta-T (C)
     TCC1 = (
-                       c.Tci + Tco) / 2 - T0 - TP;  # Temperature condition for with heating termonet. Eq. 2.19 Advances in GSHP systems. Tp in the book refers to the influence from adjacent BHEs. This effect ignored in this tool.
+                       c.heatpump.Tci + Tco) / 2 - T0 - TP;  # Temperature condition for with heating termonet. Eq. 2.19 Advances in GSHP systems. Tp in the book refers to the influence from adjacent BHEs. This effect ignored in this tool.
 
     # Compute flow and pressure loss in BHEs and HHEs under peak load conditions. Temperature conditions are computed as well.
     if isinstance(c.ground_heatexchanger_configuration, HorizontalConfiguration):
@@ -273,14 +213,14 @@ def run_dimensioning(c: DimensioningConfgiuration, print_computation_time=True):
         # HHE heating
         QHHEH = sum(Qdimh) / c_hor.NHHE;  # Peak flow in HHE pipes (m3/s)
         vhheh = QHHEH / np.pi / rihhe ** 2;  # Peak flow velocity in HHE pipes (m/s)
-        RENHHEH = Re(c.rhob, c.mub, vhheh, 2 * rihhe);  # Peak Reynolds numbers in HHE pipes (-)
-        dpHHEH = dp(c.rhob, c.mub, QHHEH, 2 * rihhe);  # Peak pressure loss in HHE pipes (Pa/m)
+        RENHHEH = Re(c.brine.rhob, c.brine.mub, vhheh, 2 * rihhe);  # Peak Reynolds numbers in HHE pipes (-)
+        dpHHEH = dp(c.brine.rhob, c.brine.mub, QHHEH, 2 * rihhe);  # Peak pressure loss in HHE pipes (Pa/m)
 
         # HHE cooling
         QHHEC = sum(Qdimc) /c_hor.NHHE;  # Peak flow in HHE pipes (m3/s)
         vhhec = QHHEC / np.pi / rihhe ** 2;  # Peak flow velocity in HHE pipes (m/s)
-        RENHHEC = Re(c.rhob, c.mub, vhhec, 2 * rihhe);  # Peak Reynolds numbers in HHE pipes (-)
-        dpHHEC = dp(c.rhob, c.mub, QHHEC, 2 * rihhe);  # Peak pressure loss in HHE pipes (Pa/m)
+        RENHHEC = Re(c.brine.rhob, c.brine.mub, vhhec, 2 * rihhe);  # Peak Reynolds numbers in HHE pipes (-)
+        dpHHEC = dp(c.brine.rhob, c.brine.mub, QHHEC, 2 * rihhe);  # Peak pressure loss in HHE pipes (Pa/m)
 
     elif isinstance(c.ground_heatexchanger_configuration, BTESConfiguation):
         c_btes = c.ground_heatexchanger_configuration
@@ -312,10 +252,10 @@ def run_dimensioning(c: DimensioningConfgiuration, print_computation_time=True):
     # Select the smallest diameter pipe that fulfills the pressure drop criterion
     for i in range(NPG):
         PIPESI = PIPES * (1 - 2 / TOPOH[i, 0]);  # Compute inner diameters (m). Variable TOPOH or TOPOC are identical here.
-        indh[i] = np.argmax(dp(c.rhob, c.mub, QPGH[i],
-                               PIPESI) < c.dpt);  # Find first pipe with a pressure loss less than the target for heating (-)
-        indc[i] = np.argmax(dp(c.rhob, c.mub, QPGC[i],
-                               PIPESI) < c.dpt);  # Find first pipe with a pressure loss less than the target for cooling (-)
+        indh[i] = np.argmax(dp(c.brine.rhob, c.brine.mub, QPGH[i],
+                               PIPESI) < c.thermonet.dpt);  # Find first pipe with a pressure loss less than the target for heating (-)
+        indc[i] = np.argmax(dp(c.brine.rhob, c.brine.mub, QPGC[i],
+                               PIPESI) < c.thermonet.dpt);  # Find first pipe with a pressure loss less than the target for cooling (-)
         PIPESELH[i] = PIPES[int(indh[i])];  # Store pipe selection for heating in new variable (m)
         PIPESELC[i] = PIPES[int(indc[i])];  # Store pipe selection for cooling in new variable (m)
     indh = indh.astype(int);
@@ -324,22 +264,28 @@ def run_dimensioning(c: DimensioningConfgiuration, print_computation_time=True):
     # Compute Reynolds number for selected pipes for heating
     DiSELH = PIPESELH * (1 - 2 / TOPOH[:, 0]);  # Compute inner diameter of selected pipes (m)
     vh = QPGH / np.pi / DiSELH ** 2 * 4;  # Compute flow velocity for selected pipes (m/s)
-    RENH = Re(c.rhob, c.mub, vh, DiSELH);  # Compute Reynolds numbers for the selected pipes (-)
+    RENH = Re(c.brine.rhob, c.brine.mub, vh, DiSELH);  # Compute Reynolds numbers for the selected pipes (-)
 
     # Compute Reynolds number for selected pipes for cooling
     DiSELC = PIPESELC * (1 - 2 / TOPOC[:, 0]);  # Compute inner diameter of selected pipes (m)
     vc = QPGC / np.pi / DiSELC ** 2 * 4;  # Compute flow velocity for selected pipes (m/s)
-    RENC = Re(c.rhob, c.mub, vc, DiSELC);  # Compute Reynolds numbers for the selected pipes (-)
+    RENC = Re(c.brine.rhob, c.brine.mub, vc, DiSELC);  # Compute Reynolds numbers for the selected pipes (-)
+
+
 
     # Output the pipe sizing
     print(' ');
     print('******************* Suggested pipe dimensions heating ******************');
+    suggested_pipe_dimensions_heating = []
     for i in range(NPG):
         print(f'{PGROUP.iloc[i]}: Ø{int(1000 * PIPESELH[i])} mm SDR {int(TOPOH[i, 0])}, Re = {int(round(RENH[i]))}');
+        suggested_pipe_dimensions_heating.append(PipeResult(diameter=1000 * PIPESELH[i], sdr=TOPOH[i, 0], Re=RENH[i]))
     print(' ');
     print('******************* Suggested pipe dimensions cooling ******************');
+    suggested_pipe_dimensions_cooling = []
     for i in range(NPG):
         print(f'{PGROUP.iloc[i]}: Ø{int(1000 * PIPESELC[i])} mm SDR {int(TOPOC[i, 0])}, Re = {int(round(RENC[i]))}');
+        suggested_pipe_dimensions_cooling.append(PipeResult(diameter=1000 * PIPESELC[i], sdr=TOPOC[i, 0], Re=RENC[i]))
     print(' ');
 
     ############################### Pipe sizing END ###############################
@@ -352,14 +298,14 @@ def run_dimensioning(c: DimensioningConfgiuration, print_computation_time=True):
     TOPOH = np.c_[
         TOPOH, PIPESELH, RENH, LENGTHS];  # Add pipe selection diameters (m), Reynolds numbers (-) and lengths as columns to the TOPO array
     for i in range(NPG):  # For all pipe groups
-        Rh[i] = Rp(DiSELH[i], PIPESELH[i], RENH[i], Pr, c.lb, c.lp);  # Compute thermal resistances (m*K/W)
+        Rh[i] = Rp(DiSELH[i], PIPESELH[i], RENH[i], Pr, c.brine.lb, c.lp);  # Compute thermal resistances (m*K/W)
     TOPOH = np.c_[TOPOH, Rh];  # Append thermal resistances to pipe groups as a column in TOPO (m*K/W)
 
     # Compute thermal resistances for pipes in cooling mode
     TOPOC = np.c_[
         TOPOC, PIPESELC, RENC, LENGTHS];  # Add pipe selection diameters (m), Reynolds numbers (-) and lengths as columns to the TOPO array
     for i in range(NPG):  # For all pipe groups
-        Rc[i] = Rp(DiSELC[i], PIPESELC[i], RENC[i], Pr, c.lb, c.lp);  # Compute thermal resistances (m*K/W)
+        Rc[i] = Rp(DiSELC[i], PIPESELC[i], RENC[i], Pr, c.brine.lb, c.lp);  # Compute thermal resistances (m*K/W)
     TOPOC = np.c_[TOPOC, Rc];  # Append thermal resistances to pipe groups as a column in TOPO (m*K/W)
 
     # Compute delta-qs for superposition of heating load responses
@@ -375,13 +321,13 @@ def run_dimensioning(c: DimensioningConfgiuration, print_computation_time=True):
     cdPSC = np.sum(dPSC, 0);
 
     # Compute temperature responses in heating and cooling mode for all pipes
-    K1 = ils(ast, t, c.PWD) - ils(ast, t, 2 * c.zd) - ils(ast, t, np.sqrt(c.PWD ** 2 + 4 * c.zd ** 2));
+    K1 = ils(ast, t, c.thermonet.PWD) - ils(ast, t, 2 * c.thermonet.zd) - ils(ast, t, np.sqrt(c.thermonet.PWD ** 2 + 4 * c.thermonet.zd ** 2));
     for i in range(NPG):
         GTHMH[i, :] = CSM(PIPESELH[i] / 2, PIPESELH[i] / 2, t, ast) + K1;
         GTHMC[i, :] = CSM(PIPESELC[i] / 2, PIPESELC[i] / 2, t, ast) + K1;
-        FPH[i] = TCH1 * LENGTHS[i] / np.dot(cdPSH, GTHMH[i] / c.lsh + Rh[
+        FPH[i] = TCH1 * LENGTHS[i] / np.dot(cdPSH, GTHMH[i] / c.thermonet.lsh + Rh[
             i]);  # Fraction of total heating that can be supplied by the i'th pipe segment (-)
-        FPC[i] = TCC1 * LENGTHS[i] / np.dot(cdPSC, GTHMC[i] / c.lsc + Rc[
+        FPC[i] = TCC1 * LENGTHS[i] / np.dot(cdPSC, GTHMC[i] / c.thermonet.lsc + Rc[
             i]);  # Fraction of total heating that can be supplied by the i'th pipe segment (-)
 
     # Heating supplied by thermonet
@@ -398,6 +344,7 @@ def run_dimensioning(c: DimensioningConfgiuration, print_computation_time=True):
         f'The thermonet supplies {round(100 * FPH)}% of the peak heating demand');  # print(f'The thermonet fully supplies the heat pumps with IDs 1 - {int(np.floor(NSHPH+1))} with heating' ) ;
     print(f'The thermonet supplies {round(100 * FPC)}% of the peak cooling demand');
     print(' ');
+    energy_production_result = EnergyProductionResult(FPH=FPH*100, FPC=FPC*100)
     ######################## Display results in console END #######################
 
     ################################ Source sizing ################################
@@ -505,6 +452,9 @@ def run_dimensioning(c: DimensioningConfgiuration, print_computation_time=True):
         print(f'Maximum pressure loss in BHEs in heating mode = {int(np.ceil(dpBHEH))} Pa/m, Re = {int(round(RENBHEH))}');
         print(f'Maximum pressure loss in BHEs in cooling mode = {int(np.ceil(dpBHEC))} Pa/m, Re = {int(round(RENBHEC))}');
 
+        heat_exchanger_result = HEResult(HE_type=HEType.BHE, NHE=int(NBHE), lengthHE_heating=np.ceil(LBHEH / NBHE), lengthHE_cooling=int(np.ceil(LBHEC / NBHE)), max_pressure_drop_heating=dpBHEH, max_pressure_drop_cooling=dpBHEC,
+                                         Re_cooling=RENBHEC, Re_heating=RENBHEC)
+
     # If HHEs are selected as source
     elif isinstance(c.ground_heatexchanger_configuration, HorizontalConfiguration):
         ###########################################################################
@@ -518,20 +468,20 @@ def run_dimensioning(c: DimensioningConfgiuration, print_computation_time=True):
         DIST = c_hor.dd * ind;  # Distance vector for HHE (m)
         for i in range(c_hor.NHHE):  # For half the pipe segments (2 per loop). Advantage from symmetry.
             s[0] = s[0] + sum(ils(ast, t[0], abs(DIST[ind != i] - i * c_hor.dd))) - sum(ils(ast, t[0], np.sqrt(
-                (DIST - i * c_hor.dd) ** 2 + 4 * c.zd ** 2)));  # Sum annual temperature responses from distant pipes (C)
+                (DIST - i * c_hor.dd) ** 2 + 4 * c.thermonet.zd ** 2)));  # Sum annual temperature responses from distant pipes (C)
             s[1] = s[1] + sum(ils(ast, t[1], abs(DIST[ind != i] - i * c_hor.dd))) - sum(ils(ast, t[1], np.sqrt(
-                (DIST - i * c_hor.dd) ** 2 + 4 * c.zd ** 2)));  # Sum monthly temperature responses from distant pipes (C)
+                (DIST - i * c_hor.dd) ** 2 + 4 * c.thermonet.zd ** 2)));  # Sum monthly temperature responses from distant pipes (C)
         GHHE = CSM(rohhe, rohhe, t, ast);  # Pipe wall response (-)
         GHHE[0:2] = GHHE[0:2] + s / c_hor.NHHE;  # Add thermal disturbance from neighbour pipes (-)
 
         # Heating
-        RHHEH = Rp(2 * rihhe, 2 * rohhe, RENHHEH, Pr, c.lb, c.lp);  # Compute the pipe thermal resistance (m*K/W)
-        GHHEH = GHHE / c.lsh + RHHEH;  # Add annual and monthly thermal resistances to GHHE (m*K/W)
+        RHHEH = Rp(2 * rihhe, 2 * rohhe, RENHHEH, Pr, c.brine.lb, c.lp);  # Compute the pipe thermal resistance (m*K/W)
+        GHHEH = GHHE / c.thermonet.lsh + RHHEH;  # Add annual and monthly thermal resistances to GHHE (m*K/W)
         LHHEH = np.dot(PHEH, GHHEH / TCH1);  # Sizing equation for computing the required borehole meters (m)
 
         # Cooling
-        RHHEC = Rp(2 * rihhe, 2 * rohhe, RENHHEC, Pr, c.lb, c.lp);  # Compute the pipe thermal resistance (m*K/W)
-        GHHEC = GHHE / c.lsc + RHHEC;  # Add annual and monthly thermal resistances to GHHE (m*K/W)
+        RHHEC = Rp(2 * rihhe, 2 * rohhe, RENHHEC, Pr, c.brine.lb, c.lp);  # Compute the pipe thermal resistance (m*K/W)
+        GHHEC = GHHE / c.thermonet.lsc + RHHEC;  # Add annual and monthly thermal resistances to GHHE (m*K/W)
         LHHEC = np.dot(PHEC, GHHEC / TCC1);  # Sizing equation for computing the required borehole meters (m)
 
         # Output results to console
@@ -543,6 +493,15 @@ def run_dimensioning(c: DimensioningConfgiuration, print_computation_time=True):
         print(
             f'Maximum pressure loss in HHE pipes in cooling mode {int(np.ceil(dpHHEC))} Pa/m, Re = {int(round(RENHHEC))}');
 
+        heat_exchanger_result = HEResult(HE_type=HEType.HHE, NHE=c_hor.NHHE, lengthHE_heating=np.ceil(LHHEH / c_hor.NHHE), lengthHE_cooling=np.ceil(LHHEC / c_hor.NHHE),
+                                         max_pressure_drop_heating=dpHHEH, max_pressure_drop_cooling=dpHHEC, Re_heating=RENHHEH, Re_cooling=RENHHEC)
+
+    results = DimensioningResults(pipe_dimensions_heating=suggested_pipe_dimensions_heating,
+                                  pipe_dimensions_cooling=suggested_pipe_dimensions_cooling,
+                                  energy_production=energy_production_result,
+                                  heat_exchanger=heat_exchanger_result
+                                  )
+
     ############################## Source sizing END ##############################
     if print_computation_time:
         # Output computation time to console
@@ -550,6 +509,8 @@ def run_dimensioning(c: DimensioningConfgiuration, print_computation_time=True):
         print('*************************** Computation time ***************************');
         toc = time.time();  # Track computation time (s)
         print(f'Elapsed time: {round(toc - tic, 6)} seconds');
+
+    return results
 
 ################## CONCEPTUAL MODEL DRAWINGS FOR REFERENCE ####################
 

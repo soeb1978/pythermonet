@@ -3,3 +3,4 @@ pandas
 scipy
 mpmath
 pytest
+dataclasses_json

@@ -52,7 +52,7 @@ Ti_C = 20;                                                           # Design te
 SF = 1;                                                             # Ratio of peak heating demand to be covered by the heat pump [0-1]. If SF = 0.8 then the heat pump delivers 80% of the peak heating load. The deficit is then supplied by an auxilliary heating device
 
 # Source selection
-SS = 1;                                                             # SS = 1: Borehole heat exchangers; SS = 0: Horizontal heat exchangers  
+SS = 0;                                                             # SS = 1: Borehole heat exchangers; SS = 0: Horizontal heat exchangers  
 
 if SS == 0:
     # Horizontal heat exchanger (HHE) topology and pipes
@@ -233,9 +233,8 @@ CPS = np.c_[CPS,Qdim_C];                                             # Append to
 
 # Heat pump and temperature conditions in the sizing equation
 To_H = Ti_H - sum(Qdim_H*HPS[:,7])/sum(Qdim_H);                         # Volumetric flow rate weighted average brine delta-T (C)
-TCH1 = T0 - (Ti_H + To_H)/2 - TP;                                     # Temperature condition for with heating termonet. Eq. 2.19 Advances in GSHP systems. Tp in the book refers to the influence from adjacent BHEs. This effect ignored in this tool.
 To_C = Ti_C + sum(Qdim_C*CPS[:,4])/sum(Qdim_C);                         # Volumetric flow rate weighted average brine delta-T (C)
-TCC1 = (Ti_C + To_C)/2 - T0 - TP;                                     # Temperature condition for with heating termonet. Eq. 2.19 Advances in GSHP systems. Tp in the book refers to the influence from adjacent BHEs. This effect ignored in this tool.                                                    
+
     
 # Compute flow and pressure loss in BHEs and HHEs under peak load conditions. Temperature conditions are computed as well.
 if SS == 0:
@@ -349,8 +348,8 @@ K1 = ils(a_s,t,D_gridpipes) - ils(a_s,t,2*z_grid) - ils(a_s,t,np.sqrt(D_gridpipe
 for i in range(N_PG):
     GTHMH[i,:] = CSM(d_selectedPipes_H[i]/2,d_selectedPipes_H[i]/2,t,a_s) + K1;
     GTHMC[i,:] = CSM(d_selectedPipes_C[i]/2,d_selectedPipes_C[i]/2,t,a_s) + K1;
-    FPH[i] = TCH1*L_segments[i]/np.dot(cdPSH,GTHMH[i]/l_s_H + R_H[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
-    FPC[i] = TCC1*L_segments[i]/np.dot(cdPSC,GTHMC[i]/l_s_C + R_C[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
+    FPH[i] = (T0 - (Ti_H + To_H)/2 - TP)*L_segments[i]/np.dot(cdPSH,GTHMH[i]/l_s_H + R_H[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
+    FPC[i] = ((Ti_C + To_C)/2 - T0 - TP)*L_segments[i]/np.dot(cdPSC,GTHMC[i]/l_s_C + R_C[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
 
 # KART - mangler at gennemgå ny beregning af energi fra grid/kilder
 
@@ -488,17 +487,19 @@ if SS == 0:
         s[0] = s[0] + sum(ils(a_s,t[0],abs(DIST[ind!=i]-i*D_HHE))) - sum(ils(a_s,t[0],np.sqrt((DIST-i*D_HHE)**2 + 4*z_grid**2))); # Sum annual temperature responses from distant pipes (C)
         s[1] = s[1] + sum(ils(a_s,t[1],abs(DIST[ind!=i]-i*D_HHE))) - sum(ils(a_s,t[1],np.sqrt((DIST-i*D_HHE)**2 + 4*z_grid**2))); # Sum monthly temperature responses from distant pipes (C)
     G_HHE = CSM(ro_HHE,ro_HHE,t,a_s);                                  # Pipe wall response (-)
+    #KART: tjek - i tidligere version var en faktor 2 til forskel
     G_HHE[0:2] = G_HHE[0:2] + s/N_HHE;                                 # Add thermal disturbance from neighbour pipes (-)
     
     # Heating
     Rp_HHE_H = Rp(2*ri_HHE,2*ro_HHE,Re_HHEmax_H,Pr,l_f,l_p);                   # Compute the pipe thermal resistance (m*K/W)
     G_HHE_H = G_HHE/l_s_H + Rp_HHE_H;                                         # Add annual and monthly thermal resistances to G_HHE (m*K/W)
-    L_HHE_H = np.dot(PHEH,G_HHE_H/TCH1);                                 # Sizing equation for computing the required borehole meters (m)
+    L_HHE_H = np.dot(PHEH,G_HHE_H) / (T0 - (Ti_H + To_H)/2 - TP );
     
     # Cooling
     Rp_HHE_C = Rp(2*ri_HHE,2*ro_HHE,Re_HHEmax_C,Pr,l_f,l_p);                   # Compute the pipe thermal resistance (m*K/W)
     G_HHE_C = G_HHE/l_s_C + Rp_HHE_C;                                         # Add annual and monthly thermal resistances to G_HHE (m*K/W)
-    L_HHE_C = np.dot(PHEC,G_HHE_C/TCC1);                                 # Sizing equation for computing the required borehole meters (m)
+    #L_HHE_C = np.dot(PHEC,G_HHE_C/TCC1);                                 # Sizing equation for computing the required borehole meters (m)
+    L_HHE_C = np.dot(PHEC,G_HHE_C) / ((Ti_C + To_C)/2 - T0 - TP);
     
     # Output results to console
     print('********* Suggested length of horizontal heat exchangers (HHE) *********');

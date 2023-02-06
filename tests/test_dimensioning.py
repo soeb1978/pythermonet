@@ -10,7 +10,7 @@ def test_dimensioning():
         results = run_dimensioning(c[0], print_computation_time=False)
 
         # Generate new file
-        #file = Path(__file__).parent.joinpath("regression_test_data/result_basic_configuration.json")
+        #file = Path(__file__).parent.joinpath(f"regression_test_data/{key}.json")
         #with open(file, 'w') as f:
         #     f.write(results.to_json())
 

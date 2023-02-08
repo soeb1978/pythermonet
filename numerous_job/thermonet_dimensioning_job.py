@@ -20,13 +20,12 @@ class ThermonetJob(NumerousBaseJob):
         self.logger.setLevel(level=LOG_LEVEL)
 
     def run_job(self) -> ExitCode:
-        exit_code = ExitCode.COMPLETED
-
         self.logger.info("adding report content")
         self.run_dimensioning_report()
 
         self.logger.warning('job terminated')
-        return exit_code
+
+        return ExitCode.COMPLETED
 
     def run_dimensioning_report(self):
         report_file = "report"

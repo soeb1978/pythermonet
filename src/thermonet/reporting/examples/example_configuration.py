@@ -1,5 +1,9 @@
 from thermonet.dimensioning.dimensioning_classes import BTESConfiguation, HorizontalConfiguration, Brine, Heatpump, \
     Thermonet, DimensioningConfiguration
+from pathlib import Path
+
+file = Path(__file__)
+
 # Source selection
 SS = True  # SS = True: Borehole heat exchangers; SS = False: Horizontal heat exchangers
 
@@ -36,9 +40,10 @@ configuration = DimensioningConfiguration(
 # Project ID
 PID='Energiakademiet, Samsø',                                     # Project name
 
+
 # Input files
-HPFN='./data/sites/Silkeborg_HPSC.dat',                                            # Input file containing heat pump information
-TOPOFN='./data/sites/Silkeborg_TOPO.dat',                                          # Input file containing topology information
+HPFN=file.parent.joinpath('../../dimensioning/examples/data/sites/Silkeborg_HPSC.dat'),                                            # Input file containing heat pump information
+TOPOFN=file.parent.joinpath('../../dimensioning/examples/data/sites/Silkeborg_TOPO.dat'),                                          # Input file containing topology information
 
 ground_heatexchanger_configuration=horizontal if SS else btes,
 

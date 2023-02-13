@@ -20,10 +20,9 @@ from thermonet_classes import Brine, Thermonet, Heatpump, HHEconfig, BHEconfig
 import time
 
 
-
-def run_dimensioning():
+# Function for dimensioning pipes
+def run_pipedimensioning():
     
-    tic = time.time();                                                    # Track computation time (s)                                                           
     
     ############### User set flow and thermal parameters by medium ################
     
@@ -43,17 +42,7 @@ def run_dimensioning():
     # Heat pump - with default parameters
     hp = Heatpump;
         
-    # Source selection
-    SS = 1;                                                             # SS = 1: Borehole heat exchangers; SS = 0: Horizontal heat exchangers  
-    
-    # KART opdater med case/switch
-    if SS == 0:
-        # Horizontal heat exchanger (HHE) topology and pipes - default parameters
-        HHE = HHEconfig
-        
-    if SS == 1:
-        # Borehole heat exchangers (BHE)
-        BHE = BHEconfig;
+
     
     ############### User set flow and thermal parameters by medium END ########
     
@@ -101,29 +90,29 @@ def run_dimensioning():
     # KART hvorfor håndteres varme og køl forskelligt?
     CPS[:, :3] = CPS[:, 3:4] / (CPS[:, 3:4] - 1) * CPS[:, :3]                                            
     
-    # G-function evaluation times (DO NOT MODIFY!!!!!!!)
-    SECONDS_IN_YEAR = 31536000; # KART: overvej at beregne disse -> mere klart hvor mange dage man regner for måned/år
-    SECONDS_IN_MONTH = 2628000; # KART ditto
-    SECONDS_IN_HOUR = 3600;
-    t = np.asarray([10 * SECONDS_IN_YEAR + 3 * SECONDS_IN_MONTH + 4 * SECONDS_IN_HOUR, 3 * SECONDS_IN_MONTH + 4 * SECONDS_IN_HOUR, 4 * SECONDS_IN_HOUR], dtype=float);            # time = [10 years + 3 months + 4 hours; 3 months + 4 hours; 4 hours]. Time vector for the temporal superposition (s).   
+    # # G-function evaluation times (DO NOT MODIFY!!!!!!!)
+    # SECONDS_IN_YEAR = 31536000; # KART: overvej at beregne disse -> mere klart hvor mange dage man regner for måned/år
+    # SECONDS_IN_MONTH = 2628000; # KART ditto
+    # SECONDS_IN_HOUR = 3600;
+    # t = np.asarray([10 * SECONDS_IN_YEAR + 3 * SECONDS_IN_MONTH + 4 * SECONDS_IN_HOUR, 3 * SECONDS_IN_MONTH + 4 * SECONDS_IN_HOUR, 4 * SECONDS_IN_HOUR], dtype=float);            # time = [10 years + 3 months + 4 hours; 3 months + 4 hours; 4 hours]. Time vector for the temporal superposition (s).   
     
     # Create array containing arrays of integers with HP IDs for all pipe sections
     IPGA = [np.asarray(I_PG.iloc[i].split(',')).astype(int) - 1 for i in range(N_PG)]
     I_PG = IPGA                                                            # Redefine I_PG
     del IPGA;                                                           # Get rid of IPGA
     
-    # Brine (fluid)
-    nu_f = brine.mu/brine.rho;                                                    # Brine kinematic viscosity (m2/s)  
-    a_f = brine.l/(brine.rho*brine.c);                                                  # Brine thermal diffusivity (m2/s)  
-    Pr = nu_f/a_f;                                                       # Prandtl number (-)                
+    # # Brine (fluid)
+    # nu_f = brine.mu/brine.rho;                                                    # Brine kinematic viscosity (m2/s)  
+    # a_f = brine.l/(brine.rho*brine.c);                                                  # Brine thermal diffusivity (m2/s)  
+    # Pr = nu_f/a_f;                                                       # Prandtl number (-)                
     
-    # Shallow soil (not for BHEs! - see below)
-    A = 7.900272987633280;                                              # Surface temperature amplitude (K) 
-    T0 = 9.028258373009810;                                             # Undisturbed soil temperature (C) 
-    omega = 2*np.pi/86400/365.25;                                           # Angular velocity of surface temperature variation (rad/s) 
-    a_s = net.l_s_H/net.rhoc_s; # KART potentielt et problem med to ledningsevner, her vælges bare den ene                                                    # Shallow soil thermal diffusivity (m2/s) - ONLY for pipes!!! 
-    # KART: følg op på brug af TP i forhold til bogen / gammel kode
-    TP = A*np.exp(-net.z_grid*np.sqrt(omega/2/a_s));                               # Temperature penalty at burial depth from surface temperature variation (K). Minimum undisturbed temperature is assumed . 
+    # # Shallow soil (not for BHEs! - see below)
+    # A = 7.900272987633280;                                              # Surface temperature amplitude (K) 
+    # T0 = 9.028258373009810;                                             # Undisturbed soil temperature (C) 
+    # omega = 2*np.pi/86400/365.25;                                           # Angular velocity of surface temperature variation (rad/s) 
+    # a_s = net.l_s_H/net.rhoc_s; # KART potentielt et problem med to ledningsevner, her vælges bare den ene                                                    # Shallow soil thermal diffusivity (m2/s) - ONLY for pipes!!! 
+    # # KART: følg op på brug af TP i forhold til bogen / gammel kode
+    # TP = A*np.exp(-net.z_grid*np.sqrt(omega/2/a_s));                               # Temperature penalty at burial depth from surface temperature variation (K). Minimum undisturbed temperature is assumed . 
     
     # Convert pipe diameter database to meters
     d_pipes = d_pipes/1000;                                                 # Convert d_pipes from mm to m (m)
@@ -136,8 +125,8 @@ def run_dimensioning():
     #P_s_H = np.zeros((N_HP,3)); Unødigt - variablen oprettes i line 226                                           # Thermal load from heating on the ground (W)
     Q_PG_H = np.zeros(N_PG);                                               # Design flow heating (m3/s)
     Q_PG_C = np.zeros(N_PG);                                               # Design flow cooling (m3/s)
-    R_H = np.zeros(N_PG);                                                 # Allocate pipe thermal resistance vector for heating (m*K/W)
-    R_C = np.zeros(N_PG);                                                 # Allocate pipe thermal resistance vector for cooling (m*K/W)
+    # R_H = np.zeros(N_PG);                                                 # Allocate pipe thermal resistance vector for heating (m*K/W)
+    # R_C = np.zeros(N_PG);                                                 # Allocate pipe thermal resistance vector for cooling (m*K/W)
     
     
     # Simultaneity factors to apply to annual, monthly and hourly heating and cooling demands
@@ -148,52 +137,52 @@ def run_dimensioning():
     S[1]  = 1; #S(1);                                                   # Monthly. Varme Ståbi. Ligning 3 i "Effekt- og samtidighedsforhold ved fjernvarmeforsyning af nye boligområder"
     
     # If horizontal heat exchangers are selected
-    if SS == 0:
-        # Horizontal heat exchangers
-        ri_HHE = HHE.d*(1 - 2/HHE.SDR)/2;                                  # Inner radius of HHE pipes (m)
-        ro_HHE = HHE.d/2;                                                 # Outer radius of HHE pipes (m)
+    # if SS == 0:
+    #     # Horizontal heat exchangers
+    #     ri_HHE = HHE.d*(1 - 2/HHE.SDR)/2;                                  # Inner radius of HHE pipes (m)
+        # ro_HHE = HHE.d/2;                                                 # Outer radius of HHE pipes (m)
     
     # If borehole heat exchangers are selected
-    if SS == 1:
+    # if SS == 1:
         # BHE
         # KART: overvej ri_BHE, ligesom ri_HHE?
-        ri = BHE.r_p*(1 - 2/BHE.SDR);                                         # Inner radius of U pipe (m)
-        a_ss = BHE.l_ss/BHE.rhoc_ss;                                               # BHE soil thermal diffusivity (m2/s)
-        a_g = BHE.l_g/BHE.rhoc_g;                                                  # Grout thermal diffusivity (W/m/K)
+        # ri = BHE.r_p*(1 - 2/BHE.SDR);                                         # Inner radius of U pipe (m)
+        # a_ss = BHE.l_ss/BHE.rhoc_ss;                                               # BHE soil thermal diffusivity (m2/s)
+        # a_g = BHE.l_g/BHE.rhoc_g;                                                  # Grout thermal diffusivity (W/m/K)
         # KART: eksponer mod bruger eller slet hvis den altid er samme som T0?
-        T0_BHE = T0;                                                     # Measured undisturbed BHE temperature (C)
-        s_BHE = 2*BHE.r_p + BHE.D_pipes;                                     # Calculate shank spacing U-pipe (m)
+        # T0_BHE = T0;                                                     # Measured undisturbed BHE temperature (C)
+        # s_BHE = 2*BHE.r_p + BHE.D_pipes;                                     # Calculate shank spacing U-pipe (m)
     
         # Borehole field
-        x = np.linspace(0,BHE.NX-1,BHE.NX)*BHE.D_x;                                  # x-coordinates of BHEs (m)                     
-        y = np.linspace(0,BHE.NY-1,BHE.NY)*BHE.D_y;                                  # y-coordinates of BHEs (m)
-        N_BHE = BHE.NX*BHE.NY;                                                   # Number of BHEs (-)
-        [XX,YY] = np.meshgrid(x,y);                                     # Meshgrid arrays for distance calculations (m)    
-        Yv = np.concatenate(YY);                                        # YY concatenated (m)
-        Xv = np.concatenate(XX);                                        # XX concatenated (m)
+        # x = np.linspace(0,BHE.NX-1,BHE.NX)*BHE.D_x;                                  # x-coordinates of BHEs (m)                     
+        # y = np.linspace(0,BHE.NY-1,BHE.NY)*BHE.D_y;                                  # y-coordinates of BHEs (m)
+        # N_BHE = BHE.NX*BHE.NY;                                                   # Number of BHEs (-)
+        # [XX,YY] = np.meshgrid(x,y);                                     # Meshgrid arrays for distance calculations (m)    
+        # Yv = np.concatenate(YY);                                        # YY concatenated (m)
+        # Xv = np.concatenate(XX);                                        # XX concatenated (m)
         
         # Logistics for symmetry considerations and associated efficiency gains
         # KART: har ikke tjekket
-        NXi = int(np.ceil(BHE.NX/2));                                       # Find half the number of boreholes in the x-direction. If not an equal number then round up to complete symmetry.
-        NYi = int(np.ceil(BHE.NY/2));                                       # Find half the number of boreholes in the y-direction. If not an equal number then round up to complete symmetry.
-        w = np.ones((NYi,NXi));                                         # Define weight matrix for temperature responses at a distance (-)
-        if np.mod(BHE.NX/2,1) > 0:                                          # If NX is an unequal integer then the weight on the temperature responses from the boreholes on the center line is equal to 0.5 for symmetry reasons
-            w[:,NXi-1] = 0.5*w[:,NXi-1];
+        # NXi = int(np.ceil(BHE.NX/2));                                       # Find half the number of boreholes in the x-direction. If not an equal number then round up to complete symmetry.
+        # NYi = int(np.ceil(BHE.NY/2));                                       # Find half the number of boreholes in the y-direction. If not an equal number then round up to complete symmetry.
+        # w = np.ones((NYi,NXi));                                         # Define weight matrix for temperature responses at a distance (-)
+        # if np.mod(BHE.NX/2,1) > 0:                                          # If NX is an unequal integer then the weight on the temperature responses from the boreholes on the center line is equal to 0.5 for symmetry reasons
+        #     w[:,NXi-1] = 0.5*w[:,NXi-1];
         
-        if np.mod(BHE.NY/2,1) > 0:                                          # If NY is an unequal integer then the weight on the temperature responses from the boreholes on the center line is equal to 0.5 for symmetry reasons
-            w[NYi-1,:] = 0.5*w[NYi-1,:];
+        # if np.mod(BHE.NY/2,1) > 0:                                          # If NY is an unequal integer then the weight on the temperature responses from the boreholes on the center line is equal to 0.5 for symmetry reasons
+        #     w[NYi-1,:] = 0.5*w[NYi-1,:];
             
-        wv = np.concatenate(w);                                         # Concatenate the weight matrix (-)
-        swv = sum(wv);                                                  # Sum all weights (-)
-        xi = np.linspace(0,NXi-1,NXi)*BHE.D_x;                               # x-coordinates of BHEs (m)                     
-        yi = np.linspace(0,NYi-1,NYi)*BHE.D_y;                               # y-coordinates of BHEs (m)
-        [XXi,YYi] = np.meshgrid(xi,yi);                                 # Meshgrid arrays for distance calculations (m)
-        Yvi = np.concatenate(YYi);                                      # YY concatenated (m)
-        Xvi = np.concatenate(XXi);                                      # XX concatenated (m)
+        # wv = np.concatenate(w);                                         # Concatenate the weight matrix (-)
+        # swv = sum(wv);                                                  # Sum all weights (-)
+        # xi = np.linspace(0,NXi-1,NXi)*BHE.D_x;                               # x-coordinates of BHEs (m)                     
+        # yi = np.linspace(0,NYi-1,NYi)*BHE.D_y;                               # y-coordinates of BHEs (m)
+        # [XXi,YYi] = np.meshgrid(xi,yi);                                 # Meshgrid arrays for distance calculations (m)
+        # Yvi = np.concatenate(YYi);                                      # YY concatenated (m)
+        # Xvi = np.concatenate(XXi);                                      # XX concatenated (m)
         
-        # Solver settings for computing the flow and length corrected length of BHEs
-        dL = 0.1;                                                       # Step length for trial trial solutions (m)
-        LL = 10;                                                        # Additional length segment for which trial solutions are generated (m)
+        # # Solver settings for computing the flow and length corrected length of BHEs
+        # dL = 0.1;                                                       # Step length for trial trial solutions (m)
+        # LL = 10;                                                        # Additional length segment for which trial solutions are generated (m)
     
     ######### Precomputations and variables that should not be changed END ########
     
@@ -207,40 +196,40 @@ def run_dimensioning():
     HPS = np.c_[HPS,Qdim_H];                                             # Append to heat pump data structure for heating
     CPS = np.c_[CPS,Qdim_C];                                             # Append to heat pump data structure for cooling
     
-    # Heat pump and temperature conditions in the sizing equation
-    To_H = hp.Ti_H - sum(Qdim_H*HPS[:,7])/sum(Qdim_H);                         # Volumetric flow rate weighted average brine delta-T (C)
-    To_C = hp.Ti_C + sum(Qdim_C*CPS[:,4])/sum(Qdim_C);                         # Volumetric flow rate weighted average brine delta-T (C)
+    # # Heat pump and temperature conditions in the sizing equation
+    # To_H = hp.Ti_H - sum(Qdim_H*HPS[:,7])/sum(Qdim_H);                         # Volumetric flow rate weighted average brine delta-T (C)
+    # To_C = hp.Ti_C + sum(Qdim_C*CPS[:,4])/sum(Qdim_C);                         # Volumetric flow rate weighted average brine delta-T (C)
     
         
     # Compute flow and pressure loss in BHEs and HHEs under peak load conditions. Temperature conditions are computed as well.
-    if SS == 0:
+    # if SS == 0:
         # HHE heating
-        Q_HHEmax_H = sum(Qdim_H)/HHE.N_HHE;                                        # Peak flow in HHE pipes (m3/s)
-        v_HHEmax_H = Q_HHEmax_H/np.pi/ri_HHE**2;                                   # Peak flow velocity in HHE pipes (m/s)
-        Re_HHEmax_H = Re(brine.rho,brine.mu,v_HHEmax_H,2*ri_HHE);                           # Peak Reynolds numbers in HHE pipes (-)
-        dpdL_HHEmax_H = dp(brine.rho,brine.mu,Q_HHEmax_H,2*ri_HHE);                            # Peak pressure loss in HHE pipes (Pa/m)
+        # Q_HHEmax_H = sum(Qdim_H)/HHE.N_HHE;                                        # Peak flow in HHE pipes (m3/s)
+        # v_HHEmax_H = Q_HHEmax_H/np.pi/ri_HHE**2;                                   # Peak flow velocity in HHE pipes (m/s)
+        # Re_HHEmax_H = Re(brine.rho,brine.mu,v_HHEmax_H,2*ri_HHE);                           # Peak Reynolds numbers in HHE pipes (-)
+        # dpdL_HHEmax_H = dp(brine.rho,brine.mu,Q_HHEmax_H,2*ri_HHE);                            # Peak pressure loss in HHE pipes (Pa/m)
     
         # HHE cooling
-        Q_HHEmax_C = sum(Qdim_C)/HHE.N_HHE;                                        # Peak flow in HHE pipes (m3/s)
-        v_HHEmax_C = Q_HHEmax_C/np.pi/ri_HHE**2;                                   # Peak flow velocity in HHE pipes (m/s)
-        Re_HHEmax_C = Re(brine.rho,brine.mu,v_HHEmax_C,2*ri_HHE);                           # Peak Reynolds numbers in HHE pipes (-)
-        dpdL_HHEmax_C = dp(brine.rho,brine.mu,Q_HHEmax_C,2*ri_HHE);                            # Peak pressure loss in HHE pipes (Pa/m)
+        # Q_HHEmax_C = sum(Qdim_C)/HHE.N_HHE;                                        # Peak flow in HHE pipes (m3/s)
+        # v_HHEmax_C = Q_HHEmax_C/np.pi/ri_HHE**2;                                   # Peak flow velocity in HHE pipes (m/s)
+        # Re_HHEmax_C = Re(brine.rho,brine.mu,v_HHEmax_C,2*ri_HHE);                           # Peak Reynolds numbers in HHE pipes (-)
+        # dpdL_HHEmax_C = dp(brine.rho,brine.mu,Q_HHEmax_C,2*ri_HHE);                            # Peak pressure loss in HHE pipes (Pa/m)
     
-    if SS == 1:
-        #TCH2 = T0_BHE - (hp.Ti_H + To_H)/2;                                   # Temperature condition for heating with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs (C)
-        #TCC2 = (hp.Ti_C + To_C)/2 - T0_BHE;                                   # Temperature condition for cooling with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs (C)
+    # if SS == 1:
+    #     #TCH2 = T0_BHE - (hp.Ti_H + To_H)/2;                                   # Temperature condition for heating with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs (C)
+    #     #TCC2 = (hp.Ti_C + To_C)/2 - T0_BHE;                                   # Temperature condition for cooling with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs (C)
         
-        # BHE heating
-        Q_BHEmax_H = sum(Qdim_H)/N_BHE;                                        # Peak flow in BHE pipes (m3/s)
-        v_BHEmax_H = Q_BHEmax_H/np.pi/ri**2;                                      # Flow velocity in BHEs (m/s)
-        Re_BHEmax_H = Re(brine.rho,brine.mu,v_BHEmax_H,2*ri);                              # Reynold number in BHEs (-)
-        dpdL_BHEmax_H = dp(brine.rho,brine.mu,Q_BHEmax_H,2*ri);                               # Pressure loss in BHE (Pa/m)
+    #     # BHE heating
+    #     Q_BHEmax_H = sum(Qdim_H)/N_BHE;                                        # Peak flow in BHE pipes (m3/s)
+    #     v_BHEmax_H = Q_BHEmax_H/np.pi/ri**2;                                      # Flow velocity in BHEs (m/s)
+    #     Re_BHEmax_H = Re(brine.rho,brine.mu,v_BHEmax_H,2*ri);                              # Reynold number in BHEs (-)
+    #     dpdL_BHEmax_H = dp(brine.rho,brine.mu,Q_BHEmax_H,2*ri);                               # Pressure loss in BHE (Pa/m)
         
-        # BHE cooling
-        Q_BHEmax_C = sum(Qdim_C)/N_BHE;                                        # Peak flow in BHE pipes (m3/s)
-        v_BHEmax_C = Q_BHEmax_C/np.pi/ri**2;                                      # Flow velocity in BHEs (m/s)
-        Re_BHEmax_C = Re(brine.rho,brine.mu,v_BHEmax_C,2*ri);                              # Reynold number in BHEs (-)
-        dpdL_BHEmax_C = dp(brine.rho,brine.mu,Q_BHEmax_C,2*ri);                               # Pressure loss in BHE (Pa/m)
+    #     # BHE cooling
+    #     Q_BHEmax_C = sum(Qdim_C)/N_BHE;                                        # Peak flow in BHE pipes (m3/s)
+    #     v_BHEmax_C = Q_BHEmax_C/np.pi/ri**2;                                      # Flow velocity in BHEs (m/s)
+    #     Re_BHEmax_C = Re(brine.rho,brine.mu,v_BHEmax_C,2*ri);                              # Reynold number in BHEs (-)
+    #     dpdL_BHEmax_C = dp(brine.rho,brine.mu,Q_BHEmax_C,2*ri);                               # Pressure loss in BHE (Pa/m)
     
     # Compute design flow for the pipes
     for i in range(N_PG):
@@ -486,12 +475,34 @@ def run_dimensioning():
         
     # ############################## Source sizing END ##############################
     
-    # Output computation time to console
-    print(' ');
-    print('*************************** Computation time ***************************');
-    toc = time.time();                                                  # Track computation time (s)
-    print(f'Elapsed time: {round(toc-tic,6)} seconds');
     
+    
+# Function for dimensioning pipes
+def run_sourcedimensioning(SS): # SS = 1: Borehole heat exchangers; SS = 0: Horizontal heat exchangers
+    
+        
+    # KART opdater med case/switch
+    if SS == 0:
+        # Horizontal heat exchanger (HHE) topology and pipes - default parameters
+        HHE = HHEconfig
+        
+    if SS == 1:
+        # Borehole heat exchangers (BHE)
+        BHE = BHEconfig;
+
+    
+# Run dimensioning functions and time    
+    
+tic = time.time();                                                    # Track computation time (s)                                                           
+run_pipedimensioning()
+    
+
+# Output computation time to console
+print(' ');
+print('*************************** Computation time ***************************');
+toc = time.time();                                                  # Track computation time (s)
+print(f'Elapsed time: {round(toc-tic,6)} seconds');
+
     ################## CONCEPTUAL MODEL DRAWINGS FOR REFERENCE ####################
     
     ################ Conceptual model for twin pipe in the ground #################
@@ -557,4 +568,3 @@ def run_dimensioning():
     #       -- or | : axes of symmetry
     ################# Conceptual model for HHE in the ground END ##################
     
-run_dimensioning()

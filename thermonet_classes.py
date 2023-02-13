@@ -30,33 +30,33 @@ class Heatpump:
     SF: float = 1  # Ratio of peak heating demand to be covered by the heat pump [0-1]. If SF = 0.8 then the heat pump delivers 80% of the peak heating load. The deficit is then supplied by an auxilliary heating device
 
 
-
-# MANGLER AT GENNEMGÅ
 @dataclass
-class BTESConfiguation:
+class HHEconfig:
+    # Horizontal heat exchanger (HHE) topology and pipes
+    N_HHE:int = 6;  # Number of HE loops (-)
+    d:float = 0.04;  # Outer diameter of HE pipe (m)
+    SDR:float = 17;  # SDR for HE pipes (-)
+    D:float = 1.5;  # Pipe segment spacing (m)
+
+
+@dataclass
+class BHEconfig:
     # Borehole heat exchangers (BHE)
-    rb:float = 0.152 / 2  # Borehole radius (m)
-    rp:float = 0.02  # Outer radius of U pipe (m)
-    BHESDR:float = 11  # SDR for U-pipe (-)
-    lss:float = 2.36  # Soil thermal conductivity along BHEs (W/m/K)
-    rhocss:float = 2.65e6  # Volumetric heat capacity of soil (along BHE). Assuming 70# quartz and 30# water (J/m3/K) #OK
-    lg:float = 1.75  # Grout thermal conductivity (W/m/K)
-    rhocg:float = 3e6  # Grout volumetric heat capacity (J/m3/K)
-    PD:float = 0.015  # Wall to wall distance U-pipe legs (m)
+    r_b:float = 0.152 / 2  # Borehole radius (m)
+    r_p:float = 0.02  # Outer radius of U pipe (m)
+    SDR:float = 11  # SDR for U-pipe (-)
+    l_ss:float = 2.36  # Soil thermal conductivity along BHEs (W/m/K)
+    rhoc_ss:float = 2.65e6  # Volumetric heat capacity of soil (along BHE). Assuming 70# quartz and 30# water (J/m3/K) #OK
+    l_g:float = 1.75  # Grout thermal conductivity (W/m/K)
+    rhoc_g:float = 3e6  # Grout volumetric heat capacity (J/m3/K)
+    D_pipes:float = 0.015  # Wall to wall distance U-pipe legs (m)
 
     # BHE field
     NX:int = 1  # Number of boreholes in the x-direction (-)
-    dx:float = 15  # Spacing between boreholes in the x-direction (m)
+    D_x:float = 15  # Spacing between boreholes in the x-direction (m)
     NY:int = 6 # Number of boreholes in the y-direction (-)
-    dy:float = 15  # Spacing between boreholes in the y-direction (m)
+    D_y:float = 15  # Spacing between boreholes in the y-direction (m)
     
-@dataclass
-class HorizontalConfiguration:
-    # Horizontal heat exchanger (HHE) topology and pipes
-    NHHE:int = 6;  # Number of HE loops (-)
-    PDHE:float = 0.04;  # Outer diameter of HE pipe (m)
-    HHESDR:float = 17;  # SDR for HE pipes (-)
-    dd:float = 1.5;  # Pipe segment spacing (m)
 
 
 

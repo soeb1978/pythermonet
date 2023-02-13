@@ -22,6 +22,15 @@ class Thermonet:
 
 
 
+@dataclass
+class Heatpump:
+    # Heat pump
+    Ti_H: float = -3  # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
+    Ti_C: float = 20  # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
+    SF: float = 1  # Ratio of peak heating demand to be covered by the heat pump [0-1]. If SF = 0.8 then the heat pump delivers 80% of the peak heating load. The deficit is then supplied by an auxilliary heating device
+
+
+
 # MANGLER AT GENNEMGÅ
 @dataclass
 class BTESConfiguation:
@@ -51,11 +60,5 @@ class HorizontalConfiguration:
 
 
 
-@dataclass
-class Heatpump:
-    # Heat pump
-    Thi: float = -3  # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
-    Tci: float = 20  # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
-    SF: float = 1  # Ratio of peak heating demand to be covered by the heat pump [0-1]. If SF = 0.8 then the heat pump delivers 80% of the peak heating load. The deficit is then supplied by an auxilliary heating device
 
 

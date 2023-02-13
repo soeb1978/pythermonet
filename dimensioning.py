@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 import math as mt
 from fThermonetDim import ils, ps, Re, dp, Rp, CSM, RbMP, GCLS, RbMPflc
-from thermonet_classes import Brine, Thermonet
+from thermonet_classes import Brine, Thermonet, Heatpump
 import time
 
 
@@ -40,11 +40,8 @@ def run_dimensioning():
     # Thermonet - with default parameters
     net = Thermonet;
     
-        
-    # Heat pump
-    Ti_H = -3;                                                           # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Ti_H > -4C. Auxillary heater must be considered.
-    Ti_C = 20;                                                           # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Ti_H > -4C. Auxillary heater must be considered.
-    SF = 1;                                                             # Ratio of peak heating demand to be covered by the heat pump [0-1]. If SF = 0.8 then the heat pump delivers 80% of the peak heating load. The deficit is then supplied by an auxilliary heating device
+    # Heat pump - with default parameters
+    hp = Heatpump;
     
     # Source selection
     SS = 0;                                                             # SS = 1: Borehole heat exchangers; SS = 0: Horizontal heat exchangers  
@@ -162,7 +159,7 @@ def run_dimensioning():
     # Simultaneity factors to apply to annual, monthly and hourly heating and cooling demands
     S = np.zeros(3);
     # KART: er der gået ged i index oversættelse fra Matlab hvor S(3) = (51 - NHP)*NHP^-0.5/NHP ? Følg op alle tre.
-    S[2] = SF*(0.62 + 0.38/N_HP);                                        # Hourly. Varme Ståbi. Ligning 3 i "Effekt- og samtidighedsforhold ved fjernvarmeforsyning af nye boligområder"
+    S[2] = hp.SF*(0.62 + 0.38/N_HP);                                        # Hourly. Varme Ståbi. Ligning 3 i "Effekt- og samtidighedsforhold ved fjernvarmeforsyning af nye boligområder"
     S[0]  = 1; #0.62 + 0.38/N_HP;                                        # Annual. Varme Ståbi. Ligning 3 i "Effekt- og samtidighedsforhold ved fjernvarmeforsyning af nye boligområder"
     S[1]  = 1; #S(1);                                                   # Monthly. Varme Ståbi. Ligning 3 i "Effekt- og samtidighedsforhold ved fjernvarmeforsyning af nye boligområder"
     
@@ -227,8 +224,8 @@ def run_dimensioning():
     CPS = np.c_[CPS,Qdim_C];                                             # Append to heat pump data structure for cooling
     
     # Heat pump and temperature conditions in the sizing equation
-    To_H = Ti_H - sum(Qdim_H*HPS[:,7])/sum(Qdim_H);                         # Volumetric flow rate weighted average brine delta-T (C)
-    To_C = Ti_C + sum(Qdim_C*CPS[:,4])/sum(Qdim_C);                         # Volumetric flow rate weighted average brine delta-T (C)
+    To_H = hp.Ti_H - sum(Qdim_H*HPS[:,7])/sum(Qdim_H);                         # Volumetric flow rate weighted average brine delta-T (C)
+    To_C = hp.Ti_C + sum(Qdim_C*CPS[:,4])/sum(Qdim_C);                         # Volumetric flow rate weighted average brine delta-T (C)
     
         
     # Compute flow and pressure loss in BHEs and HHEs under peak load conditions. Temperature conditions are computed as well.
@@ -246,8 +243,8 @@ def run_dimensioning():
         dpdL_HHEmax_C = dp(brine.rho,brine.mu,Q_HHEmax_C,2*ri_HHE);                            # Peak pressure loss in HHE pipes (Pa/m)
     
     if SS == 1:
-        #TCH2 = T0_BHE - (Ti_H + To_H)/2;                                   # Temperature condition for heating with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs (C)
-        #TCC2 = (Ti_C + To_C)/2 - T0_BHE;                                   # Temperature condition for cooling with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs (C)
+        #TCH2 = T0_BHE - (hp.Ti_H + To_H)/2;                                   # Temperature condition for heating with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs (C)
+        #TCC2 = (hp.Ti_C + To_C)/2 - T0_BHE;                                   # Temperature condition for cooling with BHE. Eq. 2.19 Advances in GSHP systems but surface temperature penalty is removed from the criterion as it doesn't apply to BHEs (C)
         
         # BHE heating
         Q_BHEmax_H = sum(Qdim_H)/N_BHE;                                        # Peak flow in BHE pipes (m3/s)
@@ -343,8 +340,8 @@ def run_dimensioning():
     for i in range(N_PG):
         GTHMH[i,:] = CSM(d_selectedPipes_H[i]/2,d_selectedPipes_H[i]/2,t,a_s) + K1;
         GTHMC[i,:] = CSM(d_selectedPipes_C[i]/2,d_selectedPipes_C[i]/2,t,a_s) + K1;
-        FPH[i] = (T0 - (Ti_H + To_H)/2 - TP)*L_segments[i]/np.dot(cdPSH,GTHMH[i]/net.l_s_H + R_H[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
-        FPC[i] = ((Ti_C + To_C)/2 - T0 - TP)*L_segments[i]/np.dot(cdPSC,GTHMC[i]/net.l_s_C + R_C[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
+        FPH[i] = (T0 - (hp.Ti_H + To_H)/2 - TP)*L_segments[i]/np.dot(cdPSH,GTHMH[i]/net.l_s_H + R_H[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
+        FPC[i] = ((hp.Ti_C + To_C)/2 - T0 - TP)*L_segments[i]/np.dot(cdPSC,GTHMC[i]/net.l_s_C + R_C[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
     
     # KART - mangler at gennemgå ny beregning af energi fra grid/kilder
     
@@ -413,8 +410,8 @@ def run_dimensioning():
         GBHEF = G_BHE;                                                  # Retain a copy of the G function for length correction later on (-)
         G_BHE_H = np.asarray([G_BHE[0]/l_ss+Rb_H,G_BHE[1]/l_ss+Rb_H, Rw_H]);     # Heating G-function
         G_BHE_C = np.asarray([G_BHE[0]/l_ss+Rb_C,G_BHE[1]/l_ss+Rb_C, Rw_C]);     # Cooling G-function
-        L_BHE_H = np.dot(PHEH,G_BHE_H) / (T0_BHE - (Ti_H + To_H)/2);    # Sizing equation for computing the required borehole meters for heating (m)
-        L_BHE_C = np.dot(PHEC,G_BHE_C) / (-T0_BHE + (Ti_C + To_C)/2);      
+        L_BHE_H = np.dot(PHEH,G_BHE_H) / (T0_BHE - (hp.Ti_H + To_H)/2);    # Sizing equation for computing the required borehole meters for heating (m)
+        L_BHE_C = np.dot(PHEC,G_BHE_C) / (-T0_BHE + (hp.Ti_C + To_C)/2);      
             
         # Determine the solution by searching the neighbourhood of the approximate length solution
         # Heating mode
@@ -435,7 +432,7 @@ def run_dimensioning():
             Tf_BHE_H[i] = T0_BHE - np.dot(PHEH,np.array([GBHEF[0]/l_ss + Rb_H_v[i], GBHEF[1]/l_ss + Rb_H_v[i], Rw_H]))/L_BHE_H_v[i]/N_BHE;
     
     
-        Tbound_H = (Ti_H + To_H)/2; # Tjek om den skal bruges tidligere og flyt op
+        Tbound_H = (hp.Ti_H + To_H)/2; # Tjek om den skal bruges tidligere og flyt op
         Tf_BHE_H[Tf_BHE_H < Tbound_H] = np.nan;                                # Remove solutions that violate the bound Tf < Tbound_H    
         indLBHEH = np.argmin(np.isnan(Tf_BHE_H));                          # Find index of the first viable solution
     
@@ -450,7 +447,7 @@ def run_dimensioning():
             # KART: beregn væske temperatur
             Tf_BHE_C[i] = T0_BHE + np.dot(PHEC,np.array([GBHEF[0]/l_ss + Rb_C_v[i], GBHEF[1]/l_ss + Rb_C_v[i], Rw_C]))/L_BHE_C_v[i]/N_BHE;
     
-        Tbound_C = (Ti_C + To_C)/2; # Tjek om den skal bruges tidligere og flyt op
+        Tbound_C = (hp.Ti_C + To_C)/2; # Tjek om den skal bruges tidligere og flyt op
         Tf_BHE_C[Tf_BHE_C > Tbound_C] = np.nan;                                # Remove solutions that violate the bound Tf > Tbound_C    
         indLBHEC = np.argmin(np.isnan(Tf_BHE_C));                          # Find index of the first viable solution
     
@@ -488,13 +485,13 @@ def run_dimensioning():
         # Heating
         Rp_HHE_H = Rp(2*ri_HHE,2*ro_HHE,Re_HHEmax_H,Pr,brine.l,net.l_p);                   # Compute the pipe thermal resistance (m*K/W)
         G_HHE_H = G_HHE/net.l_s_H + Rp_HHE_H;                                         # Add annual and monthly thermal resistances to G_HHE (m*K/W)
-        L_HHE_H = np.dot(PHEH,G_HHE_H) / (T0 - (Ti_H + To_H)/2 - TP );
+        L_HHE_H = np.dot(PHEH,G_HHE_H) / (T0 - (hp.Ti_H + To_H)/2 - TP );
         
         # Cooling
         Rp_HHE_C = Rp(2*ri_HHE,2*ro_HHE,Re_HHEmax_C,Pr,brine.l,net.l_p);                   # Compute the pipe thermal resistance (m*K/W)
         G_HHE_C = G_HHE/net.l_s_C + Rp_HHE_C;                                         # Add annual and monthly thermal resistances to G_HHE (m*K/W)
         #L_HHE_C = np.dot(PHEC,G_HHE_C/TCC1);                                 # Sizing equation for computing the required borehole meters (m)
-        L_HHE_C = np.dot(PHEC,G_HHE_C) / ((Ti_C + To_C)/2 - T0 - TP);
+        L_HHE_C = np.dot(PHEC,G_HHE_C) / ((hp.Ti_C + To_C)/2 - T0 - TP);
         
         # Output results to console
         print('********* Suggested length of horizontal heat exchangers (HHE) *********');

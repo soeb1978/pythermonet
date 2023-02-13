@@ -43,6 +43,8 @@ def run_dimensioning():
     # Heat pump - with default parameters
     hp = Heatpump;
     
+    # KOMET HJHERTIL
+    
     # Source selection
     SS = 0;                                                             # SS = 1: Borehole heat exchangers; SS = 0: Horizontal heat exchangers  
     

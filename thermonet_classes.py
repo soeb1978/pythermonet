@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import numpy as np
 
 @dataclass
 class Brine:
@@ -33,15 +34,26 @@ class Heatpump:
 @dataclass
 class HHEconfig:
     # Horizontal heat exchanger (HHE) topology and pipes
+    source:str = 'HHE';
     N_HHE:int = 6;  # Number of HE loops (-)
     d:float = 0.04;  # Outer diameter of HE pipe (m)
     SDR:float = 17;  # SDR for HE pipes (-)
     D:float = 1.5;  # Pipe segment spacing (m)
+    
+    # Results
+    L_HHE_H:float = np.nan;
+    L_HHE_C:float = np.nan;
+    Re_HHEmax_H:float = np.nan;
+    dpdL_HHEmax_H:float = np.nan;
+    Re_HHEmax_C:float = np.nan;
+    dpdL_HHEmax_C:float = np.nan;
+    
 
 
 @dataclass
 class BHEconfig:
     # Borehole heat exchangers (BHE)
+    source:str = 'BHE';
     r_b:float = 0.152 / 2  # Borehole radius (m)
     r_p:float = 0.02  # Outer radius of U pipe (m)
     SDR:float = 11  # SDR for U-pipe (-)
@@ -56,6 +68,14 @@ class BHEconfig:
     D_x:float = 15  # Spacing between boreholes in the x-direction (m)
     NY:int = 6 # Number of boreholes in the y-direction (-)
     D_y:float = 15  # Spacing between boreholes in the y-direction (m)
+    
+    # Results
+    L_BHE_H:float = np.nan;
+    L_BHE_C:float = np.nan;
+    Re_BHEmax_H:float = np.nan;
+    dpdL_BHEmax_H:float = np.nan;
+    Re_BHEmax_C:float = np.nan;
+    dpdL_BHEmax_C:float = np.nan;
     
 
 

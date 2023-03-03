@@ -60,9 +60,6 @@ class ThermonetJob(NumerousBaseJob):
 
         )
 
-
-
-
         make_dimensioning_report(configuration, filename=report_file)
         self.app.client.upload_file("output/"+report_file+".html", "report")
 

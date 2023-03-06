@@ -23,7 +23,7 @@ from thermonet_classes import Brine, Thermonet, Heatpump, HHEconfig, BHEconfig
 
 
 # Function for dimensioning pipes
-def run_pipedimensioning(HPS, CPS, TOPO, I_PG, d_pipes, brine, net, hp):
+def run_pipedimensioning(HPS, CPS, I_PG, d_pipes, brine, net, hp):
     
     N_PG = len(I_PG);                                                     # Number of pipe groups
     N_HP = len(HPS)  # Number of heat pumps
@@ -70,52 +70,41 @@ def run_pipedimensioning(HPS, CPS, TOPO, I_PG, d_pipes, brine, net, hp):
     
     # Compute design flow for the pipes
     for i in range(N_PG):
-       Q_PG_H[i]=sum(HPS[np.ndarray.tolist(I_PG[i]),8])/TOPO[i,2];        # Sum the heating brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
-       Q_PG_C[i]=sum(CPS[np.ndarray.tolist(I_PG[i]),5])/TOPO[i,2];        # Sum the cooling brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
+       Q_PG_H[i]=sum(HPS[np.ndarray.tolist(I_PG[i]),8])/net.N_traces[i];        # Sum the heating brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
+       Q_PG_C[i]=sum(CPS[np.ndarray.tolist(I_PG[i]),5])/net.N_traces[i];        # Sum the cooling brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
     
     # Select the smallest diameter pipe that fulfills the pressure drop criterion
     for i in range(N_PG):                                 
-        di_pipes = d_pipes*(1-2/TOPO[i,0]);                                # Compute inner diameters (m). Variable TOPO_H or TOPO_C are identical here.
+        di_pipes = d_pipes*(1-2/net.SDR[i]);                                # Compute inner diameters (m). Variable TOPO_H or TOPO_C are identical here.
         ind_H[i] = np.argmax(dp(brine.rho,brine.mu,Q_PG_H[i],di_pipes)<net.dpdL_t);           # Find first pipe with a pressure loss less than the target for heating (-)
         ind_C[i] = np.argmax(dp(brine.rho,brine.mu,Q_PG_C[i],di_pipes)<net.dpdL_t);           # Find first pipe with a pressure loss less than the target for cooling (-)
         d_selectedPipes_H[i] = d_pipes[int(ind_H[i])];                              # Store pipe selection for heating in new variable (m)
-        d_selectedPipes_C[i] = d_pipes[int(ind_C[i])];                              # Store pipe selection for cooling in new variable (m)
+        d_selectedPipes_C[i] = d_pipes[int(ind_C[i])]; 
+
+    net.d_selectedPipes_H = d_selectedPipes_H;
+    net.d_selectedPipes_C = d_selectedPipes_C;
+                             # Store pipe selection for cooling in new variable (m)
     
     # Compute Reynolds number for selected pipes for heating
     # KART: all variables with suffix "selected" could be renamed "grid" or similar?
-    di_selected_H = d_selectedPipes_H*(1-2/TOPO[:,0]);                                 # Compute inner diameter of selected pipes (m)
-    v_H = Q_PG_H/np.pi/di_selected_H**2*4;                                        # Compute flow velocity for selected pipes (m/s)
-    Re_selected_H = Re(brine.rho,brine.mu,v_H,di_selected_H);                                      # Compute Reynolds numbers for the selected pipes (-)
+    net.di_selected_H = d_selectedPipes_H*(1-2/net.SDR);                                 # Compute inner diameter of selected pipes (m)
+    v_H = Q_PG_H/np.pi/net.di_selected_H**2*4;                                        # Compute flow velocity for selected pipes (m/s)
+    net.Re_selected_H = Re(brine.rho,brine.mu,v_H,net.di_selected_H);                                      # Compute Reynolds numbers for the selected pipes (-)
     
     # Compute Reynolds number for selected pipes for cooling
-    di_selected_C = d_selectedPipes_C*(1-2/TOPO[:,0]);                                 # Compute inner diameter of selected pipes (m)
-    v_C = Q_PG_C/np.pi/di_selected_C**2*4;                                        # Compute flow velocity for selected pipes (m/s)
-    Re_selected_C = Re(brine.rho,brine.mu,v_C,di_selected_C);                                      # Compute Reynolds numbers for the selected pipes (-)
+    net.di_selected_C = d_selectedPipes_C*(1-2/net.SDR);                                 # Compute inner diameter of selected pipes (m)
+    v_C = Q_PG_C/np.pi/net.di_selected_C**2*4;                                        # Compute flow velocity for selected pipes (m/s)
+    net.Re_selected_C = Re(brine.rho,brine.mu,v_C,net.di_selected_C);                                      # Compute Reynolds numbers for the selected pipes (-)
     
-    L_segments = 2*TOPO[:,1]*TOPO[:,2]; # slet når der er ryddet op - se nedenfor
-    TOPO_H = np.c_[TOPO, d_selectedPipes_H, Re_selected_H, L_segments];                         # Add pipe selection diameters (m), Reynolds numbers (-) and lengths as columns to the TOPO array    
-    TOPO_C = np.c_[TOPO, d_selectedPipes_C, Re_selected_C, L_segments];                         # Add pipe selection diameters (m), Reynolds numbers (-) and lengths as columns to the TOPO array    
-
     
     # Return the pipe sizing results
-    # return HPS, CPS, P_s_H, d_selectedPipes_H, di_selected_H, Re_selected_H, d_selectedPipes_C, di_selected_C, Re_selected_C
-    return HPS, CPS, TOPO_H, TOPO_C, P_s_H, di_selected_H, di_selected_C 
+    return net, HPS, CPS, P_s_H 
 
     ############################### Pipe sizing END ###############################
     
     
 # Function for dimensioning sources
-# def run_sourcedimensioning(P_s_H, HPS, CPS, TOPO_H, TOPO_C, I_PG, d_selectedPipes_H, di_selected_H, Re_selected_H, d_selectedPipes_C, di_selected_C, Re_selected_C, brine, net, hp, source_config): 
-def run_sourcedimensioning(P_s_H, HPS, CPS, TOPO_H, TOPO_C, I_PG, di_selected_H, di_selected_C, brine, net, hp, source_config):
-    
- 
-    # KART - agree on approach for storing variables in TOPO or extracting for readability
-    d_selectedPipes_H = TOPO_H[:,3];
-    Re_selected_H = TOPO_H[:,4];
-    d_selectedPipes_C = TOPO_C[:,3];
-    Re_selected_C = TOPO_C[:,4];
-    L_segments = TOPO_H[:,5];
-
+def run_sourcedimensioning(P_s_H, HPS, CPS, I_PG, brine, net, hp, source_config):
     
     N_PG = len(I_PG);                                                     # Number of pipe groups
     N_HP = len(HPS);    
@@ -142,14 +131,13 @@ def run_sourcedimensioning(P_s_H, HPS, CPS, TOPO_H, TOPO_C, I_PG, di_selected_H,
     # Compute thermal resistances for pipes in heating mode
     R_H = np.zeros(N_PG);                                                 # Allocate pipe thermal resistance vector for heating (m*K/W)
     for i in range(N_PG):                                                # For all pipe groups
-        R_H[i] = Rp(di_selected_H[i],d_selectedPipes_H[i],Re_selected_H[i],Pr,brine.l,net.l_p);             # Compute thermal resistances (m*K/W)
-    TOPO_H = np.c_[TOPO_H, R_H];                                           # Append thermal resistances to pipe groups as a column in TOPO (m*K/W)
-    
+        R_H[i] = Rp(net.di_selected_H[i],net.d_selectedPipes_H[i],net.Re_selected_H[i],Pr,brine.l,net.l_p);             # Compute thermal resistances (m*K/W)
+     
     # Compute thermal resistances for pipes in cooling mode
     R_C = np.zeros(N_PG);                                                 # Allocate pipe thermal resistance vector for cooling (m*K/W)
     for i in range(N_PG):                                                # For all pipe groups
-        R_C[i] = Rp(di_selected_C[i],d_selectedPipes_C[i],Re_selected_C[i],Pr,brine.l,net.l_p);             # Compute thermal resistances (m*K/W)
-    TOPO_C = np.c_[TOPO_C, R_C];                                           # Append thermal resistances to pipe groups as a column in TOPO (m*K/W)
+        R_C[i] = Rp(net.di_selected_C[i],net.d_selectedPipes_C[i],net.Re_selected_C[i],Pr,brine.l,net.l_p);             # Compute thermal resistances (m*K/W)
+
     
     # Compute delta-qs for superposition of heating load responses
     dP_s_H = np.zeros((N_HP,3));                                           # Allocate power difference matrix for tempoeral superposition (W)
@@ -183,10 +171,10 @@ def run_sourcedimensioning(P_s_H, HPS, CPS, TOPO_H, TOPO_C, I_PG, di_selected_H,
     K1 = ils(a_s,t,net.D_gridpipes) - ils(a_s,t,2*net.z_grid) - ils(a_s,t,np.sqrt(net.D_gridpipes**2+4*net.z_grid**2));
     # KART: gennemgå nye varmeberegning - opsplittet på segmenter
     for i in range(N_PG):
-        GTHMH[i,:] = CSM(d_selectedPipes_H[i]/2,d_selectedPipes_H[i]/2,t,a_s) + K1;
-        GTHMC[i,:] = CSM(d_selectedPipes_C[i]/2,d_selectedPipes_C[i]/2,t,a_s) + K1;
-        FPH[i] = (T0 - (hp.Ti_H + To_H)/2 - TP)*L_segments[i]/np.dot(cdPSH,GTHMH[i]/net.l_s_H + R_H[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
-        FPC[i] = ((hp.Ti_C + To_C)/2 - T0 - TP)*L_segments[i]/np.dot(cdPSC,GTHMC[i]/net.l_s_C + R_C[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
+        GTHMH[i,:] = CSM(net.d_selectedPipes_H[i]/2,net.d_selectedPipes_H[i]/2,t,a_s) + K1;
+        GTHMC[i,:] = CSM(net.d_selectedPipes_C[i]/2,net.d_selectedPipes_C[i]/2,t,a_s) + K1;
+        FPH[i] = (T0 - (hp.Ti_H + To_H)/2 - TP)*net.L_segments[i]/np.dot(cdPSH,GTHMH[i]/net.l_s_H + R_H[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
+        FPC[i] = ((hp.Ti_C + To_C)/2 - T0 - TP)*net.L_segments[i]/np.dot(cdPSC,GTHMC[i]/net.l_s_C + R_C[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
     
     # KART - mangler at gennemgå ny beregning af energi fra grid/kilder
     
@@ -207,10 +195,10 @@ def run_sourcedimensioning(P_s_H, HPS, CPS, TOPO_H, TOPO_C, I_PG, di_selected_H,
         ############################ Borehole computation #########################
         ###########################################################################
         
-        # KART: quick and dirty - skal vi beholde denne så det er eksplicit BHE/HHE eller omskrive alt til source. osv?
+        # For readability only
         BHE = source_config;
         
-#        KART: overvej ri_BHE, ligesom ri_HHE?
+
         ri = BHE.r_p*(1 - 2/BHE.SDR);                                         # Inner radius of U pipe (m)
         a_ss = BHE.l_ss/BHE.rhoc_ss;                                               # BHE soil thermal diffusivity (m2/s)
         a_g = BHE.l_g/BHE.rhoc_g;                                                  # Grout thermal diffusivity (W/m/K)
@@ -370,7 +358,7 @@ def run_sourcedimensioning(P_s_H, HPS, CPS, TOPO_H, TOPO_C, I_PG, di_selected_H,
     # If HHEs are selected as source
     elif source_config.source == 'HHE':    
        
-        # KART: quick and dirty - skal vi beholde denne så det er eksplicit BHE/HHE eller omskrive alt til source. osv?
+        # For readability only
         HHE = source_config;
 
         ###########################################################################

@@ -7,18 +7,15 @@ TODO
 - bøvl med isinstance på egne classes -> forløbig fix med str (snak m Lasse til workshop -> lav kort script)
 
 DISKUTER
-- Gemmer resultater fra beregning ved at lave ekstra felter i klassen - OK?
-- TOPO_H og TOPO_C er identiske i rør dimensionering så er slået sammen - til sidst opdeles i H/C
-- HHE/BHE config gemmes i nye variable "BHE" el "HHE" for letlæselig kode (se source_dimensioning) -> alternativt implementer SRC.rb osv (SOEB)
+
+
 - Qdim tilføjes i HPS hhv CPS bæres der videre i beregning - OK?
-- TOPO_H/TOPO_C oprettes fra TOPO - tilføjer d_selected, RE_selected, Lsegments MEN:
-    * di_selected forbliver eksplicitte variable - nogen grund til det?
-    * L_segments er ens for H/C, overvej om den kun skal være det ene sted.
-- i første omgang er alle variable eksplicitte for at styre interface mellem funktioner -> diskuter om de skal samles i "superklasser"
+
 - Ryd op i håndtering af EER og COP - se ca Line 75.
     * Vi forstår køle-værdier i HPSC.dat som bygningslast ikke? -> jordlasten er større
     * Håndtering af EER: enheder + se ASHRAE p. 489 + egen note
     * hvor har vi EER værdier fra?
+
 - Skal vi udvide Heatpump klassen og flytte værdier fra HPS og CPS ind i den for mere ensartet kode?
 
 - Validering
@@ -78,6 +75,13 @@ CPS[:, :3] = CPS[:, 3:4] / (CPS[:, 3:4] - 1) * CPS[:, :3]
 
 # Load grid topology
 TOPO = np.loadtxt(TOPO_file,skiprows = 1,usecols = (1,2,3));          # Load numeric data from topology file
+net.SDR = TOPO[:,0];
+net.L_traces = TOPO[:,1];
+net.N_traces = TOPO[:,2];
+net.L_segments = 2 * net.L_traces * net.N_traces;
+
+
+
 I_PG = pd.read_csv(TOPO_file, sep = '\t+', engine='python');                              # Load the entire file into Panda dataframe
 pipeGroupNames = I_PG.iloc[:,0];                                             # Extract pipe group IDs
 I_PG = I_PG.iloc[:,4];                                                # Extract IDs of HPs connected to the different pipe groups
@@ -95,29 +99,24 @@ tic = time.time();
 
 # Run pipe dimensioning                                                    # Track computation time (s)                                                           
 # HPS, CPS, P_s_H, d_selectedPipes_H, di_selected_H, Re_selected_H, d_selectedPipes_C, di_selected_C, Re_selected_C = run_pipedimensioning(HPS, CPS, TOPO, I_PG, d_pipes, brine, net, hp)
-HPS, CPS, TOPO_H, TOPO_C, P_s_H, di_selected_H, di_selected_C = run_pipedimensioning(HPS, CPS, TOPO, I_PG, d_pipes, brine, net, hp)
+net, HPS, CPS, P_s_H = run_pipedimensioning(HPS, CPS, I_PG, d_pipes, brine, net, hp)
 
-# KART Possible cleanup by referencing TOPO's directly i print statements 
-d_selectedPipes_H = TOPO_H[:,3];
-Re_selected_H = TOPO_H[:,4];
-d_selectedPipes_C = TOPO_C[:,3];
-Re_selected_C = TOPO_C[:,4];
 
 # Print pipe dimensioning results
 print(' ');
 print('******************* Suggested pipe dimensions heating ******************'); 
 for i in range(len(I_PG)):
-    print(f'{pipeGroupNames.iloc[i]}: Ø{int(1000*d_selectedPipes_H[i])} mm SDR {int(TOPO[i,0])}, Re = {int(round(Re_selected_H[i]))}');
+    print(f'{pipeGroupNames.iloc[i]}: Ø{int(1000*net.d_selectedPipes_H[i])} mm SDR {int(net.SDR[i])}, Re = {int(round(net.Re_selected_H[i]))}');
 print(' ');
 print('******************* Suggested pipe dimensions cooling ******************');
 for i in range(len(I_PG)):
-    print(f'{pipeGroupNames.iloc[i]}: Ø{int(1000*d_selectedPipes_C[i])} mm SDR {int(TOPO[i,0])}, Re = {int(round(Re_selected_C[i]))}');
+    print(f'{pipeGroupNames.iloc[i]}: Ø{int(1000*net.d_selectedPipes_C[i])} mm SDR {int(net.SDR[i])}, Re = {int(round(net.Re_selected_C[i]))}');
 print(' ');
 
 
 # Run source dimensioning
 # FPH, FPC, source_config = run_sourcedimensioning(P_s_H, HPS, CPS, TOPO_H, TOPO_C, I_PG, d_selectedPipes_H, di_selected_H, Re_selected_H, d_selectedPipes_C, di_selected_C, Re_selected_C, brine, net, hp, source_config)
-FPH, FPC, source_config = run_sourcedimensioning(P_s_H, HPS, CPS, TOPO_H, TOPO_C, I_PG, di_selected_H, di_selected_C, brine, net, hp, source_config)
+FPH, FPC, source_config = run_sourcedimensioning(P_s_H, HPS, CPS, I_PG, brine, net, hp, source_config)
 
 # Print results to console
 print('***************** Thermonet energy production capacity *****************'); 
@@ -128,38 +127,26 @@ print(' ');
 # BHE specific results
 if source_config.source == 'BHE':
     N_BHE = source_config.NX * source_config.NY;
-    L_BHE_H = source_config.L_BHE_H;
-    L_BHE_C = source_config.L_BHE_C;
-    Re_BHEmax_H = source_config.Re_BHEmax_H;
-    dpdL_BHEmax_H = source_config.dpdL_BHEmax_H;
-    Re_BHEmax_C = source_config.Re_BHEmax_C;
-    dpdL_BHEmax_C = source_config.dpdL_BHEmax_C;
     
     # Display output in console
     print('********** Suggested length of borehole heat exchangers (BHE) **********'); 
-    print(f'Required length of each of the {int(N_BHE)} BHEs = {int(np.ceil(L_BHE_H/N_BHE))} m for heating');
-    print(f'Required length of each of the {int(N_BHE)} BHEs = {int(np.ceil(L_BHE_C/N_BHE))} m for cooling');
-    print(f'Maximum pressure loss in BHEs in heating mode = {int(np.ceil(dpdL_BHEmax_H))} Pa/m, Re = {int(round(Re_BHEmax_H))}');
-    print(f'Maximum pressure loss in BHEs in cooling mode = {int(np.ceil(dpdL_BHEmax_C))} Pa/m, Re = {int(round(Re_BHEmax_C))}');
+    print(f'Required length of each of the {int(N_BHE)} BHEs = {int(np.ceil(source_config.L_BHE_H/N_BHE))} m for heating');
+    print(f'Required length of each of the {int(N_BHE)} BHEs = {int(np.ceil(source_config.L_BHE_C/N_BHE))} m for cooling');
+    print(f'Maximum pressure loss in BHEs in heating mode = {int(np.ceil(source_config.dpdL_BHEmax_H))} Pa/m, Re = {int(round(source_config.Re_BHEmax_H))}');
+    print(f'Maximum pressure loss in BHEs in cooling mode = {int(np.ceil(source_config.dpdL_BHEmax_C))} Pa/m, Re = {int(round(source_config.Re_BHEmax_C))}');
 
 elif source_config.source =='HHE':
 
     N_HHE = source_config.N_HHE;
-    L_HHE_H = source_config.L_HHE_H;
-    L_HHE_C = source_config.L_HHE_C;
-    Re_HHEmax_H = source_config.Re_HHEmax_H;
-    dpdL_HHEmax_H = source_config.dpdL_HHEmax_H;
-    Re_HHEmax_C = source_config.Re_HHEmax_C;
-    dpdL_HHEmax_C = source_config.dpdL_HHEmax_C;
    
     
     
     # Output results to console
     print('********* Suggested length of horizontal heat exchangers (HHE) *********');
-    print(f'Required length of each of the {int(N_HHE)} horizontal loops = {int(np.ceil(L_HHE_H/N_HHE))} m for heating');
-    print(f'Required length of each of the {int(N_HHE)} horizontal loops = {int(np.ceil(L_HHE_C/N_HHE))} m for cooling');
-    print(f'Maximum pressure loss in HHE pipes in heating mode = {int(np.ceil(dpdL_HHEmax_H))} Pa/m, Re = {int(round(Re_HHEmax_H))}');
-    print(f'Maximum pressure loss in HHE pipes in cooling mode {int(np.ceil(dpdL_HHEmax_C))} Pa/m, Re = {int(round(Re_HHEmax_C))}');
+    print(f'Required length of each of the {int(N_HHE)} horizontal loops = {int(np.ceil(source_config.L_HHE_H/N_HHE))} m for heating');
+    print(f'Required length of each of the {int(N_HHE)} horizontal loops = {int(np.ceil(source_config.L_HHE_C/N_HHE))} m for cooling');
+    print(f'Maximum pressure loss in HHE pipes in heating mode = {int(np.ceil(source_config.dpdL_HHEmax_H))} Pa/m, Re = {int(round(source_config.Re_HHEmax_H))}');
+    print(f'Maximum pressure loss in HHE pipes in cooling mode {int(np.ceil(source_config.dpdL_HHEmax_C))} Pa/m, Re = {int(round(source_config.Re_HHEmax_C))}');
 
 
 # Output computation time to console

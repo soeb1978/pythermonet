@@ -21,6 +21,22 @@ class Thermonet:
     rhoc_s: float = 2.5e6  # Soil volumetric heat capacity  thermonet and HHE (J/m3/K) OK. Guestimate
     z_grid: float = 1.2  # Burial depth of thermonet and HHE (m)
 
+    # KART tilføjet topologi information fra TOPO_FILE
+    SDR: float = np.nan;
+    L_traces: float = np.nan;
+    N_traces: float = np.nan;
+    L_segments: float = np.nan;
+    d_selectedPipes_H: float = np.nan;
+    di_selected_H: float = np.nan;
+    Re_selected_H: float = np.nan;
+    d_selectedPipes_C: float = np.nan;
+    di_selected_C: float = np.nan;
+    Re_selected_C: float = np.nan;
+    
+    # KART: tag stilling til om det er nødbendigt at beholde dem.
+    # R_H: float = np.nan;
+    # R_C: float = np.nan;
+
 
 
 @dataclass

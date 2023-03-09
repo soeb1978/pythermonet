@@ -8,15 +8,7 @@ TODO
 
 DISKUTER
 
-
-- Qdim tilføjes i HPS hhv CPS bæres der videre i beregning - OK?
-
-- Ryd op i håndtering af EER og COP - se ca Line 75.
-    * Vi forstår køle-værdier i HPSC.dat som bygningslast ikke? -> jordlasten er større
-    * Håndtering af EER: enheder + se ASHRAE p. 489 + egen note
-    * hvor har vi EER værdier fra?
-
-- Skal vi udvide Heatpump klassen og flytte værdier fra HPS og CPS ind i den for mere ensartet kode?
+- Ryd op i EER/COP beregning
 
 - Validering
     * Overvej om vi skal indføre en function der beregner Tfluid som en del af BHE-beregning -> denne del kan valideres mod kendte løsninger
@@ -53,8 +45,8 @@ net = Thermonet(D_gridpipes=0.3, dpdL_t=90, l_p=0.4, l_s_H=1.25, l_s_C=1.25, rho
 hp = Heatpump(Ti_H=-3, Ti_C=20, SF=1);
 # Heat source (either BHE or HHE) - with default parameters
 
-# source_config = HHEconfig(N_HHE=6, d=0.04, SDR=17, D=1.5)
-source_config = BHEconfig(r_b=0.152/2, r_p=0.02, SDR=11, l_ss=2.36, rhoc_ss=2.65e6, l_g=1.75, rhoc_g=3e6, D_pipes=0.015, NX=1, D_x=15, NY=6, D_y=15);
+source_config = HHEconfig(N_HHE=6, d=0.04, SDR=17, D=1.5)
+# source_config = BHEconfig(r_b=0.152/2, r_p=0.02, SDR=11, l_ss=2.36, rhoc_ss=2.65e6, l_g=1.75, rhoc_g=3e6, D_pipes=0.015, NX=1, D_x=15, NY=6, D_y=15);
 
 
 # Input files
@@ -64,13 +56,19 @@ TOPO_file = 'Silkeborg_TOPO.dat';                                          # Inp
 # Load heat pump data
 HPS = pd.read_csv(HP_file, sep = '\t+', engine='python');                                # Heat pump input file
 HPS = HPS.values  # Load numeric data from HP file
-CPS = HPS[:, 8:]  # Place cooling demand data in separate array
-HPS = HPS[:, :8]  # Remove cooling demand data from HPS array
-# Add circulation pump power consumption to cooling load (W)
-# KART: til dokumentation Qcool -> (EER/(EER-1))*Qcool enig?
-# KART den tilsvarende beregning for varme ligger ved kald til ps() inde i run_pipedimesnioning
-# Det bør ensrettes så det håndteres på samme måde
-CPS[:, :3] = CPS[:, 3:4] / (CPS[:, 3:4] - 1) * CPS[:, :3]                                            
+
+hp.P_y_H = HPS[:,1];
+hp.P_m_H = HPS[:,2];
+hp.P_d_H = HPS[:,3];
+hp.COP_y_H = HPS[:,4];
+hp.COP_m_H = HPS[:,5];
+hp.COP_d_H = HPS[:,6];
+hp.dT_H = HPS[:,7];
+hp.P_y_C = HPS[:,8];
+hp.P_m_C = HPS[:,9];
+hp.P_d_C = HPS[:,10];
+hp.EER = HPS[:,11];
+hp.dT_C = HPS[:,12];
 
 
 # Load grid topology
@@ -79,7 +77,6 @@ net.SDR = TOPO[:,0];
 net.L_traces = TOPO[:,1];
 net.N_traces = TOPO[:,2];
 net.L_segments = 2 * net.L_traces * net.N_traces;
-
 
 
 I_PG = pd.read_csv(TOPO_file, sep = '\t+', engine='python');                              # Load the entire file into Panda dataframe
@@ -98,8 +95,7 @@ d_pipes = d_pipes/1000;                                                 # Conver
 tic = time.time();
 
 # Run pipe dimensioning                                                    # Track computation time (s)                                                           
-# HPS, CPS, P_s_H, d_selectedPipes_H, di_selected_H, Re_selected_H, d_selectedPipes_C, di_selected_C, Re_selected_C = run_pipedimensioning(HPS, CPS, TOPO, I_PG, d_pipes, brine, net, hp)
-net, HPS, CPS, P_s_H = run_pipedimensioning(HPS, CPS, I_PG, d_pipes, brine, net, hp)
+net, P_s_H, P_s_C = run_pipedimensioning(I_PG, d_pipes, brine, net, hp)
 
 
 # Print pipe dimensioning results
@@ -115,8 +111,7 @@ print(' ');
 
 
 # Run source dimensioning
-# FPH, FPC, source_config = run_sourcedimensioning(P_s_H, HPS, CPS, TOPO_H, TOPO_C, I_PG, d_selectedPipes_H, di_selected_H, Re_selected_H, d_selectedPipes_C, di_selected_C, Re_selected_C, brine, net, hp, source_config)
-FPH, FPC, source_config = run_sourcedimensioning(P_s_H, HPS, CPS, I_PG, brine, net, hp, source_config)
+FPH, FPC, source_config = run_sourcedimensioning(P_s_H, P_s_C, I_PG, brine, net, hp, source_config)
 
 # Print results to console
 print('***************** Thermonet energy production capacity *****************'); 
@@ -138,8 +133,6 @@ if source_config.source == 'BHE':
 elif source_config.source =='HHE':
 
     N_HHE = source_config.N_HHE;
-   
-    
     
     # Output results to console
     print('********* Suggested length of horizontal heat exchangers (HHE) *********');

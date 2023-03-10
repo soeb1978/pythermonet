@@ -23,7 +23,7 @@ tic = time.time();                                                    # Track co
 ############### User set flow and thermal parameters by medium ################
 
 # Project ID
-PID = 'Energiakademiet, Samsø';                                     # Project name
+PID = 'Balle Bygade, Silkeborg';                                     # Project name
 
 # Input files
 HPFN = 'Silkeborg_HPSC.dat';                                            # Input file containing heat pump information

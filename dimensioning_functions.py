@@ -13,26 +13,132 @@ Created on Fri Nov  4 08:53:07 2022
 # Conceptual model drawings are found below the code
 
 import numpy as np
-#import pandas as pd
-#import math as mt
+import pandas as pd
 from fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, GCLS, RbMPflc
-# from thermonet_classes import Brine, Thermonet, Heatpump, HHEconfig, BHEconfig
 
+
+# Read heat pump data and calculate ground loads
+def read_heatpumpdata(hp, HP_file):
+    
+    HPS = pd.read_csv(HP_file, sep = '\t+', engine='python');                                # Heat pump input file
+    HPS = HPS.values  # Load numeric data from HP file
+
+    hp.P_y_H = HPS[:,1];
+    hp.P_m_H = HPS[:,2];
+    hp.P_d_H = HPS[:,3];
+    hp.COP_y_H = HPS[:,4];
+    hp.COP_m_H = HPS[:,5];
+    hp.COP_d_H = HPS[:,6];
+    hp.dT_H = HPS[:,7];
+    hp.P_y_C = HPS[:,8];
+    hp.P_m_C = HPS[:,9];
+    hp.P_d_C = HPS[:,10];
+    hp.EER = HPS[:,11];
+    hp.dT_C = HPS[:,12];
+    
+    
+    # Calcualate ground loads from building loads
+    N_HP = len(hp.P_y_H);
+        
+    # Simultaneity factor to apply to hourly heating
+    #KART Hvad med køling?
+    S = hp.SF*(0.62 + 0.38/N_HP);                   # Varme Ståbi. Ligning 3 i "Effekt- og samtidighedsforhold ved fjernvarmeforsyning af nye boligområder"
+    
+    # Convert building loads to ground loads - heating
+    hp.P_s_H = np.zeros([N_HP,3]);
+    hp.P_s_H[:,0] = (hp.COP_y_H-1)/hp.COP_y_H * hp.P_y_H; # Annual load (W)
+    hp.P_s_H[:,1] = (hp.COP_m_H-1)/hp.COP_m_H * hp.P_m_H; # Monthly load (W)
+    hp.P_s_H[:,2] = (hp.COP_d_H-1)/hp.COP_d_H * hp.P_d_H * S; # Daily load with simultaneity factor (W)
+    
+    # Convert building loads to ground loads - cooling
+    # KART Samtidighedsfaktor?
+    hp.P_s_C = np.zeros([N_HP,3]);
+    hp.P_s_C[:,0] = hp.EER/(hp.EER - 1) * hp.P_y_C; # Annual load (W)
+    hp.P_s_C[:,1] = hp.EER/(hp.EER - 1) * hp.P_m_C; # Monthly load (W)
+    hp.P_s_C[:,2] = hp.EER/(hp.EER - 1) * hp.P_d_C; # Daily load (W)
+    
+    # Første søjle i hp.P_s_H hhv hp.P_s_C er ens pånær fortegn. 
+    hp.P_s_H[:,0] = hp.P_s_H[:,0] - hp.P_s_C[:,0];                                       # Annual imbalance between heating and cooling, positive for heating (W)
+    hp.P_s_C[:,0] = - hp.P_s_H[:,0];                                                  # Negative for cooling
+
+
+    return hp
+
+
+# Read topology data
+def read_topology(net, TOPO_file):
+    
+    # Load grid topology
+    TOPO = np.loadtxt(TOPO_file,skiprows = 1,usecols = (1,2,3));          # Load numeric data from topology file
+    net.SDR = TOPO[:,0];
+    net.L_traces = TOPO[:,1];
+    net.N_traces = TOPO[:,2];
+    net.L_segments = 2 * net.L_traces * net.N_traces;
+    
+    I_PG = pd.read_csv(TOPO_file, sep = '\t+', engine='python');                              # Load the entire file into Panda dataframe
+    pipeGroupNames = I_PG.iloc[:,0];                                             # Extract pipe group IDs
+    I_PG = I_PG.iloc[:,4];                                                # Extract IDs of HPs connected to the different pipe groups
+    # Create array containing arrays of integers with HP IDs for all pipe sections
+    IPGA = [np.asarray(I_PG.iloc[i].split(',')).astype(int) - 1 for i in range(len(I_PG))]
+    I_PG = IPGA                                                            # Redefine I_PG
+    net.I_PG = I_PG;
+    del IPGA, I_PG;                                                           # Get rid of IPGA
+
+    
+    return net, pipeGroupNames
+
+
+# Print results to console
+def print_pipe_dimensions(net, pipeGroupNames):
+    
+    # Print pipe dimensioning results
+    print(' ');
+    print('******************* Suggested pipe dimensions heating ******************'); 
+    for i in range(len(net.I_PG)):
+        print(f'{pipeGroupNames.iloc[i]}: Ø{int(1000*net.d_selectedPipes_H[i])} mm SDR {int(net.SDR[i])}, Re = {int(round(net.Re_selected_H[i]))}');
+    print(' ');
+    print('******************* Suggested pipe dimensions cooling ******************');
+    for i in range(len(net.I_PG)):
+        print(f'{pipeGroupNames.iloc[i]}: Ø{int(1000*net.d_selectedPipes_C[i])} mm SDR {int(net.SDR[i])}, Re = {int(round(net.Re_selected_C[i]))}');
+    print(' ');
+
+
+# Print source dimensioning results to console
+def print_source_dimensions(FPH, FPC, source_config):
+    
+    # Print results to console
+    print('***************** Thermonet energy production capacity *****************'); 
+    print(f'The thermonet supplies {round(100*FPH)}% of the peak heating demand');  #print(f'The thermonet fully supplies the heat pumps with IDs 1 - {int(np.floor(NSHPH+1))} with heating' ) ;
+    print(f'The thermonet supplies {round(100*FPC)}% of the peak cooling demand');  
+    print(' ');
+
+    # BHE specific results
+    if source_config.source == 'BHE':
+        N_BHE = source_config.NX * source_config.NY;
+        
+        # Display output in console
+        print('********** Suggested length of borehole heat exchangers (BHE) **********'); 
+        print(f'Required length of each of the {int(N_BHE)} BHEs = {int(np.ceil(source_config.L_BHE_H/N_BHE))} m for heating');
+        print(f'Required length of each of the {int(N_BHE)} BHEs = {int(np.ceil(source_config.L_BHE_C/N_BHE))} m for cooling');
+        print(f'Maximum pressure loss in BHEs in heating mode = {int(np.ceil(source_config.dpdL_BHEmax_H))} Pa/m, Re = {int(round(source_config.Re_BHEmax_H))}');
+        print(f'Maximum pressure loss in BHEs in cooling mode = {int(np.ceil(source_config.dpdL_BHEmax_C))} Pa/m, Re = {int(round(source_config.Re_BHEmax_C))}');
+
+    elif source_config.source =='HHE':
+
+        N_HHE = source_config.N_HHE;
+        
+        # Output results to console
+        print('********* Suggested length of horizontal heat exchangers (HHE) *********');
+        print(f'Required length of each of the {int(N_HHE)} horizontal loops = {int(np.ceil(source_config.L_HHE_H/N_HHE))} m for heating');
+        print(f'Required length of each of the {int(N_HHE)} horizontal loops = {int(np.ceil(source_config.L_HHE_C/N_HHE))} m for cooling');
+        print(f'Maximum pressure loss in HHE pipes in heating mode = {int(np.ceil(source_config.dpdL_HHEmax_H))} Pa/m, Re = {int(round(source_config.Re_HHEmax_H))}');
+        print(f'Maximum pressure loss in HHE pipes in cooling mode {int(np.ceil(source_config.dpdL_HHEmax_C))} Pa/m, Re = {int(round(source_config.Re_HHEmax_C))}');
 
 
 # Function for dimensioning pipes
-def run_pipedimensioning(I_PG, d_pipes, brine, net, hp):
+def run_pipedimensioning(d_pipes, brine, net, hp):
     
-    N_PG = len(I_PG);                                                     # Number of pipe groups
-    N_HP = len(hp.P_y_H);
-
-    
-    # Create array containing arrays of integers with HP IDs for all pipe sections
-    IPGA = [np.asarray(I_PG.iloc[i].split(',')).astype(int) - 1 for i in range(N_PG)]
-    I_PG = IPGA                                                            # Redefine I_PG
-    del IPGA;                                                           # Get rid of IPGA
-        
-
+    N_PG = len(net.I_PG);                                                     # Number of pipe groups
     
     # Allocate variables
     ind_H = np.zeros(N_PG);                                               # Index vector for pipe groups heating (-)
@@ -42,47 +148,14 @@ def run_pipedimensioning(I_PG, d_pipes, brine, net, hp):
     Q_PG_H = np.zeros(N_PG);                                               # Design flow heating (m3/s)
     Q_PG_C = np.zeros(N_PG);                                               # Design flow cooling (m3/s)
 
-    
-    
-    # Simultaneity factors to apply to annual, monthly and hourly heating and cooling demands
-    #KART men vi bruger den kun for varme - og kun på årlig last
-    S = np.zeros(3);
-    
-    # KART: Overflødigt med vektor hvis vi kun korrigerer på timeniveau
-    S[0]  = 1;                                         # Annual. 
-    S[1]  = 1;                                         # Monthly. 
-    S[2] = hp.SF*(0.62 + 0.38/N_HP);                   # Hourly. Varme Ståbi. Ligning 3 i "Effekt- og samtidighedsforhold ved fjernvarmeforsyning af nye boligområder"
-    
-    ######### Precomputations and variables that should not be changed END ########
-    
-    ################################# Pipe sizing #################################
-    
-    # Convert building loads to ground loads
-    P_s_H = np.zeros([N_HP,3]);
-    P_s_H[:,0] = (hp.COP_y_H-1)/hp.COP_y_H * hp.P_y_H * S[0]; # Annual load (W)
-    P_s_H[:,1] = (hp.COP_m_H-1)/hp.COP_m_H * hp.P_m_H * S[1]; # Monthly load (W)
-    P_s_H[:,2] = (hp.COP_d_H-1)/hp.COP_d_H * hp.P_d_H * S[2]; # Daily load (W)
-    
-    
-    # Convert building loads to ground loads - cooling
-    # KART Samtidighedsfaktor?
-    P_s_C = np.zeros([N_HP,3]);
-    P_s_C[:,0] = hp.EER/(hp.EER - 1) * hp.P_y_C; # Annual load (W)
-    P_s_C[:,1] = hp.EER/(hp.EER - 1) * hp.P_m_C; # Monthly load (W)
-    P_s_C[:,2] = hp.EER/(hp.EER - 1) * hp.P_d_C; # Daily load (W)
-    
-    # KART vi korrigerer i princippet (S=1) for P_s_H[:,0], men ikke for køl
-    # Første søjle i P_s_H hhv P_s_C er ens pånær fortegn. 
-    P_s_H[:,0] = P_s_H[:,0] - P_s_C[:,0];                                       # Annual imbalance between heating and cooling, positive for heating (W)
-    P_s_C[:,0] = - P_s_H[:,0];                                                  # Negative for cooling
-    
-    hp.Qdim_H = P_s_H[:,2]/hp.dT_H/brine.rho/brine.c;                                  # Design flow heating (m3/s)
-    hp.Qdim_C = P_s_C[:,2]/hp.dT_C/brine.rho/brine.c;                             # Design flow cooling (m3/s). 
+        
+    hp.Qdim_H = hp.P_s_H[:,2]/hp.dT_H/brine.rho/brine.c;                                  # Design flow heating (m3/s)
+    hp.Qdim_C = hp.P_s_C[:,2]/hp.dT_C/brine.rho/brine.c;                             # Design flow cooling (m3/s). 
 
     # Compute design flow for the pipes
     for i in range(N_PG):
-       Q_PG_H[i] = sum(hp.Qdim_H[np.ndarray.tolist(I_PG[i])])/net.N_traces[i];        # Sum the heating brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
-       Q_PG_C[i] = sum(hp.Qdim_C[np.ndarray.tolist(I_PG[i])])/net.N_traces[i];        # Sum the cooling brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
+       Q_PG_H[i] = sum(hp.Qdim_H[np.ndarray.tolist(net.I_PG[i])])/net.N_traces[i];        # Sum the heating brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
+       Q_PG_C[i] = sum(hp.Qdim_C[np.ndarray.tolist(net.I_PG[i])])/net.N_traces[i];        # Sum the cooling brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
     
     # Select the smallest diameter pipe that fulfills the pressure drop criterion
     for i in range(N_PG):                                 
@@ -108,15 +181,15 @@ def run_pipedimensioning(I_PG, d_pipes, brine, net, hp):
     
     
     # Return the pipe sizing results
-    return net, P_s_H, P_s_C
+    return net
 
     ############################### Pipe sizing END ###############################
     
     
 # Function for dimensioning sources
-def run_sourcedimensioning(P_s_H, P_s_C, I_PG, brine, net, hp, source_config):
+def run_sourcedimensioning(brine, net, hp, source_config):
     
-    N_PG = len(I_PG);                                                     # Number of pipe groups
+    N_PG = len(net.I_PG);                                                     # Number of pipe groups
     N_HP = len(hp.P_y_H);    
       
     # G-function evaluation times (DO NOT MODIFY!!!!!!!)
@@ -153,16 +226,16 @@ def run_sourcedimensioning(P_s_H, P_s_C, I_PG, brine, net, hp, source_config):
     
     # Compute delta-qs for superposition of heating load responses
     dP_s_H = np.zeros((N_HP,3));                                           # Allocate power difference matrix for tempoeral superposition (W)
-    dP_s_H[:,0] = P_s_H[:,0];                                               # First entry is just the annual average power (W)
-    dP_s_H[:,1:] = np.diff(P_s_H);                                          # Differences between year-month and month-hour are added (W)
+    dP_s_H[:,0] = hp.P_s_H[:,0];                                               # First entry is just the annual average power (W)
+    dP_s_H[:,1:] = np.diff(hp.P_s_H);                                          # Differences between year-month and month-hour are added (W)
     
     # KART: tjek beregning
     cdPSH = np.sum(dP_s_H,0);
     
     # Compute delta-qs for superposition of cooling load responses
     dP_s_C = np.zeros((N_HP,3));                                           # Allocate power difference matrix for tempoeral superposition (W)
-    dP_s_C[:,0] = P_s_C[:,0];                                               # First entry is just the annual average power (W)
-    dP_s_C[:,1:] = np.diff(P_s_C);                                          # Differences between year-month and month-hour are added (W)
+    dP_s_C[:,0] = hp.P_s_C[:,0];                                               # First entry is just the annual average power (W)
+    dP_s_C[:,1:] = np.diff(hp.P_s_C);                                          # Differences between year-month and month-hour are added (W)
     
     # KART: ditto køl
     cdPSC = np.sum(dP_s_C,0);
@@ -286,9 +359,7 @@ def run_sourcedimensioning(P_s_H, P_s_C, I_PG, brine, net, hp, source_config):
         Rb_H = RbMP(brine.l,net.l_p,BHE.l_g,BHE.l_ss,BHE.r_b,BHE.r_p,ri,s_BHE,Re_BHEmax_H,Pr);                # Compute the borehole thermal resistance (m*K/W)
         Rb_C = RbMP(brine.l,net.l_p,BHE.l_g,BHE.l_ss,BHE.r_b,BHE.r_p,ri,s_BHE,Re_BHEmax_C,Pr);                # Compute the borehole thermal resistance (m*K/W)
         
-        # KART: eksponer mod bruger eller slet
-        #Rb = 0.12;                                                     # TRT estimate can be supplied instread (m*K/W)
-    
+        
         # Composite cylindrical source model GCLS() for short term response. Hu et al. 2014. Paper here: https://www.sciencedirect.com/science/article/abs/pii/S0378778814005866?via#3Dihub
         re_H = BHE.r_b/np.exp(2*np.pi*BHE.l_g*Rb_H);                                # Heating: Compute the equivalent pipe radius for cylindrical symmetry (m). This is how Hu et al. 2014 define it.
         re_C = BHE.r_b/np.exp(2*np.pi*BHE.l_g*Rb_C);                                # Cooling: Compute the equivalent pipe radius for cylindrical symmetry (m). This is how Hu et al. 2014 define it.

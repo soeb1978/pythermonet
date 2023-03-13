@@ -26,6 +26,8 @@ class Thermonet:
     L_traces: float = np.nan;
     N_traces: float = np.nan;
     L_segments: float = np.nan;
+    I_PG: float = np.nan; 
+    
     d_selectedPipes_H: float = np.nan;
     di_selected_H: float = np.nan;
     Re_selected_H: float = np.nan;
@@ -33,7 +35,9 @@ class Thermonet:
     di_selected_C: float = np.nan;
     Re_selected_C: float = np.nan;
     
-    # KART: tag stilling til om det er nødbendigt at beholde dem.
+    
+    
+    # KART: tag stilling til om det er nødvendigt at beholde dem.
     # R_H: float = np.nan;
     # R_C: float = np.nan;
 
@@ -55,6 +59,7 @@ class Heatpump:
     COP_d_H: float = np.nan;
     dT_H: float = np.nan;
     Qdim_H: float = np.nan;
+    P_s_H: float = np.nan;
     
     # Cooling mode parameters
     P_y_C: float = np.nan;
@@ -63,7 +68,7 @@ class Heatpump:
     EER: float = np.nan;
     dT_C: float = np.nan;
     Qdim_C: float = np.nan;
-
+    P_s_C: float = np.nan;
 
 
 

@@ -26,6 +26,7 @@ def ils(a, t, r):
     """
     return 1/4/mt.pi*f.exp1(r**2/4/a/t)
 
+#KART obsolete SLET
 def ps(PT,COP):
     # Computes ground load from total building load and COP (W)
     # pt : total building thermal load (W);

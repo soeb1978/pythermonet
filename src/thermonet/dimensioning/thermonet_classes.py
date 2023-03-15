@@ -1,6 +1,10 @@
 from dataclasses import dataclass
+from dataclasses_json import dataclass_json
 import numpy as np
+from typing import List
 
+
+@dataclass_json
 @dataclass
 class Brine:
     # Brine
@@ -9,8 +13,8 @@ class Brine:
     mu: float = 5e-3  # Brine dynamic viscosity (Pa*s). Source see above reference.
     l: float = 0.45  # Brine thermal conductivity (W/m/K). https://www.researchgate.net/publication/291350729_Investigation_of_ethanol_based_secondary_fluids_with_denaturing_agents_and_other_additives_used_for_borehole_heat_exchangers
 
-
-@dataclass()
+@dataclass_json
+@dataclass
 class Thermonet:
     # Thermonet and HHE
     D_gridpipes: float = 0.3    # Distance between forward and return pipe centers (m)
@@ -42,7 +46,7 @@ class Thermonet:
     # R_C: float = np.nan;
 
 
-
+@dataclass_json
 @dataclass
 class Heatpump:
     # Heat pump
@@ -71,7 +75,7 @@ class Heatpump:
     P_s_C: float = np.nan;
 
 
-
+@dataclass_json
 @dataclass
 class HHEconfig:
     # Horizontal heat exchanger (HHE) topology and pipes
@@ -90,7 +94,7 @@ class HHEconfig:
     dpdL_HHEmax_C:float = np.nan;
     
 
-
+@dataclass_json
 @dataclass
 class BHEconfig:
     # Borehole heat exchangers (BHE)
@@ -119,7 +123,14 @@ class BHEconfig:
     dpdL_BHEmax_C:float = np.nan;
     
 
-
-
-
-
+@dataclass_json
+@dataclass
+class FullDimension:
+    brine: Brine
+    thermonet: Thermonet
+    heatpump: Heatpump
+    source_config: HHEconfig | BHEconfig
+    pipe_group_name: List[str]
+    d_pipes: List[float]
+    FPH: float=np.nan
+    FPC: float=np.nan

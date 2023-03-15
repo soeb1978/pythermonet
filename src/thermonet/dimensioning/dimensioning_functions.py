@@ -14,7 +14,7 @@ Created on Fri Nov  4 08:53:07 2022
 
 import numpy as np
 import pandas as pd
-from fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, GCLS, RbMPflc
+from .fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, GCLS, RbMPflc
 
 
 # Read heat pump data and calculate ground loads

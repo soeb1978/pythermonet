@@ -1,3 +1,4 @@
+import pandas as pd
 from thermonet.dimensioning.thermonet_classes import Brine, Thermonet, Heatpump, HHEconfig
 from thermonet.dimensioning.dimensioning_functions import read_heatpumpdata, read_topology
 from thermonet.dimensioning.main import run_full_dimensioning

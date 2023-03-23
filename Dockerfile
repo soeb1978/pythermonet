@@ -1,6 +1,6 @@
 FROM python:3.10-slim
 
-COPY numerous_job/requirements.txt .
+COPY src/thermonet/numerous_job/requirements.txt .
 
 RUN pip install -r requirements.txt
 

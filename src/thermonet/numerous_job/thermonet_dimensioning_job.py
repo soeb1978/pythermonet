@@ -2,9 +2,8 @@ from numerous.image_tools.job import NumerousBaseJob, ExitCode
 from numerous.image_tools.app import run_job
 import logging
 import os
-from thermonet.reporting.report import make_dimensioning_report
-from thermonet.reporting.examples.example_configuration import configuration
-from thermonet.dimensioning.dimensioning_classes import BTESConfiguation, HorizontalConfiguration, Brine, Heatpump, Thermonet, DimensioningConfiguration
+from ..reporting.report import make_dimensioning_report
+from ..dimensioning.thermonet_classes import HHEconfig, BHEconfig, Brine, Heatpump, Thermonet, FullDimension
 from pathlib import Path
 
 LOG_LEVEL = os.getenv('LOG_LEVEL', logging.DEBUG)
@@ -34,9 +33,9 @@ class ThermonetJob(NumerousBaseJob):
         heatpump = Heatpump(**self.system.components["heatpump"].constants)
         brine = Brine(**self.system.components["brine"].constants)
         if "borehole_heat_exchanger" in self.system.components:
-            heat_exchanger = BTESConfiguation(**self.system.components["borehole_heat_exchanger"].constants)
+            heat_exchanger = BHEconfig(**self.system.components["borehole_heat_exchanger"].constants)
         else:
-            heat_exchanger = HorizontalConfiguration(**self.system.components["horizontal_heat_exchanger"].constants)
+            heat_exchanger = HHEconfig(**self.system.components["horizontal_heat_exchanger"].constants)
 
         if "prosumers_file" in self.system.components:
             prosumer_file = Path(self.system.components["prosumers_file"].constants["prosumer_file"])
@@ -48,11 +47,11 @@ class ThermonetJob(NumerousBaseJob):
         else:
             raise NotImplementedError("The sections list is not implemented")
 
-        configuration = DimensioningConfiguration(
+        configuration = FullDimension(
             thermonet=thermonet,
             heatpump=heatpump,
             brine=brine,
-            ground_heatexchanger_configuration=heat_exchanger,
+            source_config=heat_exchanger,
             PID="Test",
             HPFN=prosumer_file,  # Input file containing heat pump information
             TOPOFN=topology_file,

@@ -55,7 +55,7 @@ def read_heatpumpdata(hp, HP_file):
     hp.P_s_C = np.zeros([N_HP,3]);
     hp.P_s_C[:,0] = hp.EER/(hp.EER - 1) * hp.P_y_C; # Annual load (W)
     hp.P_s_C[:,1] = hp.EER/(hp.EER - 1) * hp.P_m_C; # Monthly load (W)
-    hp.P_s_C[:,2] = hp.EER/(hp.EER - 1) * hp.P_d_C; # Daily load (W)
+    hp.P_s_C[:,2] = hp.EER/(hp.EER - 1) * hp.P_d_C * S; # Daily load (W)
     
     # Første søjle i hp.P_s_H hhv hp.P_s_C er ens pånær fortegn. 
     hp.P_s_H[:,0] = hp.P_s_H[:,0] - hp.P_s_C[:,0];                                       # Annual imbalance between heating and cooling, positive for heating (W)
@@ -70,6 +70,7 @@ def read_topology(net, TOPO_file):
     
     # Load grid topology
     TOPO = np.loadtxt(TOPO_file,skiprows = 1,usecols = (1,2,3));          # Load numeric data from topology file
+    #print(TOPO);
     net.SDR = TOPO[:,0];
     net.L_traces = TOPO[:,1];
     net.N_traces = TOPO[:,2];
@@ -179,18 +180,27 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
     v_C = Q_PG_C/np.pi/net.di_selected_C**2*4;                                        # Compute flow velocity for selected pipes (m/s)
     net.Re_selected_C = Re(brine.rho,brine.mu,v_C,net.di_selected_C);                                      # Compute Reynolds numbers for the selected pipes (-)
     
+    # Aggregate heating and cooling demand for the next computations
+    #N_HP = len(hp.P_y_H);
+    
+    # Aggregate the heating and cooling demands
+    sPSH = sum(hp.P_s_H);
+    sPSC = sum(hp.P_s_C);
+    
+    # Heat pump and temperature conditions in the sizing equation
+    To_H = hp.Ti_H - sum(hp.Qdim_H*hp.dT_H)/sum(hp.Qdim_H);                         # Volumetric flow rate weighted average brine delta-T (C)
+    To_C = hp.Ti_C + sum(hp.Qdim_C*hp.dT_C)/sum(hp.Qdim_C);                         # Volumetric flow rate weighted average brine delta-T (C)
     
     # Return the pipe sizing results
-    return net
+    return net, sPSH, sPSC, To_H, To_C, hp.Ti_H, hp.Ti_C 
 
     ############################### Pipe sizing END ###############################
     
-    
+        
 # Function for dimensioning sources
-def run_sourcedimensioning(brine, net, hp, source_config):
+def run_sourcedimensioning(brine, net, sPSH, sPSC, Ti_H, Ti_C, To_H, To_C, source_config):
     
     N_PG = len(net.I_PG);                                                     # Number of pipe groups
-    N_HP = len(hp.P_y_H);    
       
     # G-function evaluation times (DO NOT MODIFY!!!!!!!)
     SECONDS_IN_HOUR = 3600;
@@ -222,23 +232,18 @@ def run_sourcedimensioning(brine, net, hp, source_config):
     R_C = np.zeros(N_PG);                                                 # Allocate pipe thermal resistance vector for cooling (m*K/W)
     for i in range(N_PG):                                                # For all pipe groups
         R_C[i] = Rp(net.di_selected_C[i],net.d_selectedPipes_C[i],net.Re_selected_C[i],Pr,brine.l,net.l_p);             # Compute thermal resistances (m*K/W)
-
     
-    # Compute delta-qs for superposition of heating load responses
-    dP_s_H = np.zeros((N_HP,3));                                           # Allocate power difference matrix for tempoeral superposition (W)
-    dP_s_H[:,0] = hp.P_s_H[:,0];                                               # First entry is just the annual average power (W)
-    dP_s_H[:,1:] = np.diff(hp.P_s_H);                                          # Differences between year-month and month-hour are added (W)
     
-    # KART: tjek beregning
-    cdPSH = np.sum(dP_s_H,0);
+    # Compute delta-qs for temporal superposition
+    # Heating
+    sdPSH = np.zeros(3); 
+    sdPSH[0] = sPSH[0];
+    sdPSH[1:] = np.diff(sPSH);
     
-    # Compute delta-qs for superposition of cooling load responses
-    dP_s_C = np.zeros((N_HP,3));                                           # Allocate power difference matrix for tempoeral superposition (W)
-    dP_s_C[:,0] = hp.P_s_C[:,0];                                               # First entry is just the annual average power (W)
-    dP_s_C[:,1:] = np.diff(hp.P_s_C);                                          # Differences between year-month and month-hour are added (W)
-    
-    # KART: ditto køl
-    cdPSC = np.sum(dP_s_C,0);
+    # Cooling
+    sdPSC = np.zeros(3);
+    sdPSC[0] = sPSC[0];
+    sdPSC[1:] = np.diff(sPSC);
     
     # Compute temperature responses in heating and cooling mode for all pipes
     # KART bliv enige om sigende navne der følger konvention og implementer x 4
@@ -247,28 +252,24 @@ def run_sourcedimensioning(brine, net, hp, source_config):
     GTHMH = np.zeros([N_PG,3]); #KART: G_grid_H
     GTHMC = np.zeros([N_PG,3]); #KART: G_grid_C
     
-    
-    # Heat pump and temperature conditions in the sizing equation
-    To_H = hp.Ti_H - sum(hp.Qdim_H*hp.dT_H)/sum(hp.Qdim_H);                         # Volumetric flow rate weighted average brine delta-T (C)
-    To_C = hp.Ti_C + sum(hp.Qdim_C*hp.dT_C)/sum(hp.Qdim_C);                         # Volumetric flow rate weighted average brine delta-T (C)
-    
+        
     K1 = ils(a_s,t,net.D_gridpipes) - ils(a_s,t,2*net.z_grid) - ils(a_s,t,np.sqrt(net.D_gridpipes**2+4*net.z_grid**2));
     # KART: gennemgå nye varmeberegning - opsplittet på segmenter
     for i in range(N_PG):
         GTHMH[i,:] = CSM(net.d_selectedPipes_H[i]/2,net.d_selectedPipes_H[i]/2,t,a_s) + K1;
         GTHMC[i,:] = CSM(net.d_selectedPipes_C[i]/2,net.d_selectedPipes_C[i]/2,t,a_s) + K1;
-        FPH[i] = (T0 - (hp.Ti_H + To_H)/2 - TP)*net.L_segments[i]/np.dot(cdPSH,GTHMH[i]/net.l_s_H + R_H[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
-        FPC[i] = ((hp.Ti_C + To_C)/2 - T0 - TP)*net.L_segments[i]/np.dot(cdPSC,GTHMC[i]/net.l_s_C + R_C[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
+        FPH[i] = (T0 - (Ti_H + To_H)/2 - TP)*net.L_segments[i]/np.dot(sdPSH,GTHMH[i]/net.l_s_H + R_H[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
+        FPC[i] = ((Ti_C + To_C)/2 - T0 - TP)*net.L_segments[i]/np.dot(sdPSC,GTHMC[i]/net.l_s_C + R_C[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
     
     # KART - mangler at gennemgå ny beregning af energi fra grid/kilder
     
     # Heating supplied by thermonet 
     FPH = sum(FPH);                                                     # Total fraction of heating supplied by thermonet (-)
-    PHEH = (1-FPH)*cdPSH;                                               # Residual heat demand (W)
+    PHEH = (1-FPH)*sdPSH;                                               # Residual heat demand (W)
     
     # Cooling supplied by thermonet
     FPC = sum(FPC);                                                     # Total fraction of cooling supplied by thermonet (-)
-    PHEC = (1-FPC)*cdPSC;                                               # Residual heat demand (W)
+    PHEC = (1-FPC)*sdPSC;                                               # Residual heat demand (W)
     
     
     ################################ Source sizing ################################

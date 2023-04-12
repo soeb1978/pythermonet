@@ -14,7 +14,7 @@ Created on Fri Nov  4 08:53:07 2022
 
 import numpy as np
 import pandas as pd
-from .fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, GCLS, RbMPflc
+from fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, GCLS, RbMPflc
 
 
 # Read heat pump data and calculate ground loads
@@ -184,21 +184,26 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
     #N_HP = len(hp.P_y_H);
     
     # Aggregate the heating and cooling demands
-    sPSH = sum(hp.P_s_H);
-    sPSC = sum(hp.P_s_C);
-    
+    sP_S_H = sum(hp.P_s_H);
+    sP_S_C = sum(hp.P_s_C);
+        
     # Heat pump and temperature conditions in the sizing equation
     To_H = hp.Ti_H - sum(hp.Qdim_H*hp.dT_H)/sum(hp.Qdim_H);                         # Volumetric flow rate weighted average brine delta-T (C)
     To_C = hp.Ti_C + sum(hp.Qdim_C*hp.dT_C)/sum(hp.Qdim_C);                         # Volumetric flow rate weighted average brine delta-T (C)
     
+    # Aggregate flow in heating and cooling mode
+    sQdim_H = sum(hp.Qdim_H);
+    sQdim_C = sum(hp.Qdim_C);
+
+    
     # Return the pipe sizing results
-    return net, sPSH, sPSC, To_H, To_C, hp.Ti_H, hp.Ti_C 
+    return net, sP_S_H, sP_S_C, To_H, To_C, hp.Ti_H, hp.Ti_C, sQdim_H, sQdim_C 
 
     ############################### Pipe sizing END ###############################
     
         
 # Function for dimensioning sources
-def run_sourcedimensioning(brine, net, sPSH, sPSC, Ti_H, Ti_C, To_H, To_C, source_config):
+def run_sourcedimensioning(brine, net, sP_S_H, sP_S_C, Ti_H, Ti_C, To_H, To_C, sQdim_H, sQdim_C, source_config):
     
     N_PG = len(net.I_PG);                                                     # Number of pipe groups
       
@@ -237,13 +242,13 @@ def run_sourcedimensioning(brine, net, sPSH, sPSC, Ti_H, Ti_C, To_H, To_C, sourc
     # Compute delta-qs for temporal superposition
     # Heating
     sdPSH = np.zeros(3); 
-    sdPSH[0] = sPSH[0];
-    sdPSH[1:] = np.diff(sPSH);
+    sdPSH[0] = sP_S_H[0];
+    sdPSH[1:] = np.diff(sP_S_H);
     
     # Cooling
     sdPSC = np.zeros(3);
-    sdPSC[0] = sPSC[0];
-    sdPSC[1:] = np.diff(sPSC);
+    sdPSC[0] = sP_S_C[0];
+    sdPSC[1:] = np.diff(sP_S_C);
     
     # Compute temperature responses in heating and cooling mode for all pipes
     # KART bliv enige om sigende navne der følger konvention og implementer x 4
@@ -338,7 +343,7 @@ def run_sourcedimensioning(brine, net, sPSH, sPSC, Ti_H, Ti_C, To_H, To_C, sourc
     
     
         # BHE heating
-        Q_BHEmax_H = sum(hp.Qdim_H)/N_BHE;                                        # Peak flow in BHE pipes (m3/s)
+        Q_BHEmax_H = sQdim_H/N_BHE;                                        # Peak flow in BHE pipes (m3/s)
         v_BHEmax_H = Q_BHEmax_H/np.pi/ri**2;                                      # Flow velocity in BHEs (m/s)
         Re_BHEmax_H = Re(brine.rho,brine.mu,v_BHEmax_H,2*ri);                              # Reynold number in BHEs (-)
         dpdL_BHEmax_H = dp(brine.rho,brine.mu,Q_BHEmax_H,2*ri);                               # Pressure loss in BHE (Pa/m)
@@ -347,7 +352,7 @@ def run_sourcedimensioning(brine, net, sPSH, sPSC, Ti_H, Ti_C, To_H, To_C, sourc
         BHE.dpdL_BHEmax_H = dpdL_BHEmax_H;  # Add pressure loss to BHE instance
         
         # BHE cooling
-        Q_BHEmax_C = sum(hp.Qdim_C)/N_BHE;                                        # Peak flow in BHE pipes (m3/s)
+        Q_BHEmax_C = sQdim_C/N_BHE;                                        # Peak flow in BHE pipes (m3/s)
         v_BHEmax_C = Q_BHEmax_C/np.pi/ri**2;                                      # Flow velocity in BHEs (m/s)
         Re_BHEmax_C = Re(brine.rho,brine.mu,v_BHEmax_C,2*ri);                              # Reynold number in BHEs (-)
         dpdL_BHEmax_C = dp(brine.rho,brine.mu,Q_BHEmax_C,2*ri);                               # Pressure loss in BHE (Pa/m)
@@ -386,8 +391,8 @@ def run_sourcedimensioning(brine, net, sPSH, sPSC, Ti_H, Ti_C, To_H, To_C, sourc
         GBHEF = G_BHE;                                                  # Retain a copy of the G function for length correction later on (-)
         G_BHE_H = np.asarray([G_BHE[0]/BHE.l_ss+Rb_H,G_BHE[1]/BHE.l_ss+Rb_H, Rw_H]);     # Heating G-function
         G_BHE_C = np.asarray([G_BHE[0]/BHE.l_ss+Rb_C,G_BHE[1]/BHE.l_ss+Rb_C, Rw_C]);     # Cooling G-function
-        L_BHE_H = np.dot(PHEH,G_BHE_H) / (T0_BHE - (hp.Ti_H + To_H)/2);    # Sizing equation for computing the required borehole meters for heating (m)
-        L_BHE_C = np.dot(PHEC,G_BHE_C) / (-T0_BHE + (hp.Ti_C + To_C)/2);      
+        L_BHE_H = np.dot(PHEH,G_BHE_H) / (T0_BHE - (Ti_H + To_H)/2);    # Sizing equation for computing the required borehole meters for heating (m)
+        L_BHE_C = np.dot(PHEC,G_BHE_C) / (-T0_BHE + (Ti_C + To_C)/2);      
             
         # Determine the solution by searching the neighbourhood of the approximate length solution
         # Heating mode
@@ -408,7 +413,7 @@ def run_sourcedimensioning(brine, net, sPSH, sPSC, Ti_H, Ti_C, To_H, To_C, sourc
             Tf_BHE_H[i] = T0_BHE - np.dot(PHEH,np.array([GBHEF[0]/BHE.l_ss + Rb_H_v[i], GBHEF[1]/BHE.l_ss + Rb_H_v[i], Rw_H]))/L_BHE_H_v[i]/N_BHE;
     
     
-        Tbound_H = (hp.Ti_H + To_H)/2; # Tjek om den skal bruges tidligere og flyt op
+        Tbound_H = (Ti_H + To_H)/2; # Tjek om den skal bruges tidligere og flyt op
         Tf_BHE_H[Tf_BHE_H < Tbound_H] = np.nan;                                # Remove solutions that violate the bound Tf < Tbound_H    
         indLBHEH = np.argmin(np.isnan(Tf_BHE_H));                          # Find index of the first viable solution
     
@@ -423,7 +428,7 @@ def run_sourcedimensioning(brine, net, sPSH, sPSC, Ti_H, Ti_C, To_H, To_C, sourc
             # KART: beregn væske temperatur
             Tf_BHE_C[i] = T0_BHE + np.dot(PHEC,np.array([GBHEF[0]/BHE.l_ss + Rb_C_v[i], GBHEF[1]/BHE.l_ss + Rb_C_v[i], Rw_C]))/L_BHE_C_v[i]/N_BHE;
     
-        Tbound_C = (hp.Ti_C + To_C)/2; # Tjek om den skal bruges tidligere og flyt op
+        Tbound_C = (Ti_C + To_C)/2; # Tjek om den skal bruges tidligere og flyt op
         Tf_BHE_C[Tf_BHE_C > Tbound_C] = np.nan;                                # Remove solutions that violate the bound Tf > Tbound_C    
         indLBHEC = np.argmin(np.isnan(Tf_BHE_C));                          # Find index of the first viable solution
     
@@ -465,7 +470,7 @@ def run_sourcedimensioning(brine, net, sPSH, sPSC, Ti_H, Ti_C, To_H, To_C, sourc
         G_HHE[0:2] = G_HHE[0:2] + s/HHE.N_HHE;                                 # Add thermal disturbance from neighbour pipes (-)
         
         # HHE heating
-        Q_HHEmax_H = sum(hp.Qdim_H)/HHE.N_HHE;                                        # Peak flow in HHE pipes (m3/s)
+        Q_HHEmax_H = sQdim_H/HHE.N_HHE;                                        # Peak flow in HHE pipes (m3/s)
         v_HHEmax_H = Q_HHEmax_H/np.pi/ri_HHE**2;                                   # Peak flow velocity in HHE pipes (m/s)
         Re_HHEmax_H = Re(brine.rho,brine.mu,v_HHEmax_H,2*ri_HHE);                           # Peak Reynolds numbers in HHE pipes (-)
         dpdL_HHEmax_H = dp(brine.rho,brine.mu,Q_HHEmax_H,2*ri_HHE);                            # Peak pressure loss in HHE pipes (Pa/m)
@@ -475,7 +480,7 @@ def run_sourcedimensioning(brine, net, sPSH, sPSC, Ti_H, Ti_C, To_H, To_C, sourc
 
     
         # HHE cooling
-        Q_HHEmax_C = sum(hp.Qdim_C)/HHE.N_HHE;                                        # Peak flow in HHE pipes (m3/s)
+        Q_HHEmax_C = sQdim_C/HHE.N_HHE;                                        # Peak flow in HHE pipes (m3/s)
         v_HHEmax_C = Q_HHEmax_C/np.pi/ri_HHE**2;                                   # Peak flow velocity in HHE pipes (m/s)
         Re_HHEmax_C = Re(brine.rho,brine.mu,v_HHEmax_C,2*ri_HHE);                           # Peak Reynolds numbers in HHE pipes (-)
         dpdL_HHEmax_C = dp(brine.rho,brine.mu,Q_HHEmax_C,2*ri_HHE);                            # Peak pressure loss in HHE pipes (Pa/m)
@@ -487,13 +492,13 @@ def run_sourcedimensioning(brine, net, sPSH, sPSC, Ti_H, Ti_C, To_H, To_C, sourc
         # Heating
         Rp_HHE_H = Rp(2*ri_HHE,2*ro_HHE,Re_HHEmax_H,Pr,brine.l,net.l_p);                   # Compute the pipe thermal resistance (m*K/W)
         G_HHE_H = G_HHE/net.l_s_H + Rp_HHE_H;                                         # Add annual and monthly thermal resistances to G_HHE (m*K/W)
-        L_HHE_H = np.dot(PHEH,G_HHE_H) / (T0 - (hp.Ti_H + To_H)/2 - TP );
+        L_HHE_H = np.dot(PHEH,G_HHE_H) / (T0 - (Ti_H + To_H)/2 - TP );
         
         # Cooling
         Rp_HHE_C = Rp(2*ri_HHE,2*ro_HHE,Re_HHEmax_C,Pr,brine.l,net.l_p);                   # Compute the pipe thermal resistance (m*K/W)
         G_HHE_C = G_HHE/net.l_s_C + Rp_HHE_C;                                         # Add annual and monthly thermal resistances to G_HHE (m*K/W)
         #L_HHE_C = np.dot(PHEC,G_HHE_C/TCC1);                                 # Sizing equation for computing the required borehole meters (m)
-        L_HHE_C = np.dot(PHEC,G_HHE_C) / ((hp.Ti_C + To_C)/2 - T0 - TP);
+        L_HHE_C = np.dot(PHEC,G_HHE_C) / ((Ti_C + To_C)/2 - T0 - TP);
         
         
         # Add results to source configuration

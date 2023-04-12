@@ -129,7 +129,8 @@ class FullDimension:
     brine: Brine
     thermonet: Thermonet
     heatpump: Heatpump
-    source_config: HHEconfig | BHEconfig
+    source_config: List[str]
+    #source_config: HHEconfig | BHEconfig
     pipe_group_name: List[str]
     d_pipes: List[float]
     FPH: float=np.nan

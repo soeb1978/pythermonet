@@ -38,13 +38,18 @@ def run_full_dimensioning(PID:str, d_pipes, brine:Brine, net:Thermonet, hp:Heatp
     tic = time.time();
 
     # Run pipe dimensioning
-    net = run_pipedimensioning(d_pipes, brine, net, hp)
+    # KART indført aggregeret last
+    # net = run_pipedimensioning(d_pipes, brine, net, hp)
+    net, aggLoad = run_pipedimensioning(d_pipes, brine, net, hp)
+
 
     # Print results to console
     print_pipe_dimensions(net, pipeGroupNames)
 
     # Run source dimensioning
-    FPH, FPC, source_config = run_sourcedimensioning(brine, net, hp, source_config)
+    # KART indført aggregeret last
+    # FPH, FPC, source_config = run_sourcedimensioning(brine, net, hp, source_config)
+    FPH, FPC, source_config = run_sourcedimensioning(brine, net, aggLoad, source_config)
 
     # Print results to console
     print_source_dimensions(FPH, FPC, source_config)

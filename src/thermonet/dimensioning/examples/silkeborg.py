@@ -1,5 +1,5 @@
 import pandas as pd
-from thermonet.dimensioning.thermonet_classes import Brine, Thermonet, Heatpump, HHEconfig
+from thermonet.dimensioning.thermonet_classes import Brine, Thermonet, Heatpump, HHEconfig, BHEconfig
 from thermonet.dimensioning.dimensioning_functions import read_heatpumpdata, read_topology
 from thermonet.dimensioning.main import run_full_dimensioning
 
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     hp = read_heatpumpdata(hp, HP_file); # Read remaining data from user specified file
 
     # Heat source (either BHE or HHE) - with default parameters
-    source_config = HHEconfig(N_HHE=6, d=0.04, SDR=17, D=1.5)
-    # source_config = BHEconfig(r_b=0.152/2, r_p=0.02, SDR=11, l_ss=2.36, rhoc_ss=2.65e6, l_g=1.75, rhoc_g=3e6, D_pipes=0.015, NX=1, D_x=15, NY=6, D_y=15);
+    # source_config = HHEconfig(N_HHE=6, d=0.04, SDR=17, D=1.5)
+    source_config = BHEconfig(r_b=0.152/2, r_p=0.02, SDR=11, l_ss=2.36, rhoc_ss=2.65e6, l_g=1.75, rhoc_g=3e6, D_pipes=0.015, NX=1, D_x=15, NY=6, D_y=15);
 
     run_full_dimensioning(PID, d_pipes, brine, net, hp, pipeGroupNames, source_config)

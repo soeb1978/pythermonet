@@ -74,6 +74,36 @@ class Heatpump:
     Qdim_C: float = np.nan;
     P_s_C: float = np.nan;
 
+@dataclass_json
+@dataclass
+class aggregatedLoad:
+    
+    # Heat pump
+    Ti_H: float = np.nan  # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
+    Ti_C: float = np.nan  # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
+    SF: float = np.nan  # Ratio of peak heating demand to be covered by the heat pump [0-1]. If SF = 0.8 then the heat pump delivers 80% of the peak heating load. The deficit is then supplied by an auxilliary heating device
+
+    # Heating mode parameters
+    # P_y_H: float = np.nan;
+    # P_m_H: float = np.nan;
+    # P_d_H: float = np.nan;
+    # COP_y_H: float = np.nan;
+    # COP_m_H: float = np.nan;
+    # COP_d_H: float = np.nan;
+    # dT_H: float = np.nan;
+    Qdim_H: float = np.nan;
+    P_s_H: float = np.nan;
+    
+    # Cooling mode parameters
+    # P_y_C: float = np.nan;
+    # P_m_C: float = np.nan;
+    # P_d_C: float = np.nan;
+    # EER: float = np.nan;
+    # dT_C: float = np.nan;
+    Qdim_C: float = np.nan;
+    P_s_C: float = np.nan;
+
+
 
 @dataclass_json
 @dataclass

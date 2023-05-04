@@ -89,6 +89,66 @@ def read_topology(net, TOPO_file):
     
     return net, pipeGroupNames
 
+def read_aggregated_load(brine, agg_load_file):
+    
+    # Load aggregated load form file
+    load = pd.read_csv(agg_load_file, sep = '\t+', engine='python');                                # Heat pump input file
+    load = load.values 
+    
+    # Parse values from file
+    N_HP = load[0,0];
+    P_y_H = load[0,1];
+    P_m_H = load[0,2];
+    P_d_H = load[0,3];
+    COP_y_H = load[0,4];
+    COP_m_H = load[0,5];
+    COP_d_H = load[0,6];
+    dT_H = load[0,7];
+    P_y_C = load[0,8];
+    P_m_C = load[0,9];
+    P_d_C = load[0,10];
+    EER = load[0,11];
+    dT_C = load[0,12];
+
+    # BRUGER SKAL SELV ANGIVE SF og/eller S??
+    SF = 1
+    S = SF*(0.62 + 0.38/N_HP);
+
+    # Calculate ground loads from COP (heating)
+    P_s_H = np.zeros(3);
+    P_s_H[0] = (COP_y_H-1)/COP_y_H * P_y_H; # Annual load (W)
+    P_s_H[1] = (COP_m_H-1)/COP_m_H * P_m_H; # Monthly load (W)
+    P_s_H[2] = (COP_d_H-1)/COP_d_H * P_d_H * S; # Daily load with simultaneity factor (W)
+
+    # Calculate ground loads from EER (cooling)
+    P_s_C = np.zeros(3);
+    P_s_C[0] = EER/(EER - 1) * P_y_C; # Annual load (W)
+    P_s_C[1] = EER/(EER - 1) * P_m_C; # Monthly load (W)
+    P_s_C[2] = EER/(EER - 1) * P_d_C * S; # Daily load (W)
+
+    # Første søjle i hp.P_s_H hhv hp.P_s_C er ens pånær fortegn. 
+    P_s_H[0] = P_s_H[0] - P_s_C[0];                                       # Annual imbalance between heating and cooling, positive for heating (W)
+    P_s_C[0] = - P_s_H[0];                                                  # Negative for cooling
+
+    
+    # Initialise class for aggregated load
+    aggLoad = aggregatedLoad();
+    # KART: NB lige nu angives default værdi i klasse-definition
+    # aggLoad.Ti_H = hp.Ti_H;
+    # aggLoad.Ti_C = hp.Ti_C;
+    
+    aggLoad.Qdim_H = P_s_H[2] / dT_H / brine.rho / brine.c;
+    aggLoad.Qdim_C = P_s_C[2] / dT_C / brine.rho / brine.c;
+    
+    aggLoad.To_H = aggLoad.Ti_H - dT_H;
+    aggLoad.To_C = aggLoad.Ti_C + dT_C;
+
+    aggLoad.P_s_H = P_s_H;
+    aggLoad.P_s_C = P_s_C;
+    
+    
+    return aggLoad
+
 
 # Print results to console
 def print_pipe_dimensions(net, pipeGroupNames):

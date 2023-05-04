@@ -1,6 +1,6 @@
 import pandas as pd
 from thermonet.dimensioning.thermonet_classes import Brine, Thermonet, Heatpump, HHEconfig, BHEconfig
-from thermonet.dimensioning.dimensioning_functions import read_heatpumpdata, read_topology
+from thermonet.dimensioning.dimensioning_functions import read_heatpumpdata, read_topology, read_aggregated_load, run_sourcedimensioning, print_source_dimensions
 from thermonet.dimensioning.main import run_full_dimensioning
 
 if __name__ == '__main__':
@@ -37,3 +37,12 @@ if __name__ == '__main__':
     source_config = BHEconfig(r_b=0.152/2, r_p=0.02, SDR=11, l_ss=2.36, rhoc_ss=2.65e6, l_g=1.75, rhoc_g=3e6, D_pipes=0.015, NX=1, D_x=15, NY=6, D_y=15);
 
     run_full_dimensioning(PID, d_pipes, brine, net, hp, pipeGroupNames, source_config)
+    
+    # KART - EXPERIMENTAL
+    print('')
+    print('Experimental - test aggergated load for source dimensioning')
+    print('')
+    agg_load_file = './data/sites/Silkeborg_aggregated_load.dat';
+    aggLoad = read_aggregated_load(brine, agg_load_file)
+    FPH, FPC, source_config = run_sourcedimensioning(brine, net, aggLoad, source_config);
+    print_source_dimensions(FPH, FPC, source_config)

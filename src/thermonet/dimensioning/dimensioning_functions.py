@@ -43,21 +43,25 @@ def read_heatpumpdata(hp, HP_file):
     N_HP = len(hp.P_y_H);
         
     # Simultaneity factor to apply to hourly heating
-    #KART Hvad med køling?
-    S = hp.SF*(0.62 + 0.38/N_HP);                   # Varme Ståbi. Ligning 3 i "Effekt- og samtidighedsforhold ved fjernvarmeforsyning af nye boligområder"
+    #KART slet - flyttet til pipe_dimension
+    # S = hp.SF*(0.62 + 0.38/N_HP);                   # Varme Ståbi. Ligning 3 i "Effekt- og samtidighedsforhold ved fjernvarmeforsyning af nye boligområder"
     
     # Convert building loads to ground loads - heating
     hp.P_s_H = np.zeros([N_HP,3]);
     hp.P_s_H[:,0] = (hp.COP_y_H-1)/hp.COP_y_H * hp.P_y_H; # Annual load (W)
     hp.P_s_H[:,1] = (hp.COP_m_H-1)/hp.COP_m_H * hp.P_m_H; # Monthly load (W)
-    hp.P_s_H[:,2] = (hp.COP_d_H-1)/hp.COP_d_H * hp.P_d_H * S; # Daily load with simultaneity factor (W)
+    # hp.P_s_H[:,2] = (hp.COP_d_H-1)/hp.COP_d_H * hp.P_d_H * S; # Daily load with simultaneity factor (W)
+    #KART flytter S til pipe_dimenioning
+    hp.P_s_H[:,2] = (hp.COP_d_H-1)/hp.COP_d_H * hp.P_d_H; # Daily load with simultaneity factor (W)
     
     # Convert building loads to ground loads - cooling
     # KART Samtidighedsfaktor?
     hp.P_s_C = np.zeros([N_HP,3]);
     hp.P_s_C[:,0] = hp.EER/(hp.EER - 1) * hp.P_y_C; # Annual load (W)
     hp.P_s_C[:,1] = hp.EER/(hp.EER - 1) * hp.P_m_C; # Monthly load (W)
-    hp.P_s_C[:,2] = hp.EER/(hp.EER - 1) * hp.P_d_C * S; # Daily load (W)
+    # hp.P_s_C[:,2] = hp.EER/(hp.EER - 1) * hp.P_d_C * S; # Daily load (W)
+    
+    hp.P_s_C[:,2] = hp.EER/(hp.EER - 1) * hp.P_d_C; # Daily load (W)
     
     # Første søjle i hp.P_s_H hhv hp.P_s_C er ens pånær fortegn. 
     hp.P_s_H[:,0] = hp.P_s_H[:,0] - hp.P_s_C[:,0];                                       # Annual imbalance between heating and cooling, positive for heating (W)
@@ -110,7 +114,7 @@ def read_aggregated_load(brine, agg_load_file):
     EER = load[0,11];
     dT_C = load[0,12];
 
-    # BRUGER SKAL SELV ANGIVE SF og/eller S??
+    # KART: BRUGER SKAL SELV ANGIVE SF og/eller S??
     SF = 1
     S = SF*(0.62 + 0.38/N_HP);
 
@@ -211,13 +215,24 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
     Q_PG_C = np.zeros(N_PG);                                               # Design flow cooling (m3/s)
 
         
-    hp.Qdim_H = hp.P_s_H[:,2]/hp.dT_H/brine.rho/brine.c;                                  # Design flow heating (m3/s)
-    hp.Qdim_C = hp.P_s_C[:,2]/hp.dT_C/brine.rho/brine.c;                             # Design flow cooling (m3/s). 
+    #KART TEMP -> IMPLEMENTER INDIVIDUELLE S'er -> slet S beregning her
+    N_HP = len(hp.P_y_H);
+    SF = 1
+    # S = SF*(0.62 + 0.38/N_HP);
+   
+    # KART FJERN S HER -> FLYT TIL LOOP med ny beregning for hver gruppe
+    # KART Qdim fjernes fra hp -> flyttet til aggLoad
+    Qdim_H =  hp.P_s_H[:,2]/hp.dT_H/brine.rho/brine.c;                                  # Design flow heating (m3/s)
+    Qdim_C =  hp.P_s_C[:,2]/hp.dT_C/brine.rho/brine.c;                             # Design flow cooling (m3/s). 
 
     # Compute design flow for the pipes
     for i in range(N_PG):
-       Q_PG_H[i] = sum(hp.Qdim_H[np.ndarray.tolist(net.I_PG[i])])/net.N_traces[i];        # Sum the heating brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
-       Q_PG_C[i] = sum(hp.Qdim_C[np.ndarray.tolist(net.I_PG[i])])/net.N_traces[i];        # Sum the cooling brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
+        # KART: np.ndarray.tolist er overflødig?
+        # KART: nye S'er for hver rørgruppe
+       N_HP_per_trace = len(net.I_PG[i]) / net.N_traces[i];
+       S = SF*(0.62 + 0.38/N_HP_per_trace);
+       Q_PG_H[i] =  S * sum(Qdim_H[np.ndarray.tolist(net.I_PG[i])])/net.N_traces[i];        # Sum the heating brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
+       Q_PG_C[i] =  S * sum(Qdim_C[np.ndarray.tolist(net.I_PG[i])])/net.N_traces[i];        # Sum the cooling brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
     
     # Select the smallest diameter pipe that fulfills the pressure drop criterion
     for i in range(N_PG):                                 
@@ -244,25 +259,28 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
     
     
     
-    
+    # KART: BRUGER SKAL SELV ANGIVE SF og/eller S??
+    N_HP = len(hp.P_y_H);
+    SF = 1
+    S = SF*(0.62 + 0.38/N_HP);
     
     aggLoad = aggregatedLoad();
     aggLoad.Ti_H = hp.Ti_H;
     aggLoad.Ti_C = hp.Ti_C;
     
-    aggLoad.To_H = hp.Ti_H - sum(hp.Qdim_H*hp.dT_H)/sum(hp.Qdim_H);                         # Volumetric flow rate weighted average brine delta-T (C)
-    aggLoad.To_C = hp.Ti_C + sum(hp.Qdim_C*hp.dT_C)/sum(hp.Qdim_C);                         # Volumetric flow rate weighted average brine delta-T (C)
+    aggLoad.To_H = hp.Ti_H - sum(Qdim_H*hp.dT_H)/sum(Qdim_H);                         # Volumetric flow rate weighted average brine delta-T (C)
+    aggLoad.To_C = hp.Ti_C + sum(Qdim_C*hp.dT_C)/sum(Qdim_C);                         # Volumetric flow rate weighted average brine delta-T (C)
 
     aggLoad.P_s_H = sum(hp.P_s_H);
     aggLoad.P_s_C = sum(hp.P_s_C);
+    # KART korriger spidslast med samtidighedsfaktor
+    aggLoad.P_s_H[2] = aggLoad.P_s_H[2] * S;
+    aggLoad.P_s_C[2] = aggLoad.P_s_C[2] * S;
     
-    aggLoad.Qdim_H = sum(hp.Qdim_H);
-    aggLoad.Qdim_C = sum(hp.Qdim_C);
+    # KART ditto dimensionerende flow 
+    aggLoad.Qdim_H = sum(Qdim_H) * S;
+    aggLoad.Qdim_C = sum(Qdim_C) * S;
 
-
-
-    
-    
     
     # Return the pipe sizing results
     return net, aggLoad
@@ -271,13 +289,10 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
     
     
 # Function for dimensioning sources
-#KART fjern hp input i endelig version
-# def run_sourcedimensioning(brine, net, hp, source_config):
 def run_sourcedimensioning(brine, net, aggLoad, source_config):
     
     
-    N_PG = len(net.I_PG);                                                     # Number of pipe groups
-    # N_HP = len(hp.P_y_H);    
+    N_PG = len(net.I_PG);                                                     # Number of pipe groups    
       
     # G-function evaluation times (DO NOT MODIFY!!!!!!!)
     SECONDS_IN_HOUR = 3600;

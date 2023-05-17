@@ -1,5 +1,5 @@
 import pandas as pd
-from thermonet.dimensioning.thermonet_classes import Brine, Thermonet, Heatpump, HHEconfig, BHEconfig
+from thermonet.dimensioning.thermonet_classes import Brine, Thermonet, Heatpump, HHEconfig, BHEconfig, aggregatedLoad
 from thermonet.dimensioning.dimensioning_functions import read_heatpumpdata, read_topology, read_aggregated_load, run_sourcedimensioning, print_source_dimensions
 from thermonet.dimensioning.main import run_full_dimensioning
 
@@ -14,8 +14,7 @@ if __name__ == '__main__':
     TOPO_file = './data/sites/Silkeborg_TOPO.dat';               # Input file containing topology information
     pipe_file = '../data/equipment/PIPES.dat';                   # Input file with available pipe diameters
 
-    d_pipes = pd.read_csv(pipe_file,
-                          sep='\t');  # Open file with available pipe outer diameters (mm). This file can be expanded with additional pipes and used directly.
+    d_pipes = pd.read_csv(pipe_file,sep='\t');  # Open file with available pipe outer diameters (mm). This file can be expanded with additional pipes and used directly.
     d_pipes = d_pipes.values;  # Get numerical values from pipes excluding the headers
     d_pipes = d_pipes / 1000;  # Convert d_pipes from mm to m
 
@@ -29,20 +28,24 @@ if __name__ == '__main__':
     net, pipeGroupNames = read_topology(net, TOPO_file); # Read remaining data from user specified file
 
     # Initialise HP object - with default parameters
-    hp = Heatpump(Ti_H=-3, Ti_C=20, SF=1);
+    hp = Heatpump(Ti_H=-3, Ti_C=20, SF=1, t_peak=4);
     hp = read_heatpumpdata(hp, HP_file); # Read remaining data from user specified file
 
     # Heat source (either BHE or HHE) - with default parameters
     # source_config = HHEconfig(N_HHE=6, d=0.04, SDR=17, D=1.5)
-    source_config = BHEconfig(r_b=0.152/2, r_p=0.02, SDR=11, l_ss=2.36, rhoc_ss=2.65e6, l_g=1.75, rhoc_g=3e6, D_pipes=0.015, NX=1, D_x=15, NY=6, D_y=15);
+    
+    T0_BHE = 9.028258373009810; # Bemærk løsning er følsom overfor T0
+    source_config = BHEconfig(T0=T0_BHE, r_b=0.152/2, r_p=0.02, SDR=11, l_ss=2.36, rhoc_ss=2.65e6, l_g=1.75, rhoc_g=3e6, D_pipes=0.015, NX=1, D_x=15, NY=6, D_y=15);
 
     run_full_dimensioning(PID, d_pipes, brine, net, hp, pipeGroupNames, source_config)
     
-    # KART - EXPERIMENTAL
+    # KART - EXPERIMENTAL. Slet alle variable og genkør kun kildedimensionering
     print('')
     print('Experimental - test aggergated load for source dimensioning')
     print('')
+
     agg_load_file = './data/sites/Silkeborg_aggregated_load.dat';
-    aggLoad = read_aggregated_load(brine, agg_load_file)
+    aggLoad = aggregatedLoad(Ti_H = -3, Ti_C = 20, SF=1, t_peak=4)
+    aggLoad = read_aggregated_load(aggLoad, brine, agg_load_file)
     FPH, FPC, source_config = run_sourcedimensioning(brine, net, aggLoad, source_config);
     print_source_dimensions(FPH, FPC, source_config)

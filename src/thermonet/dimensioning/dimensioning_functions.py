@@ -25,43 +25,37 @@ def read_heatpumpdata(hp, HP_file):
     HPS = pd.read_csv(HP_file, sep = '\t+', engine='python');                                # Heat pump input file
     HPS = HPS.values  # Load numeric data from HP file
 
-    hp.P_y_H = HPS[:,1];
-    hp.P_m_H = HPS[:,2];
-    hp.P_d_H = HPS[:,3];
-    hp.COP_y_H = HPS[:,4];
-    hp.COP_m_H = HPS[:,5];
-    hp.COP_d_H = HPS[:,6];
+   
+    P_y_H = HPS[:,1];
+    P_m_H = HPS[:,2];
+    P_d_H = HPS[:,3];
+    COP_y_H = HPS[:,4];
+    COP_m_H = HPS[:,5];
+    COP_d_H = HPS[:,6];
     hp.dT_H = HPS[:,7];
-    hp.P_y_C = HPS[:,8];
-    hp.P_m_C = HPS[:,9];
-    hp.P_d_C = HPS[:,10];
-    hp.EER = HPS[:,11];
+    P_y_C = HPS[:,8];
+    P_m_C = HPS[:,9];
+    P_d_C = HPS[:,10];
+    EER = HPS[:,11];
     hp.dT_C = HPS[:,12];
-    
+   
     
     # Calcualate ground loads from building loads
-    N_HP = len(hp.P_y_H);
+    N_HP = len(P_y_H);
         
-    # Simultaneity factor to apply to hourly heating
-    #KART slet - flyttet til pipe_dimension
-    # S = hp.SF*(0.62 + 0.38/N_HP);                   # Varme Ståbi. Ligning 3 i "Effekt- og samtidighedsforhold ved fjernvarmeforsyning af nye boligområder"
     
     # Convert building loads to ground loads - heating
     hp.P_s_H = np.zeros([N_HP,3]);
-    hp.P_s_H[:,0] = (hp.COP_y_H-1)/hp.COP_y_H * hp.P_y_H; # Annual load (W)
-    hp.P_s_H[:,1] = (hp.COP_m_H-1)/hp.COP_m_H * hp.P_m_H; # Monthly load (W)
-    # hp.P_s_H[:,2] = (hp.COP_d_H-1)/hp.COP_d_H * hp.P_d_H * S; # Daily load with simultaneity factor (W)
-    #KART flytter S til pipe_dimenioning
-    hp.P_s_H[:,2] = (hp.COP_d_H-1)/hp.COP_d_H * hp.P_d_H; # Daily load with simultaneity factor (W)
+    hp.P_s_H[:,0] = (COP_y_H-1)/COP_y_H * P_y_H; # Annual load (W)
+    hp.P_s_H[:,1] = (COP_m_H-1)/COP_m_H * P_m_H; # Monthly load (W)
+    hp.P_s_H[:,2] = (COP_d_H-1)/COP_d_H * P_d_H; # Daily load  (W)
     
     # Convert building loads to ground loads - cooling
     # KART Samtidighedsfaktor?
     hp.P_s_C = np.zeros([N_HP,3]);
-    hp.P_s_C[:,0] = hp.EER/(hp.EER - 1) * hp.P_y_C; # Annual load (W)
-    hp.P_s_C[:,1] = hp.EER/(hp.EER - 1) * hp.P_m_C; # Monthly load (W)
-    # hp.P_s_C[:,2] = hp.EER/(hp.EER - 1) * hp.P_d_C * S; # Daily load (W)
-    
-    hp.P_s_C[:,2] = hp.EER/(hp.EER - 1) * hp.P_d_C; # Daily load (W)
+    hp.P_s_C[:,0] = EER/(EER - 1) * P_y_C; # Annual load (W)
+    hp.P_s_C[:,1] = EER/(EER - 1) * P_m_C; # Monthly load (W)
+    hp.P_s_C[:,2] = EER/(EER - 1) * P_d_C; # Daily load (W)
     
     # Første søjle i hp.P_s_H hhv hp.P_s_C er ens pånær fortegn. 
     hp.P_s_H[:,0] = hp.P_s_H[:,0] - hp.P_s_C[:,0];                                       # Annual imbalance between heating and cooling, positive for heating (W)
@@ -84,7 +78,8 @@ def read_topology(net, TOPO_file):
     I_PG = pd.read_csv(TOPO_file, sep = '\t+', engine='python');                              # Load the entire file into Panda dataframe
     pipeGroupNames = I_PG.iloc[:,0];                                             # Extract pipe group IDs
     I_PG = I_PG.iloc[:,4];                                                # Extract IDs of HPs connected to the different pipe groups
-    # Create array containing arrays of integers with HP IDs for all pipe sections
+    # Create array containing arrays of integers with HP IDs for all pipe sections.
+    # Convert 1-based indices from file to 0-based indices for code.
     IPGA = [np.asarray(I_PG.iloc[i].split(',')).astype(int) - 1 for i in range(len(I_PG))]
     I_PG = IPGA                                                            # Redefine I_PG
     net.I_PG = I_PG;
@@ -93,7 +88,7 @@ def read_topology(net, TOPO_file):
     
     return net, pipeGroupNames
 
-def read_aggregated_load(brine, agg_load_file):
+def read_aggregated_load(aggLoad, brine, agg_load_file):
     
     # Load aggregated load form file
     load = pd.read_csv(agg_load_file, sep = '\t+', engine='python');                                # Heat pump input file
@@ -115,8 +110,8 @@ def read_aggregated_load(brine, agg_load_file):
     dT_C = load[0,12];
 
     # KART: BRUGER SKAL SELV ANGIVE SF og/eller S??
-    SF = 1
-    S = SF*(0.62 + 0.38/N_HP);
+  
+    S = aggLoad.SF*(0.62 + 0.38/N_HP);
 
     # Calculate ground loads from COP (heating)
     P_s_H = np.zeros(3);
@@ -134,12 +129,6 @@ def read_aggregated_load(brine, agg_load_file):
     P_s_H[0] = P_s_H[0] - P_s_C[0];                                       # Annual imbalance between heating and cooling, positive for heating (W)
     P_s_C[0] = - P_s_H[0];                                                  # Negative for cooling
 
-    
-    # Initialise class for aggregated load
-    aggLoad = aggregatedLoad();
-    # KART: NB lige nu angives default værdi i klasse-definition
-    # aggLoad.Ti_H = hp.Ti_H;
-    # aggLoad.Ti_C = hp.Ti_C;
     
     aggLoad.Qdim_H = P_s_H[2] / dT_H / brine.rho / brine.c;
     aggLoad.Qdim_C = P_s_C[2] / dT_C / brine.rho / brine.c;
@@ -216,9 +205,7 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
 
         
     #KART TEMP -> IMPLEMENTER INDIVIDUELLE S'er -> slet S beregning her
-    N_HP = len(hp.P_y_H);
-    SF = 1
-    # S = SF*(0.62 + 0.38/N_HP);
+    N_HP = len(hp.P_s_H);
    
     # KART FJERN S HER -> FLYT TIL LOOP med ny beregning for hver gruppe
     # KART Qdim fjernes fra hp -> flyttet til aggLoad
@@ -229,8 +216,11 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
     for i in range(N_PG):
         # KART: np.ndarray.tolist er overflødig?
         # KART: nye S'er for hver rørgruppe
-       N_HP_per_trace = len(net.I_PG[i]) / net.N_traces[i];
-       S = SF*(0.62 + 0.38/N_HP_per_trace);
+       N_HP_per_trace = len(net.I_PG[i]) / net.N_traces[i]; 
+       S = hp.SF*(0.62 + 0.38/N_HP_per_trace);
+       
+       
+       
        Q_PG_H[i] =  S * sum(Qdim_H[np.ndarray.tolist(net.I_PG[i])])/net.N_traces[i];        # Sum the heating brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
        Q_PG_C[i] =  S * sum(Qdim_C[np.ndarray.tolist(net.I_PG[i])])/net.N_traces[i];        # Sum the cooling brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
     
@@ -260,11 +250,11 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
     
     
     # KART: BRUGER SKAL SELV ANGIVE SF og/eller S??
-    N_HP = len(hp.P_y_H);
-    SF = 1
-    S = SF*(0.62 + 0.38/N_HP);
+    N_HP = len(hp.P_s_H);
     
-    aggLoad = aggregatedLoad();
+    aggLoad = aggregatedLoad(Ti_H = hp.Ti_H, Ti_C = hp.Ti_C, SF=hp.SF, t_peak=hp.t_peak)
+    S = hp.SF*(0.62 + 0.38/N_HP);
+    
     aggLoad.Ti_H = hp.Ti_H;
     aggLoad.Ti_C = hp.Ti_C;
     
@@ -299,8 +289,9 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
     SECONDS_IN_MONTH = 24 * (365/12) * SECONDS_IN_HOUR
     SECONDS_IN_YEAR = 12 * SECONDS_IN_MONTH;
 
-    # t = [10y 3m 4h, 3m 4h, 4h]
-    t = np.asarray([10 * SECONDS_IN_YEAR + 3 * SECONDS_IN_MONTH + 4 * SECONDS_IN_HOUR, 3 * SECONDS_IN_MONTH + 4 * SECONDS_IN_HOUR, 4 * SECONDS_IN_HOUR], dtype=float);            # time = [10 years + 3 months + 4 hours; 3 months + 4 hours; 4 hours]. Time vector for the temporal superposition (s).       
+    # t = [10y 3m t_peak, 3m t_peak, t_peak]
+    t_peak = aggLoad.t_peak; # Peak load duration [h]
+    t = np.asarray([10 * SECONDS_IN_YEAR + 3 * SECONDS_IN_MONTH + t_peak * SECONDS_IN_HOUR, 3 * SECONDS_IN_MONTH + t_peak * SECONDS_IN_HOUR, t_peak * SECONDS_IN_HOUR], dtype=float);            # time = [10 years + 3 months + 4 hours; 3 months + 4 hours; 4 hours]. Time vector for the temporal superposition (s).       
     
     # Brine (fluid)
     nu_f = brine.mu/brine.rho;                                                    # Brine kinematic viscosity (m2/s)  
@@ -409,8 +400,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         ri = BHE.r_p*(1 - 2/BHE.SDR);                                         # Inner radius of U pipe (m)
         a_ss = BHE.l_ss/BHE.rhoc_ss;                                               # BHE soil thermal diffusivity (m2/s)
         a_g = BHE.l_g/BHE.rhoc_g;                                                  # Grout thermal diffusivity (W/m/K)
-        # KART: eksponer mod bruger eller slet hvis den altid er samme som T0?
-        T0_BHE = T0;                                                     # Measured undisturbed BHE temperature (C)
+        T0_BHE = BHE.T0;                                                     # Measured undisturbed BHE temperature (C)
         s_BHE = 2*BHE.r_p + BHE.D_pipes;                                     # Calculate shank spacing U-pipe (m)
     
         # Borehole field

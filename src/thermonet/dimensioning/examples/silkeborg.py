@@ -10,7 +10,11 @@ if __name__ == '__main__':
     PID = 'Silkeborg';                                     # Project name
 
     # Input files
-    HP_file = './data/sites/Silkeborg_HPSC.dat';                 # Input file containing heat pump information
+    # HP_file = './data/sites/Silkeborg_HPSC.dat';                 # Input file containing heat pump information
+    # HP_file = './data/sites/Silkeborg_HPS_Heat.dat';             # Input file - only heating
+    HP_file = './data/sites/Silkeborg_HPS_Heat_COMPARE.dat';       # Input file - only heating with same yearly net load as Silkeborg_HPSC.dat for comparison
+
+
     TOPO_file = './data/sites/Silkeborg_TOPO.dat';               # Input file containing topology information
     pipe_file = '../data/equipment/PIPES.dat';                   # Input file with available pipe diameters
 
@@ -44,8 +48,16 @@ if __name__ == '__main__':
     print('Experimental - test aggergated load for source dimensioning')
     print('')
 
-    agg_load_file = './data/sites/Silkeborg_aggregated_load.dat';
+    # agg_load_file = './data/sites/Silkeborg_aggregated_load.dat';             # Input file for specifying only aggregated load for heating and cooling. Same totale load as in Silkeborg_HPSC.dat
+    # agg_load_file = './data/sites/Silkeborg_aggregated_load_HEAT.dat';        # Input file - only heating
+    agg_load_file = './data/sites/Silkeborg_aggregated_load_HEAT_COMPARE.dat';  # Input file - only heating with same yearly net load as in Silkeborg_aggregated_load.dat for comparsion
+
     aggLoad = aggregatedLoad(Ti_H = -3, Ti_C = 20, SF=1, t_peak=4)
     aggLoad = read_aggregated_load(aggLoad, brine, agg_load_file)
-    FPH, FPC, source_config = run_sourcedimensioning(brine, net, aggLoad, source_config);
-    print_source_dimensions(FPH, FPC, source_config)
+    source_config = run_sourcedimensioning(brine, net, aggLoad, source_config);
+    print_source_dimensions(source_config)
+
+
+
+    # FPH, FPC, source_config = run_sourcedimensioning(brine, net, aggLoad, source_config);
+    # print_source_dimensions(FPH, FPC, source_config)

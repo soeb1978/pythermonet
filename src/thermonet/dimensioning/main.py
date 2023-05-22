@@ -49,10 +49,11 @@ def run_full_dimensioning(PID:str, d_pipes, brine:Brine, net:Thermonet, hp:Heatp
     # Run source dimensioning
     # KART indført aggregeret last
     # FPH, FPC, source_config = run_sourcedimensioning(brine, net, hp, source_config)
-    FPH, FPC, source_config = run_sourcedimensioning(brine, net, aggLoad, source_config)
+    # FPH, FPC, source_config = run_sourcedimensioning(brine, net, aggLoad, source_config)
+    source_config = run_sourcedimensioning(brine, net, aggLoad, source_config)
 
     # Print results to console
-    print_source_dimensions(FPH, FPC, source_config)
+    print_source_dimensions(source_config)
 
     # Output computation time to console
     print(' ');
@@ -60,6 +61,11 @@ def run_full_dimensioning(PID:str, d_pipes, brine:Brine, net:Thermonet, hp:Heatp
     toc = time.time();                                                  # Track computation time (s)
     print(f'Elapsed time: {round(toc-tic,6)} seconds');
 
+
+    #KART + LASSE: PAK FPH OG FPC IND I SOURCE_CONFIG?
+    FPH = source_config.FPH;
+    FPC = source_config.FPC;
+    
     return net, FPH, FPC, source_config
 
 

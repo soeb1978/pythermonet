@@ -50,16 +50,19 @@ def read_heatpumpdata(hp, HP_file):
     hp.P_s_H[:,1] = (COP_m_H-1)/COP_m_H * P_m_H; # Monthly load (W)
     hp.P_s_H[:,2] = (COP_d_H-1)/COP_d_H * P_d_H; # Daily load  (W)
     
-    # Convert building loads to ground loads - cooling
-    # KART Samtidighedsfaktor?
-    hp.P_s_C = np.zeros([N_HP,3]);
-    hp.P_s_C[:,0] = EER/(EER - 1) * P_y_C; # Annual load (W)
-    hp.P_s_C[:,1] = EER/(EER - 1) * P_m_C; # Monthly load (W)
-    hp.P_s_C[:,2] = EER/(EER - 1) * P_d_C; # Daily load (W)
     
-    # Første søjle i hp.P_s_H hhv hp.P_s_C er ens pånær fortegn. 
-    hp.P_s_H[:,0] = hp.P_s_H[:,0] - hp.P_s_C[:,0];                                       # Annual imbalance between heating and cooling, positive for heating (W)
-    hp.P_s_C[:,0] = - hp.P_s_H[:,0];                                                  # Negative for cooling
+    #KART COOLING - hvis ingen køl angivet forbliver alle værdier på default NaN
+    if np.sum(np.abs(P_y_C)) > 1e-3:
+    
+        # Convert building loads to ground loads - cooling
+        hp.P_s_C = np.zeros([N_HP,3]);
+        hp.P_s_C[:,0] = EER/(EER - 1) * P_y_C; # Annual load (W)
+        hp.P_s_C[:,1] = EER/(EER - 1) * P_m_C; # Monthly load (W)
+        hp.P_s_C[:,2] = EER/(EER - 1) * P_d_C; # Daily load (W)
+    
+        # Første søjle i hp.P_s_H hhv hp.P_s_C er ens pånær fortegn. 
+        hp.P_s_H[:,0] = hp.P_s_H[:,0] - hp.P_s_C[:,0];                                       # Annual imbalance between heating and cooling, positive for heating (W)
+        hp.P_s_C[:,0] = - hp.P_s_H[:,0];                                                  # Negative for cooling
 
 
     return hp
@@ -119,25 +122,28 @@ def read_aggregated_load(aggLoad, brine, agg_load_file):
     P_s_H[1] = (COP_m_H-1)/COP_m_H * P_m_H; # Monthly load (W)
     P_s_H[2] = (COP_d_H-1)/COP_d_H * P_d_H * S; # Daily load with simultaneity factor (W)
 
-    # Calculate ground loads from EER (cooling)
-    P_s_C = np.zeros(3);
-    P_s_C[0] = EER/(EER - 1) * P_y_C; # Annual load (W)
-    P_s_C[1] = EER/(EER - 1) * P_m_C; # Monthly load (W)
-    P_s_C[2] = EER/(EER - 1) * P_d_C * S; # Daily load (W)
+    #KART COOLING
+    if np.abs(P_y_C) > 1e-3:
+        # Calculate ground loads from EER (cooling)
+        P_s_C = np.zeros(3);
+        P_s_C[0] = EER/(EER - 1) * P_y_C; # Annual load (W)
+        P_s_C[1] = EER/(EER - 1) * P_m_C; # Monthly load (W)
+        P_s_C[2] = EER/(EER - 1) * P_d_C * S; # Daily load (W)
 
-    # Første søjle i hp.P_s_H hhv hp.P_s_C er ens pånær fortegn. 
-    P_s_H[0] = P_s_H[0] - P_s_C[0];                                       # Annual imbalance between heating and cooling, positive for heating (W)
-    P_s_C[0] = - P_s_H[0];                                                  # Negative for cooling
+        # Første søjle i hp.P_s_H hhv hp.P_s_C er ens pånær fortegn. 
+        P_s_H[0] = P_s_H[0] - P_s_C[0];                                       # Annual imbalance between heating and cooling, positive for heating (W)
+        P_s_C[0] = - P_s_H[0];                                                  # Negative for cooling
 
     
     aggLoad.Qdim_H = P_s_H[2] / dT_H / brine.rho / brine.c;
-    aggLoad.Qdim_C = P_s_C[2] / dT_C / brine.rho / brine.c;
-    
     aggLoad.To_H = aggLoad.Ti_H - dT_H;
-    aggLoad.To_C = aggLoad.Ti_C + dT_C;
-
     aggLoad.P_s_H = P_s_H;
-    aggLoad.P_s_C = P_s_C;
+    
+    #KART COOLING
+    if np.abs(P_y_C) > 1e-3: 
+        aggLoad.Qdim_C = P_s_C[2] / dT_C / brine.rho / brine.c;
+        aggLoad.To_C = aggLoad.Ti_C + dT_C;
+        aggLoad.P_s_C = P_s_C;
     
     
     return aggLoad
@@ -146,25 +152,37 @@ def read_aggregated_load(aggLoad, brine, agg_load_file):
 # Print results to console
 def print_pipe_dimensions(net, pipeGroupNames):
     
+    doCooling = not np.isnan(net.Re_selected_C).any();
+    
     # Print pipe dimensioning results
     print(' ');
     print('******************* Suggested pipe dimensions heating ******************'); 
     for i in range(len(net.I_PG)):
         print(f'{pipeGroupNames.iloc[i]}: Ø{int(1000*net.d_selectedPipes_H[i])} mm SDR {int(net.SDR[i])}, Re = {int(round(net.Re_selected_H[i]))}');
     print(' ');
-    print('******************* Suggested pipe dimensions cooling ******************');
-    for i in range(len(net.I_PG)):
-        print(f'{pipeGroupNames.iloc[i]}: Ø{int(1000*net.d_selectedPipes_C[i])} mm SDR {int(net.SDR[i])}, Re = {int(round(net.Re_selected_C[i]))}');
+    
+    if doCooling:
+        print('******************* Suggested pipe dimensions cooling ******************');
+        for i in range(len(net.I_PG)):
+            print(f'{pipeGroupNames.iloc[i]}: Ø{int(1000*net.d_selectedPipes_C[i])} mm SDR {int(net.SDR[i])}, Re = {int(round(net.Re_selected_C[i]))}');
+            
     print(' ');
 
 
 # Print source dimensioning results to console
-def print_source_dimensions(FPH, FPC, source_config):
+def print_source_dimensions(source_config):
+    
+    FPH = source_config.FPH;
+    FPC = source_config.FPC;
+    doCooling = not np.isnan(FPC);
     
     # Print results to console
     print('***************** Thermonet energy production capacity *****************'); 
     print(f'The thermonet supplies {round(100*FPH)}% of the peak heating demand');  #print(f'The thermonet fully supplies the heat pumps with IDs 1 - {int(np.floor(NSHPH+1))} with heating' ) ;
-    print(f'The thermonet supplies {round(100*FPC)}% of the peak cooling demand');  
+    #KART COOLING    
+    if doCooling:
+        print(f'The thermonet supplies {round(100*FPC)}% of the peak cooling demand');  
+
     print(' ');
 
     # BHE specific results
@@ -174,9 +192,15 @@ def print_source_dimensions(FPH, FPC, source_config):
         # Display output in console
         print('********** Suggested length of borehole heat exchangers (BHE) **********'); 
         print(f'Required length of each of the {int(N_BHE)} BHEs = {int(np.ceil(source_config.L_BHE_H/N_BHE))} m for heating');
-        print(f'Required length of each of the {int(N_BHE)} BHEs = {int(np.ceil(source_config.L_BHE_C/N_BHE))} m for cooling');
+        #KART COOLING    
+        if doCooling:
+            print(f'Required length of each of the {int(N_BHE)} BHEs = {int(np.ceil(source_config.L_BHE_C/N_BHE))} m for cooling');
+    
         print(f'Maximum pressure loss in BHEs in heating mode = {int(np.ceil(source_config.dpdL_BHEmax_H))} Pa/m, Re = {int(round(source_config.Re_BHEmax_H))}');
-        print(f'Maximum pressure loss in BHEs in cooling mode = {int(np.ceil(source_config.dpdL_BHEmax_C))} Pa/m, Re = {int(round(source_config.Re_BHEmax_C))}');
+        
+        #KART COOLING    
+        if doCooling:
+            print(f'Maximum pressure loss in BHEs in cooling mode = {int(np.ceil(source_config.dpdL_BHEmax_C))} Pa/m, Re = {int(round(source_config.Re_BHEmax_C))}');
 
     elif source_config.source =='HHE':
 
@@ -185,32 +209,43 @@ def print_source_dimensions(FPH, FPC, source_config):
         # Output results to console
         print('********* Suggested length of horizontal heat exchangers (HHE) *********');
         print(f'Required length of each of the {int(N_HHE)} horizontal loops = {int(np.ceil(source_config.L_HHE_H/N_HHE))} m for heating');
-        print(f'Required length of each of the {int(N_HHE)} horizontal loops = {int(np.ceil(source_config.L_HHE_C/N_HHE))} m for cooling');
+        #KART COOLING    
+        if doCooling:
+            print(f'Required length of each of the {int(N_HHE)} horizontal loops = {int(np.ceil(source_config.L_HHE_C/N_HHE))} m for cooling');
+        
         print(f'Maximum pressure loss in HHE pipes in heating mode = {int(np.ceil(source_config.dpdL_HHEmax_H))} Pa/m, Re = {int(round(source_config.Re_HHEmax_H))}');
-        print(f'Maximum pressure loss in HHE pipes in cooling mode {int(np.ceil(source_config.dpdL_HHEmax_C))} Pa/m, Re = {int(round(source_config.Re_HHEmax_C))}');
+        #KART COOLING    
+        if doCooling:
+            print(f'Maximum pressure loss in HHE pipes in cooling mode {int(np.ceil(source_config.dpdL_HHEmax_C))} Pa/m, Re = {int(round(source_config.Re_HHEmax_C))}');
 
 
 # Function for dimensioning pipes
 def run_pipedimensioning(d_pipes, brine, net, hp):
     
+    #KART UDTRÆK BOOLEAN FOR COOLING HER OG ERSTAT HELE VEJEN NED
+    doCooling = not np.isnan(hp.P_s_C).any();
+    
     N_PG = len(net.I_PG);                                                     # Number of pipe groups
     
     # Allocate variables
     ind_H = np.zeros(N_PG);                                               # Index vector for pipe groups heating (-)
-    ind_C = np.zeros(N_PG);                                               # Index vector for pipe groups cooling (-)
     d_selectedPipes_H = np.zeros(N_PG);                                           # Pipes selected from dimensioning for heating (length)
-    d_selectedPipes_C = np.zeros(N_PG);                                           # Pipes selected from dimensioning for cooling (length)
     Q_PG_H = np.zeros(N_PG);                                               # Design flow heating (m3/s)
-    Q_PG_C = np.zeros(N_PG);                                               # Design flow cooling (m3/s)
+    
+    #KART COOLING
+    if doCooling:
+        ind_C = np.zeros(N_PG);                                               # Index vector for pipe groups cooling (-)
+        d_selectedPipes_C = np.zeros(N_PG);                                           # Pipes selected from dimensioning for cooling (length)
+        Q_PG_C = np.zeros(N_PG);                                               # Design flow cooling (m3/s)
 
         
-    #KART TEMP -> IMPLEMENTER INDIVIDUELLE S'er -> slet S beregning her
     N_HP = len(hp.P_s_H);
    
-    # KART FJERN S HER -> FLYT TIL LOOP med ny beregning for hver gruppe
     # KART Qdim fjernes fra hp -> flyttet til aggLoad
     Qdim_H =  hp.P_s_H[:,2]/hp.dT_H/brine.rho/brine.c;                                  # Design flow heating (m3/s)
-    Qdim_C =  hp.P_s_C[:,2]/hp.dT_C/brine.rho/brine.c;                             # Design flow cooling (m3/s). 
+    #KART COOLING
+    if doCooling:
+        Qdim_C =  hp.P_s_C[:,2]/hp.dT_C/brine.rho/brine.c;                             # Design flow cooling (m3/s). 
 
     # Compute design flow for the pipes
     for i in range(N_PG):
@@ -219,21 +254,28 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
        N_HP_per_trace = len(net.I_PG[i]) / net.N_traces[i]; 
        S = hp.SF*(0.62 + 0.38/N_HP_per_trace);
        
-       
-       
        Q_PG_H[i] =  S * sum(Qdim_H[np.ndarray.tolist(net.I_PG[i])])/net.N_traces[i];        # Sum the heating brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
-       Q_PG_C[i] =  S * sum(Qdim_C[np.ndarray.tolist(net.I_PG[i])])/net.N_traces[i];        # Sum the cooling brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
+
+       #KART COOLING
+       if doCooling:
+           Q_PG_C[i] =  S * sum(Qdim_C[np.ndarray.tolist(net.I_PG[i])])/net.N_traces[i];        # Sum the cooling brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
     
     # Select the smallest diameter pipe that fulfills the pressure drop criterion
     for i in range(N_PG):                                 
         di_pipes = d_pipes*(1-2/net.SDR[i]);                                # Compute inner diameters (m). Variable TOPO_H or TOPO_C are identical here.
         ind_H[i] = np.argmax(dp(brine.rho,brine.mu,Q_PG_H[i],di_pipes)<net.dpdL_t);           # Find first pipe with a pressure loss less than the target for heating (-)
-        ind_C[i] = np.argmax(dp(brine.rho,brine.mu,Q_PG_C[i],di_pipes)<net.dpdL_t);           # Find first pipe with a pressure loss less than the target for cooling (-)
         d_selectedPipes_H[i] = d_pipes[int(ind_H[i])];                              # Store pipe selection for heating in new variable (m)
-        d_selectedPipes_C[i] = d_pipes[int(ind_C[i])]; 
+
+        #KART COOLING
+        if doCooling:
+            ind_C[i] = np.argmax(dp(brine.rho,brine.mu,Q_PG_C[i],di_pipes)<net.dpdL_t);           # Find first pipe with a pressure loss less than the target for cooling (-)
+            d_selectedPipes_C[i] = d_pipes[int(ind_C[i])]; 
 
     net.d_selectedPipes_H = d_selectedPipes_H;
-    net.d_selectedPipes_C = d_selectedPipes_C;
+
+    # KART COOLING
+    if doCooling:
+        net.d_selectedPipes_C = d_selectedPipes_C;
                              # Store pipe selection for cooling in new variable (m)
     
     # Compute Reynolds number for selected pipes for heating
@@ -241,35 +283,40 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
     v_H = Q_PG_H/np.pi/net.di_selected_H**2*4;                                        # Compute flow velocity for selected pipes (m/s)
     net.Re_selected_H = Re(brine.rho,brine.mu,v_H,net.di_selected_H);                                      # Compute Reynolds numbers for the selected pipes (-)
     
-    # Compute Reynolds number for selected pipes for cooling
-    net.di_selected_C = d_selectedPipes_C*(1-2/net.SDR);                                 # Compute inner diameter of selected pipes (m)
-    v_C = Q_PG_C/np.pi/net.di_selected_C**2*4;                                        # Compute flow velocity for selected pipes (m/s)
-    net.Re_selected_C = Re(brine.rho,brine.mu,v_C,net.di_selected_C);                                      # Compute Reynolds numbers for the selected pipes (-)
+    #KART COOLING    
+    if doCooling:
+        # Compute Reynolds number for selected pipes for cooling
+        net.di_selected_C = d_selectedPipes_C*(1-2/net.SDR);                                 # Compute inner diameter of selected pipes (m)
+        v_C = Q_PG_C/np.pi/net.di_selected_C**2*4;                                        # Compute flow velocity for selected pipes (m/s)
+        net.Re_selected_C = Re(brine.rho,brine.mu,v_C,net.di_selected_C);                                      # Compute Reynolds numbers for the selected pipes (-)
     
     
     
     
-    # KART: BRUGER SKAL SELV ANGIVE SF og/eller S??
+    # Beregn aggregeret last til videre beregning
     N_HP = len(hp.P_s_H);
     
     aggLoad = aggregatedLoad(Ti_H = hp.Ti_H, Ti_C = hp.Ti_C, SF=hp.SF, t_peak=hp.t_peak)
     S = hp.SF*(0.62 + 0.38/N_HP);
     
     aggLoad.Ti_H = hp.Ti_H;
-    aggLoad.Ti_C = hp.Ti_C;
-    
     aggLoad.To_H = hp.Ti_H - sum(Qdim_H*hp.dT_H)/sum(Qdim_H);                         # Volumetric flow rate weighted average brine delta-T (C)
-    aggLoad.To_C = hp.Ti_C + sum(Qdim_C*hp.dT_C)/sum(Qdim_C);                         # Volumetric flow rate weighted average brine delta-T (C)
-
     aggLoad.P_s_H = sum(hp.P_s_H);
-    aggLoad.P_s_C = sum(hp.P_s_C);
     # KART korriger spidslast med samtidighedsfaktor
     aggLoad.P_s_H[2] = aggLoad.P_s_H[2] * S;
-    aggLoad.P_s_C[2] = aggLoad.P_s_C[2] * S;
-    
     # KART ditto dimensionerende flow 
     aggLoad.Qdim_H = sum(Qdim_H) * S;
-    aggLoad.Qdim_C = sum(Qdim_C) * S;
+
+    #KART COOLING    
+    if doCooling:
+
+        aggLoad.Ti_C = hp.Ti_C;    
+        aggLoad.To_C = hp.Ti_C + sum(Qdim_C*hp.dT_C)/sum(Qdim_C);                         # Volumetric flow rate weighted average brine delta-T (C)
+        aggLoad.P_s_C = sum(hp.P_s_C);
+        # KART korriger spidslast med samtidighedsfaktor
+        aggLoad.P_s_C[2] = aggLoad.P_s_C[2] * S;
+        # KART ditto dimensionerende flow 
+        aggLoad.Qdim_C = sum(Qdim_C) * S;
 
     
     # Return the pipe sizing results
@@ -280,6 +327,10 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
     
 # Function for dimensioning sources
 def run_sourcedimensioning(brine, net, aggLoad, source_config):
+    
+    
+    #KART UDTRÆK BOOLEAN FOR COOLING HER OG ERSTAT HELE VEJEN NED
+    doCooling = not np.isnan(aggLoad.P_s_C).any();
     
     
     N_PG = len(net.I_PG);                                                     # Number of pipe groups    
@@ -311,10 +362,13 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
     for i in range(N_PG):                                                # For all pipe groups
         R_H[i] = Rp(net.di_selected_H[i],net.d_selectedPipes_H[i],net.Re_selected_H[i],Pr,brine.l,net.l_p);             # Compute thermal resistances (m*K/W)
      
-    # Compute thermal resistances for pipes in cooling mode
-    R_C = np.zeros(N_PG);                                                 # Allocate pipe thermal resistance vector for cooling (m*K/W)
-    for i in range(N_PG):                                                # For all pipe groups
-        R_C[i] = Rp(net.di_selected_C[i],net.d_selectedPipes_C[i],net.Re_selected_C[i],Pr,brine.l,net.l_p);             # Compute thermal resistances (m*K/W)
+    
+    #KART COOLING
+    if doCooling:
+        # Compute thermal resistances for pipes in cooling mode
+        R_C = np.zeros(N_PG);                                                 # Allocate pipe thermal resistance vector for cooling (m*K/W)
+        for i in range(N_PG):                                                # For all pipe groups
+            R_C[i] = Rp(net.di_selected_C[i],net.d_selectedPipes_C[i],net.Re_selected_C[i],Pr,brine.l,net.l_p);             # Compute thermal resistances (m*K/W)
 
     
     # Compute delta-qs for superposition of heating load responses
@@ -332,13 +386,15 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
     # KART flyttet aggregering
     # cdPSH = np.sum(dP_s_H,0);
     
-    # Compute delta-qs for superposition of cooling load responses
-    # dP_s_C = np.zeros((N_HP,3));                                           # Allocate power difference matrix for tempoeral superposition (W)
-    # dP_s_C[:,0] = hp.P_s_C[:,0];                                               # First entry is just the annual average power (W)
-    # dP_s_C[:,1:] = np.diff(hp.P_s_C);                                          # Differences between year-month and month-hour are added (W)
-    dP_s_C = np.zeros(3);                                           # Allocate power difference matrix for tempoeral superposition (W)
-    dP_s_C[0] = aggLoad.P_s_C[0];                                               # First entry is just the annual average power (W)
-    dP_s_C[1:] = np.diff(aggLoad.P_s_C);                                          # Differences between year-month and month-hour are added (W)
+    #KART COOLING
+    if doCooling:
+        # Compute delta-qs for superposition of cooling load responses
+        # dP_s_C = np.zeros((N_HP,3));                                           # Allocate power difference matrix for tempoeral superposition (W)
+        # dP_s_C[:,0] = hp.P_s_C[:,0];                                               # First entry is just the annual average power (W)
+        # dP_s_C[:,1:] = np.diff(hp.P_s_C);                                          # Differences between year-month and month-hour are added (W)
+        dP_s_C = np.zeros(3);                                           # Allocate power difference matrix for tempoeral superposition (W)
+        dP_s_C[0] = aggLoad.P_s_C[0];                                               # First entry is just the annual average power (W)
+        dP_s_C[1:] = np.diff(aggLoad.P_s_C);                                          # Differences between year-month and month-hour are added (W)
 
     # KART: ditto køl
     # KART: flyttet aggregering
@@ -347,9 +403,11 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
     # Compute temperature responses in heating and cooling mode for all pipes
     # KART bliv enige om sigende navne der følger konvention og implementer x 4
     FPH = np.zeros(N_PG);                                                # Vector with total heating load fractions supplied by each pipe segment (-)
-    FPC = np.zeros(N_PG);                                                # Vector with total cooling load fractions supplied by each pipe segment (-)
     GTHMH = np.zeros([N_PG,3]); #KART: G_grid_H
-    GTHMC = np.zeros([N_PG,3]); #KART: G_grid_C
+
+    if doCooling:    
+       FPC = np.zeros(N_PG);                                                # Vector with total cooling load fractions supplied by each pipe segment (-)
+       GTHMC = np.zeros([N_PG,3]); #KART: G_grid_C
     
     
     # Heat pump and temperature conditions in the sizing equation
@@ -361,27 +419,31 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
     # KART: gennemgå nye varmeberegning - opsplittet på segmenter
     for i in range(N_PG):
         GTHMH[i,:] = CSM(net.d_selectedPipes_H[i]/2,net.d_selectedPipes_H[i]/2,t,a_s) + K1;
-        GTHMC[i,:] = CSM(net.d_selectedPipes_C[i]/2,net.d_selectedPipes_C[i]/2,t,a_s) + K1;
         # FPH[i] = (T0 - (aggLoad.Ti_H + aggLoad.To_H)/2 - TP)*net.L_segments[i]/np.dot(cdPSH,GTHMH[i]/net.l_s_H + R_H[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
         # KART opdateret aggregering
         FPH[i] = (T0 - (aggLoad.Ti_H + aggLoad.To_H)/2 - TP)*net.L_segments[i]/np.dot(dP_s_H, GTHMH[i]/net.l_s_H + R_H[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
-        # KART opdateret aggregering
-        FPC[i] = ((aggLoad.Ti_C + aggLoad.To_C)/2 - T0 - TP)*net.L_segments[i]/np.dot(dP_s_C, GTHMC[i]/net.l_s_C + R_C[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
+        
+        #KART COOLING
+        if doCooling:
+            GTHMC[i,:] = CSM(net.d_selectedPipes_C[i]/2,net.d_selectedPipes_C[i]/2,t,a_s) + K1;
+            # KART opdateret aggregering
+            FPC[i] = ((aggLoad.Ti_C + aggLoad.To_C)/2 - T0 - TP)*net.L_segments[i]/np.dot(dP_s_C, GTHMC[i]/net.l_s_C + R_C[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
+
     
     # KART - mangler at gennemgå ny beregning af energi fra grid/kilder
     
     # Heating supplied by thermonet 
     FPH = sum(FPH);                                                     # Total fraction of heating supplied by thermonet (-)
-# KART flyttet aggregering
+    # KART flyttet aggregering
     # PHEH = (1-FPH)*cdPSH;                                               # Residual heat demand (W)
     PHEH = (1-FPH)*dP_s_H;                                               # Residual heat demand (W)
 
-    
-    # Cooling supplied by thermonet
-    FPC = sum(FPC);                                                     # Total fraction of cooling supplied by thermonet (-)
-   # KART flyttet aggregering
-    # PHEC = (1-FPC)*cdPSC;                                               # Residual heat demand (W)
-    PHEC = (1-FPC)*dP_s_C;                                               # Residual heat demand (W)
+    if doCooling:    
+        # Cooling supplied by thermonet
+        FPC = sum(FPC);                                                     # Total fraction of cooling supplied by thermonet (-)
+        # KART flyttet aggregering
+        # PHEC = (1-FPC)*cdPSC;                                               # Residual heat demand (W)
+        PHEC = (1-FPC)*dP_s_C;                                               # Residual heat demand (W)
     
 
     
@@ -459,27 +521,32 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         
         BHE.Re_BHEmax_H = Re_BHEmax_H;  # Add Re to BHE instance
         BHE.dpdL_BHEmax_H = dpdL_BHEmax_H;  # Add pressure loss to BHE instance
-        
-        # BHE cooling
-        # KART flyttet aggregering
-        # Q_BHEmax_C = sum(hp.Qdim_C)/N_BHE;                                        # Peak flow in BHE pipes (m3/s)
-        Q_BHEmax_C = aggLoad.Qdim_C/N_BHE;                                        # Peak flow in BHE pipes (m3/s)
-        v_BHEmax_C = Q_BHEmax_C/np.pi/ri**2;                                      # Flow velocity in BHEs (m/s)
-        Re_BHEmax_C = Re(brine.rho,brine.mu,v_BHEmax_C,2*ri);                              # Reynold number in BHEs (-)
-        dpdL_BHEmax_C = dp(brine.rho,brine.mu,Q_BHEmax_C,2*ri);                               # Pressure loss in BHE (Pa/m)
-
-        BHE.Re_BHEmax_C = Re_BHEmax_C;  # Add Re to BHE instance
-        BHE.dpdL_BHEmax_C = dpdL_BHEmax_C;  # Add pressure loss to BHE instance
-
     
         # Compute borehole resistance with the first order multipole method ignoring flow and length effects
-        Rb_H = RbMP(brine.l,net.l_p,BHE.l_g,BHE.l_ss,BHE.r_b,BHE.r_p,ri,s_BHE,Re_BHEmax_H,Pr);                # Compute the borehole thermal resistance (m*K/W)
-        Rb_C = RbMP(brine.l,net.l_p,BHE.l_g,BHE.l_ss,BHE.r_b,BHE.r_p,ri,s_BHE,Re_BHEmax_C,Pr);                # Compute the borehole thermal resistance (m*K/W)
+        Rb_H = RbMP(brine.l,net.l_p,BHE.l_g,BHE.l_ss,BHE.r_b,BHE.r_p,ri,s_BHE,Re_BHEmax_H,Pr);                # Compute the borehole thermal resistance (m*K/W)    
+    
+        # KART COOLING
+        if doCooling:
+            # BHE cooling
+            # KART flyttet aggregering
+            # Q_BHEmax_C = sum(hp.Qdim_C)/N_BHE;                                        # Peak flow in BHE pipes (m3/s)
+            Q_BHEmax_C = aggLoad.Qdim_C/N_BHE;                                        # Peak flow in BHE pipes (m3/s)
+            v_BHEmax_C = Q_BHEmax_C/np.pi/ri**2;                                      # Flow velocity in BHEs (m/s)
+            Re_BHEmax_C = Re(brine.rho,brine.mu,v_BHEmax_C,2*ri);                              # Reynold number in BHEs (-)
+            dpdL_BHEmax_C = dp(brine.rho,brine.mu,Q_BHEmax_C,2*ri);                               # Pressure loss in BHE (Pa/m)
+
+            BHE.Re_BHEmax_C = Re_BHEmax_C;  # Add Re to BHE instance
+            BHE.dpdL_BHEmax_C = dpdL_BHEmax_C;  # Add pressure loss to BHE instance
+
+            # Compute borehole resistance with the first order multipole method ignoring flow and length effects    
+            Rb_C = RbMP(brine.l,net.l_p,BHE.l_g,BHE.l_ss,BHE.r_b,BHE.r_p,ri,s_BHE,Re_BHEmax_C,Pr);                # Compute the borehole thermal resistance (m*K/W)
         
         
         # Composite cylindrical source model GCLS() for short term response. Hu et al. 2014. Paper here: https://www.sciencedirect.com/science/article/abs/pii/S0378778814005866?via#3Dihub
         re_H = BHE.r_b/np.exp(2*np.pi*BHE.l_g*Rb_H);                                # Heating: Compute the equivalent pipe radius for cylindrical symmetry (m). This is how Hu et al. 2014 define it.
-        re_C = BHE.r_b/np.exp(2*np.pi*BHE.l_g*Rb_C);                                # Cooling: Compute the equivalent pipe radius for cylindrical symmetry (m). This is how Hu et al. 2014 define it.
+        #KART COOLING
+        if doCooling:
+            re_C = BHE.r_b/np.exp(2*np.pi*BHE.l_g*Rb_C);                                # Cooling: Compute the equivalent pipe radius for cylindrical symmetry (m). This is how Hu et al. 2014 define it.
     
         # The Fourier numbers Fo1-Fo3 are neccesary for computing the solution 
         Fo1 = a_ss*t[2]/BHE.r_b**2;                                    
@@ -488,22 +555,30 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         Fo2h = a_g*t[2]/re_H**2;
         G2h = GCLS(Fo2h);
     
-        Fo2c = a_g*t[2]/re_C**2;
-        G2c = GCLS(Fo2c);
+        #KART COOLING
+        if doCooling:        
+            Fo2c = a_g*t[2]/re_C**2;
+            G2c = GCLS(Fo2c);
     
         Fo3 = a_g*t[2]/BHE.r_b**2;
         G3 = GCLS(Fo3);
     
         Rw_H = G1/BHE.l_ss + G2h/BHE.l_g - G3/BHE.l_g;                                  # Step response for short term model on the form q*Rw = T (m*K/W). Rw indicates that it is in fact a thermal resistance
-        Rw_C = G1/BHE.l_ss + G2c/BHE.l_g - G3/BHE.l_g;                                  # Step response for short term model on the form q*Rw = T (m*K/W). Rw indicates that it is in fact a thermal resistance
+        
+        #KART COOLING
+        if doCooling:
+            Rw_C = G1/BHE.l_ss + G2c/BHE.l_g - G3/BHE.l_g;                                  # Step response for short term model on the form q*Rw = T (m*K/W). Rw indicates that it is in fact a thermal resistance
     
         # Compute approximate combined length of BHES (length effects not considered)
         # KART: hvorfor kun een GBHEF (ingen H/C)
         GBHEF = G_BHE;                                                  # Retain a copy of the G function for length correction later on (-)
         G_BHE_H = np.asarray([G_BHE[0]/BHE.l_ss+Rb_H,G_BHE[1]/BHE.l_ss+Rb_H, Rw_H]);     # Heating G-function
-        G_BHE_C = np.asarray([G_BHE[0]/BHE.l_ss+Rb_C,G_BHE[1]/BHE.l_ss+Rb_C, Rw_C]);     # Cooling G-function
         L_BHE_H = np.dot(PHEH,G_BHE_H) / (T0_BHE - (aggLoad.Ti_H + aggLoad.To_H)/2);    # Sizing equation for computing the required borehole meters for heating (m)
-        L_BHE_C = np.dot(PHEC,G_BHE_C) / (-T0_BHE + (aggLoad.Ti_C + aggLoad.To_C)/2);      
+        
+        #KART COOLING
+        if doCooling:        
+            G_BHE_C = np.asarray([G_BHE[0]/BHE.l_ss+Rb_C,G_BHE[1]/BHE.l_ss+Rb_C, Rw_C]);     # Cooling G-function
+            L_BHE_C = np.dot(PHEC,G_BHE_C) / (-T0_BHE + (aggLoad.Ti_C + aggLoad.To_C)/2);      
             
         # Determine the solution by searching the neighbourhood of the approximate length solution
         # Heating mode
@@ -511,11 +586,14 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         NLBHEHv = len(L_BHE_H_v);
         Rb_H_v = np.zeros(NLBHEHv);
         
-        # Cooling mode
-        L_BHE_C_v = L_BHE_C/N_BHE + np.arange(0,LL,dL);
-        NLBHECv = len(L_BHE_C_v);
-        Rb_C_v = np.zeros(NLBHECv);
-        # Tsolc = np.zeros(NLBHECv);
+        
+        #KART COOLING
+        if doCooling:
+            # Cooling mode
+            L_BHE_C_v = L_BHE_C/N_BHE + np.arange(0,LL,dL);
+            NLBHECv = len(L_BHE_C_v);
+            Rb_C_v = np.zeros(NLBHECv);
+            # Tsolc = np.zeros(NLBHECv);
         
         Tf_BHE_H = np.zeros(NLBHEHv);
         for i in range(NLBHEHv):                                         # Compute Rb for the specified number of boreholes and lengths considering flow and length effects (m*K/W)
@@ -533,29 +611,36 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         if Tf_BHE_H[indLBHEH]-Tbound_H > 0.1:        
             print('Warning - the length steps used for computing the BHE length for heating are too big. Reduce the stepsize and recompute a solution.');
         
-        Tf_BHE_C = np.zeros(NLBHECv)
-        for i in range(NLBHECv):                                         # Compute Rb for the specified number of boreholes and lengths considering flow and length effects (m*K/W)
-            Rb_C_v[i] = RbMPflc(brine.l,net.l_p,BHE.l_g,BHE.l_ss,brine.rho,brine.c,BHE.r_b,BHE.r_p,ri,L_BHE_C_v[i],s_BHE,Q_BHEmax_C,Re_BHEmax_C,Pr);    #K. Compute BHE length and flow corrected multipole estimates of Rb for all candidate solutions (m*K/W)
-            # KART: beregn væske temperatur
-            Tf_BHE_C[i] = T0_BHE + np.dot(PHEC,np.array([GBHEF[0]/BHE.l_ss + Rb_C_v[i], GBHEF[1]/BHE.l_ss + Rb_C_v[i], Rw_C]))/L_BHE_C_v[i]/N_BHE;
+        #KART COOLING
+        if doCooling:        
+            Tf_BHE_C = np.zeros(NLBHECv)
+            for i in range(NLBHECv):                                         # Compute Rb for the specified number of boreholes and lengths considering flow and length effects (m*K/W)
+                Rb_C_v[i] = RbMPflc(brine.l,net.l_p,BHE.l_g,BHE.l_ss,brine.rho,brine.c,BHE.r_b,BHE.r_p,ri,L_BHE_C_v[i],s_BHE,Q_BHEmax_C,Re_BHEmax_C,Pr);    #K. Compute BHE length and flow corrected multipole estimates of Rb for all candidate solutions (m*K/W)
+                # KART: beregn væske temperatur
+                Tf_BHE_C[i] = T0_BHE + np.dot(PHEC,np.array([GBHEF[0]/BHE.l_ss + Rb_C_v[i], GBHEF[1]/BHE.l_ss + Rb_C_v[i], Rw_C]))/L_BHE_C_v[i]/N_BHE;
     
-        Tbound_C = (aggLoad.Ti_C + aggLoad.To_C)/2; # Tjek om den skal bruges tidligere og flyt op
-        Tf_BHE_C[Tf_BHE_C > Tbound_C] = np.nan;                                # Remove solutions that violate the bound Tf > Tbound_C    
-        indLBHEC = np.argmin(np.isnan(Tf_BHE_C));                          # Find index of the first viable solution
-    
+            Tbound_C = (aggLoad.Ti_C + aggLoad.To_C)/2; # Tjek om den skal bruges tidligere og flyt op
+            Tf_BHE_C[Tf_BHE_C > Tbound_C] = np.nan;                                # Remove solutions that violate the bound Tf > Tbound_C    
+            indLBHEC = np.argmin(np.isnan(Tf_BHE_C));                          # Find index of the first viable solution
+
         
-        #indLBHEC = np.argmax(Tsolc<TCC2);                                # Get rid of candidates that undersize the system. 
-        L_BHE_C = L_BHE_C_v[indLBHEC]*N_BHE;                                   # Solution BHE length for cooling (m)
+            #indLBHEC = np.argmax(Tsolc<TCC2);                                # Get rid of candidates that undersize the system. 
+            L_BHE_C = L_BHE_C_v[indLBHEC]*N_BHE;                                   # Solution BHE length for cooling (m)
         
-        if Tf_BHE_C[indLBHEC]-Tbound_C > 0.1:
-            print('Warning - the length steps used for computing the BHE length for cooling are too big. Reduce the stepsize and recompute a solution.');    
+            if Tf_BHE_C[indLBHEC]-Tbound_C > 0.1:
+                print('Warning - the length steps used for computing the BHE length for cooling are too big. Reduce the stepsize and recompute a solution.');    
         
         BHE.L_BHE_H = L_BHE_H;
-        BHE.L_BHE_C = L_BHE_C;
+        BHE.FPH = FPH;
+        
+        #KART COOLING
+        if doCooling:
+            BHE.L_BHE_C = L_BHE_C;
+            BHE.FPC = FPC;
+        
         source_config = BHE;
        
         
-       
     # If HHEs are selected as source
     elif source_config.source == 'HHE':    
        
@@ -591,17 +676,18 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         HHE.Re_HHEmax_H = Re_HHEmax_H;  # Add Re to HHE instance
         HHE.dpdL_HHEmax_H = dpdL_HHEmax_H;  # Add pressure loss to HHE instance
 
-    
-        # HHE cooling
-        # KART fyttet aggregering
-        # Q_HHEmax_C = sum(hp.Qdim_C)/HHE.N_HHE;                                        # Peak flow in HHE pipes (m3/s)
-        Q_HHEmax_C = aggLoad.Qdim_C / HHE.N_HHE;                                        # Peak flow in HHE pipes (m3/s)
-        v_HHEmax_C = Q_HHEmax_C/np.pi/ri_HHE**2;                                   # Peak flow velocity in HHE pipes (m/s)
-        Re_HHEmax_C = Re(brine.rho,brine.mu,v_HHEmax_C,2*ri_HHE);                           # Peak Reynolds numbers in HHE pipes (-)
-        dpdL_HHEmax_C = dp(brine.rho,brine.mu,Q_HHEmax_C,2*ri_HHE);                            # Peak pressure loss in HHE pipes (Pa/m)
+        #KART COOLING
+        if doCooling:
+            # HHE cooling
+            # KART fyttet aggregering
+            # Q_HHEmax_C = sum(hp.Qdim_C)/HHE.N_HHE;                                        # Peak flow in HHE pipes (m3/s)
+            Q_HHEmax_C = aggLoad.Qdim_C / HHE.N_HHE;                                        # Peak flow in HHE pipes (m3/s)
+            v_HHEmax_C = Q_HHEmax_C/np.pi/ri_HHE**2;                                   # Peak flow velocity in HHE pipes (m/s)
+            Re_HHEmax_C = Re(brine.rho,brine.mu,v_HHEmax_C,2*ri_HHE);                           # Peak Reynolds numbers in HHE pipes (-)
+            dpdL_HHEmax_C = dp(brine.rho,brine.mu,Q_HHEmax_C,2*ri_HHE);                            # Peak pressure loss in HHE pipes (Pa/m)
 
-        HHE.Re_HHEmax_C = Re_HHEmax_C;  # Add Re to HHE instance
-        HHE.dpdL_HHEmax_C = dpdL_HHEmax_C;  # Add pressure loss to HHE instance
+            HHE.Re_HHEmax_C = Re_HHEmax_C;  # Add Re to HHE instance
+            HHE.dpdL_HHEmax_C = dpdL_HHEmax_C;  # Add pressure loss to HHE instance
 
         
         # Heating
@@ -609,20 +695,28 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         G_HHE_H = G_HHE/net.l_s_H + Rp_HHE_H;                                         # Add annual and monthly thermal resistances to G_HHE (m*K/W)
         L_HHE_H = np.dot(PHEH,G_HHE_H) / (T0 - (aggLoad.Ti_H + aggLoad.To_H)/2 - TP );
         
-        # Cooling
-        Rp_HHE_C = Rp(2*ri_HHE,2*ro_HHE,Re_HHEmax_C,Pr,brine.l,net.l_p);                   # Compute the pipe thermal resistance (m*K/W)
-        G_HHE_C = G_HHE/net.l_s_C + Rp_HHE_C;                                         # Add annual and monthly thermal resistances to G_HHE (m*K/W)
-        #L_HHE_C = np.dot(PHEC,G_HHE_C/TCC1);                                 # Sizing equation for computing the required borehole meters (m)
-        L_HHE_C = np.dot(PHEC,G_HHE_C) / ((aggLoad.Ti_C + aggLoad.To_C)/2 - T0 - TP);
+        #KART COOLING
+        if doCooling:        
+            # Cooling
+            Rp_HHE_C = Rp(2*ri_HHE,2*ro_HHE,Re_HHEmax_C,Pr,brine.l,net.l_p);                   # Compute the pipe thermal resistance (m*K/W)
+            G_HHE_C = G_HHE/net.l_s_C + Rp_HHE_C;                                         # Add annual and monthly thermal resistances to G_HHE (m*K/W)
+            #L_HHE_C = np.dot(PHEC,G_HHE_C/TCC1);                                 # Sizing equation for computing the required borehole meters (m)
+            L_HHE_C = np.dot(PHEC,G_HHE_C) / ((aggLoad.Ti_C + aggLoad.To_C)/2 - T0 - TP);
         
         
         # Add results to source configuration
+        HHE.FPH = FPH;
         HHE.L_HHE_H = L_HHE_H;
-        HHE.L_HHE_C = L_HHE_C;
+        #KART COOLING
+        if doCooling:        
+            HHE.FPC = FPC;
+            HHE.L_HHE_C = L_HHE_C;
+        
         source_config = HHE;
     ############################## Source sizing END ##############################
     
-    return FPH, FPC, source_config
+    # return FPH, FPC, source_config
+    return source_config
     
 
     

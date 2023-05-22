@@ -102,9 +102,10 @@ class HHEconfig:
     d:float = np.nan;  # Outer diameter of HE pipe (m)
     SDR:float = np.nan;  # SDR for HE pipes (-)
     D:float = np.nan;  # Pipe segment spacing (m)
-   
     
-   # Results
+    # Results
+    FPH:float = np.nan;
+    FPC:float = np.nan;
     L_HHE_H:float = np.nan;
     L_HHE_C:float = np.nan;
     Re_HHEmax_H:float = np.nan;
@@ -137,6 +138,8 @@ class BHEconfig:
     D_y:float = np.nan  # Spacing between boreholes in the y-direction (m)
     
     # Results
+    FPH:float = np.nan;
+    FPC:float = np.nan;    
     L_BHE_H:float = np.nan;
     L_BHE_C:float = np.nan;
     Re_BHEmax_H:float = np.nan;

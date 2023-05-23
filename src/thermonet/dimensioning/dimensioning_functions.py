@@ -91,6 +91,32 @@ def read_topology(net, TOPO_file):
     
     return net, pipeGroupNames
 
+# Read topology for thermonet with already dimesnioned pipe system
+def read_dimensioned_topology(net, brine, TOPO_file):
+    
+    # Load grid topology
+    TOPO = np.loadtxt(TOPO_file,skiprows = 1,usecols = (1,2,3,4,5));          # Load numeric data from topology file
+    net.d_selectedPipes_H = TOPO[:,0];      # Pipe outer diameters [m]
+    net.SDR = TOPO[:,1];
+    net.L_traces = TOPO[:,2];
+    net.N_traces = TOPO[:,3];
+    net.L_segments = 2 * net.L_traces * net.N_traces;
+    
+    I_PG = pd.read_csv(TOPO_file, sep = '\t+', engine='python');            # Load the entire file into Panda dataframe
+    pipeGroupNames = I_PG.iloc[:,0];                                        # Extract pipe group IDs
+    
+    # User supplied dimensioning flow
+    Q_PG_H = TOPO[:,4]
+    
+    # Compute Reynolds number for selected pipes for heating
+    net.di_selected_H = net.d_selectedPipes_H*(1-2/net.SDR);                                 # Compute inner diameter of selected pipes (m)
+    v_H = Q_PG_H/np.pi/net.di_selected_H**2*4;                                        # Compute flow velocity for selected pipes (m/s)
+    net.Re_selected_H = Re(brine.rho,brine.mu,v_H,net.di_selected_H);                                      # Compute Reynolds numbers for the selected pipes (-)
+    
+    
+    return net, pipeGroupNames
+
+
 def read_aggregated_load(aggLoad, brine, agg_load_file):
     
     # Load aggregated load form file
@@ -333,7 +359,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
     doCooling = not np.isnan(aggLoad.P_s_C).any();
     
     
-    N_PG = len(net.I_PG);                                                     # Number of pipe groups    
+    N_PG = len(net.L_segments);                                                     # Number of pipe groups    
       
     # G-function evaluation times (DO NOT MODIFY!!!!!!!)
     SECONDS_IN_HOUR = 3600;

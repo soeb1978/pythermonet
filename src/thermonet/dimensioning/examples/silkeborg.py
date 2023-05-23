@@ -1,6 +1,6 @@
 import pandas as pd
 from thermonet.dimensioning.thermonet_classes import Brine, Thermonet, Heatpump, HHEconfig, BHEconfig, aggregatedLoad
-from thermonet.dimensioning.dimensioning_functions import read_heatpumpdata, read_topology, read_aggregated_load, run_sourcedimensioning, print_source_dimensions
+from thermonet.dimensioning.dimensioning_functions import read_heatpumpdata, read_topology, read_dimensioned_topology, read_aggregated_load, run_sourcedimensioning, print_source_dimensions
 from thermonet.dimensioning.main import run_full_dimensioning
 
 if __name__ == '__main__':
@@ -44,13 +44,23 @@ if __name__ == '__main__':
     run_full_dimensioning(PID, d_pipes, brine, net, hp, pipeGroupNames, source_config)
     
     # KART - EXPERIMENTAL. Slet alle variable og genkør kun kildedimensionering
+    del net, hp, source_config, TOPO_file
     print('')
     print('Experimental - test aggergated load for source dimensioning')
     print('')
+    
+    TOPO_file = './data/sites/Silkeborg_TOPO_dimensioneret.dat';               # Input file containing topology information
+    
+    # Initialise thermonet object - with default parameters
+    net = Thermonet(D_gridpipes=0.3, dpdL_t=90, l_p=0.4, l_s_H=1.25, l_s_C=1.25, rhoc_s=2.5e6, z_grid=1.2);
+    net, pipeGroupNames = read_dimensioned_topology(net, brine, TOPO_file); # Read remaining data from user specified file
+
 
     # agg_load_file = './data/sites/Silkeborg_aggregated_load.dat';             # Input file for specifying only aggregated load for heating and cooling. Same totale load as in Silkeborg_HPSC.dat
     # agg_load_file = './data/sites/Silkeborg_aggregated_load_HEAT.dat';        # Input file - only heating
     agg_load_file = './data/sites/Silkeborg_aggregated_load_HEAT_COMPARE.dat';  # Input file - only heating with same yearly net load as in Silkeborg_aggregated_load.dat for comparsion
+
+    source_config = BHEconfig(T0=T0_BHE, r_b=0.152/2, r_p=0.02, SDR=11, l_ss=2.36, rhoc_ss=2.65e6, l_g=1.75, rhoc_g=3e6, D_pipes=0.015, NX=1, D_x=15, NY=6, D_y=15);
 
     aggLoad = aggregatedLoad(Ti_H = -3, Ti_C = 20, SF=1, t_peak=4)
     aggLoad = read_aggregated_load(aggLoad, brine, agg_load_file)

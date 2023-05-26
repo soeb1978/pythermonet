@@ -52,7 +52,7 @@ def read_heatpumpdata(hp, HP_file):
     
     
     #KART COOLING - hvis ingen køl angivet forbliver alle værdier på default NaN
-    if np.sum(np.abs(P_y_C)) > 1e-3:
+    if np.sum(np.abs(P_y_C)) > 1e-6:
     
         # Convert building loads to ground loads - cooling
         hp.P_s_C = np.zeros([N_HP,3]);
@@ -96,7 +96,7 @@ def read_dimensioned_topology(net, brine, TOPO_file):
     
     # Load grid topology
     TOPO = np.loadtxt(TOPO_file,skiprows = 1,usecols = (1,2,3,4,5));          # Load numeric data from topology file
-    net.d_selectedPipes_H = TOPO[:,0];      # Pipe outer diameters [m]
+    net.d_selectedPipes_H = TOPO[:,0] / 1000;      # Pipe outer diameters, convert from [mm] to [m]
     net.SDR = TOPO[:,1];
     net.L_traces = TOPO[:,2];
     net.N_traces = TOPO[:,3];
@@ -119,7 +119,7 @@ def read_dimensioned_topology(net, brine, TOPO_file):
 
 def read_aggregated_load(aggLoad, brine, agg_load_file):
     
-    # Load aggregated load form file
+    # Load aggregated load from file
     load = pd.read_csv(agg_load_file, sep = '\t+', engine='python');                                # Heat pump input file
     load = load.values 
     
@@ -149,7 +149,7 @@ def read_aggregated_load(aggLoad, brine, agg_load_file):
     P_s_H[2] = (COP_d_H-1)/COP_d_H * P_d_H * S; # Daily load with simultaneity factor (W)
 
     #KART COOLING
-    if np.abs(P_y_C) > 1e-3:
+    if np.abs(P_y_C) > 1e-6:
         # Calculate ground loads from EER (cooling)
         P_s_C = np.zeros(3);
         P_s_C[0] = EER/(EER - 1) * P_y_C; # Annual load (W)

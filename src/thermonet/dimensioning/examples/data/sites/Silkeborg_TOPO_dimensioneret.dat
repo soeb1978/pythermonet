@@ -1,7 +1,8 @@
-Section				do_(m)	SDR	Trace_(m)	Number_of_traces	Dimensioning_flow_m3/s
-Hovedlinje			0.090	17	40		1			0.00313915
-Distribution_1			0.075	17	63		1			0.00204304
-Distribution_2			0.063	17	58		1			0.00122458
-Enkeltledninger			0.063	17	63		1			0.00088801
-Stikledninger_lille		0.040	17	20		14			0.00031049
-Stikledninger_stor		0.050	17	20		1			0.00051749
+Section				do_(mm)	SDR	Trace_(m)	Number_of_traces	Dimensioning_flow_m3/s
+Hovedlinje			90	17	40		1			0.00313915
+Distribution_1			75	17	63		1			0.00204304
+Distribution_2			63	17	58		1			0.00122458
+Enkeltledninger			63	17	63		1			0.00088801
+Stikledninger_lille		40	17	20		14			0.00031049
+Stikledninger_stor		50	17	20		1			0.00051749
+

@@ -22,11 +22,12 @@ class Thermonet:
     # Thermonet and HHE
     D_gridpipes: float = np.nan    # Distance between forward and return pipe centers (m)
     dpdL_t: float = np.nan  # Target pressure loss in thermonet (Pa/m). 10# reduction to account for loss in fittings. Source: Oklahoma State University, Closed-loop/ground source heat pump systems. Installation guide., (1988). Interval: 98-298 Pa/m
-    l_p: float = np.nan    # Pipe thermal conductivity (W/m/K). https://www.wavin.com/da-dk/catalog/Varme/Jordvarme/PE-80-lige-ror/40mm-jordvarme-PE-80PN6-100m
-    l_s_H: float = np.nan  # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
-    l_s_C: float = np.nan  # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
+    l_p: float = np.nan     # Pipe thermal conductivity (W/m/K). https://www.wavin.com/da-dk/catalog/Varme/Jordvarme/PE-80-lige-ror/40mm-jordvarme-PE-80PN6-100m
+    l_s_H: float = np.nan   # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
+    l_s_C: float = np.nan   # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
     rhoc_s: float = np.nan  # Soil volumetric heat capacity  thermonet and HHE (J/m3/K) OK. Guestimate
     z_grid: float = np.nan  # Burial depth of thermonet and HHE (m)
+    T0: float = np.nan      # Surface temperature (C)
 
     # KART tilføjet topologi information fra TOPO_FILE
     SDR: float = np.nan;
@@ -121,7 +122,8 @@ class BHEconfig:
     # Borehole heat exchangers (BHE)
     source:str = 'BHE';
     
-    T0: float = np.nan;
+    T0: float = np.nan    # Surface temperature (C)
+    q_geo: float = np.nan # Geothermal heat flux (W/m2)
     r_b:float = np.nan  # Borehole radius (m)
     r_p:float = np.nan  # Outer radius of U pipe (m)
     SDR:float = np.nan  # SDR for U-pipe (-)

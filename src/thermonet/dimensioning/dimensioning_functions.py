@@ -599,62 +599,73 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         # KART: hvorfor kun een GBHEF (ingen H/C)
         GBHEF = G_BHE;                                                  # Retain a copy of the G function for length correction later on (-)
         G_BHE_H = np.asarray([G_BHE[0]/BHE.l_ss+Rb_H,G_BHE[1]/BHE.l_ss+Rb_H, Rw_H]);     # Heating G-function
-        L_BHE_H = np.dot(PHEH,G_BHE_H) / (T0_BHE - (aggLoad.Ti_H + aggLoad.To_H)/2);    # Sizing equation for computing the required borehole meters for heating (m)
+        
+        dTdz = BHE.q_geo/BHE.l_ss   # Geothermal gradient (K/m)
+        a = dTdz/(2*N_BHE)
+        b = T0_BHE - (aggLoad.Ti_H + aggLoad.To_H)/2
+        c = -np.dot(PHEH, G_BHE_H)
+        L_BHE_H = (-b + np.sqrt(b**2-4*a*c))/(2*a)
+        
         
         #KART COOLING
         if doCooling:        
             G_BHE_C = np.asarray([G_BHE[0]/BHE.l_ss+Rb_C,G_BHE[1]/BHE.l_ss+Rb_C, Rw_C]);     # Cooling G-function
-            L_BHE_C = np.dot(PHEC,G_BHE_C) / (-T0_BHE + (aggLoad.Ti_C + aggLoad.To_C)/2);      
             
-        # Determine the solution by searching the neighbourhood of the approximate length solution
-        # Heating mode
-        L_BHE_H_v = L_BHE_H/N_BHE + np.arange(0,LL,dL);
-        NLBHEHv = len(L_BHE_H_v);
-        Rb_H_v = np.zeros(NLBHEHv);
+            b = - T0_BHE + (aggLoad.Ti_C + aggLoad.To_C)/2
+            c = -np.dot(PHEC, G_BHE_C)
+            L_BHE_C = (-b + np.sqrt(b**2-4*a*c))/(2*a)
+
+            
+        ## REPLACE SEARCH BY OPTIMISATION    
+        # # Determine the solution by searching the neighbourhood of the approximate length solution
+        # # Heating mode
+        # L_BHE_H_v = L_BHE_H/N_BHE + np.arange(0,LL,dL);
+        # NLBHEHv = len(L_BHE_H_v);
+        # Rb_H_v = np.zeros(NLBHEHv);
         
         
-        #KART COOLING
-        if doCooling:
-            # Cooling mode
-            L_BHE_C_v = L_BHE_C/N_BHE + np.arange(0,LL,dL);
-            NLBHECv = len(L_BHE_C_v);
-            Rb_C_v = np.zeros(NLBHECv);
-            # Tsolc = np.zeros(NLBHECv);
+        # #KART COOLING
+        # if doCooling:
+        #     # Cooling mode
+        #     L_BHE_C_v = L_BHE_C/N_BHE + np.arange(0,LL,dL);
+        #     NLBHECv = len(L_BHE_C_v);
+        #     Rb_C_v = np.zeros(NLBHECv);
+        #     # Tsolc = np.zeros(NLBHECv);
         
-        Tf_BHE_H = np.zeros(NLBHEHv);
-        for i in range(NLBHEHv):                                         # Compute Rb for the specified number of boreholes and lengths considering flow and length effects (m*K/W)
-            Rb_H_v[i] = RbMPflc(brine.l,net.l_p,BHE.l_g,BHE.l_ss,brine.rho,brine.c,BHE.r_b,BHE.r_p,ri,L_BHE_H_v[i],s_BHE,Q_BHEmax_H,Re_BHEmax_H,Pr);    # Compute BHE length and flow corrected multipole estimates of Rb for all candidate solutions (m*K/W)
-            # KART: beregn væske temperatur
-            Tf_BHE_H[i] = T0_BHE - np.dot(PHEH,np.array([GBHEF[0]/BHE.l_ss + Rb_H_v[i], GBHEF[1]/BHE.l_ss + Rb_H_v[i], Rw_H]))/L_BHE_H_v[i]/N_BHE;
+        # Tf_BHE_H = np.zeros(NLBHEHv);
+        # for i in range(NLBHEHv):                                         # Compute Rb for the specified number of boreholes and lengths considering flow and length effects (m*K/W)
+        #     Rb_H_v[i] = RbMPflc(brine.l,net.l_p,BHE.l_g,BHE.l_ss,brine.rho,brine.c,BHE.r_b,BHE.r_p,ri,L_BHE_H_v[i],s_BHE,Q_BHEmax_H,Re_BHEmax_H,Pr);    # Compute BHE length and flow corrected multipole estimates of Rb for all candidate solutions (m*K/W)
+        #     # KART: beregn væske temperatur
+        #     Tf_BHE_H[i] = T0_BHE - np.dot(PHEH,np.array([GBHEF[0]/BHE.l_ss + Rb_H_v[i], GBHEF[1]/BHE.l_ss + Rb_H_v[i], Rw_H]))/L_BHE_H_v[i]/N_BHE;
     
     
-        Tbound_H = (aggLoad.Ti_H + aggLoad.To_H)/2; # Tjek om den skal bruges tidligere og flyt op
-        Tf_BHE_H[Tf_BHE_H < Tbound_H] = np.nan;                                # Remove solutions that violate the bound Tf < Tbound_H    
-        indLBHEH = np.argmin(np.isnan(Tf_BHE_H));                          # Find index of the first viable solution
+        # Tbound_H = (aggLoad.Ti_H + aggLoad.To_H)/2; # Tjek om den skal bruges tidligere og flyt op
+        # Tf_BHE_H[Tf_BHE_H < Tbound_H] = np.nan;                                # Remove solutions that violate the bound Tf < Tbound_H    
+        # indLBHEH = np.argmin(np.isnan(Tf_BHE_H));                          # Find index of the first viable solution
     
-        L_BHE_H = L_BHE_H_v[indLBHEH]*N_BHE;                                   # Solution to BHE length for heating (m)
+        # L_BHE_H = L_BHE_H_v[indLBHEH]*N_BHE;                                   # Solution to BHE length for heating (m)
         
-        if Tf_BHE_H[indLBHEH]-Tbound_H > 0.1:        
-            print('Warning - the length steps used for computing the BHE length for heating are too big. Reduce the stepsize and recompute a solution.');
+        # if Tf_BHE_H[indLBHEH]-Tbound_H > 0.1:        
+        #     print('Warning - the length steps used for computing the BHE length for heating are too big. Reduce the stepsize and recompute a solution.');
         
-        #KART COOLING
-        if doCooling:        
-            Tf_BHE_C = np.zeros(NLBHECv)
-            for i in range(NLBHECv):                                         # Compute Rb for the specified number of boreholes and lengths considering flow and length effects (m*K/W)
-                Rb_C_v[i] = RbMPflc(brine.l,net.l_p,BHE.l_g,BHE.l_ss,brine.rho,brine.c,BHE.r_b,BHE.r_p,ri,L_BHE_C_v[i],s_BHE,Q_BHEmax_C,Re_BHEmax_C,Pr);    #K. Compute BHE length and flow corrected multipole estimates of Rb for all candidate solutions (m*K/W)
-                # KART: beregn væske temperatur
-                Tf_BHE_C[i] = T0_BHE + np.dot(PHEC,np.array([GBHEF[0]/BHE.l_ss + Rb_C_v[i], GBHEF[1]/BHE.l_ss + Rb_C_v[i], Rw_C]))/L_BHE_C_v[i]/N_BHE;
+        # #KART COOLING
+        # if doCooling:        
+        #     Tf_BHE_C = np.zeros(NLBHECv)
+        #     for i in range(NLBHECv):                                         # Compute Rb for the specified number of boreholes and lengths considering flow and length effects (m*K/W)
+        #         Rb_C_v[i] = RbMPflc(brine.l,net.l_p,BHE.l_g,BHE.l_ss,brine.rho,brine.c,BHE.r_b,BHE.r_p,ri,L_BHE_C_v[i],s_BHE,Q_BHEmax_C,Re_BHEmax_C,Pr);    #K. Compute BHE length and flow corrected multipole estimates of Rb for all candidate solutions (m*K/W)
+        #         # KART: beregn væske temperatur
+        #         Tf_BHE_C[i] = T0_BHE + np.dot(PHEC,np.array([GBHEF[0]/BHE.l_ss + Rb_C_v[i], GBHEF[1]/BHE.l_ss + Rb_C_v[i], Rw_C]))/L_BHE_C_v[i]/N_BHE;
     
-            Tbound_C = (aggLoad.Ti_C + aggLoad.To_C)/2; # Tjek om den skal bruges tidligere og flyt op
-            Tf_BHE_C[Tf_BHE_C > Tbound_C] = np.nan;                                # Remove solutions that violate the bound Tf > Tbound_C    
-            indLBHEC = np.argmin(np.isnan(Tf_BHE_C));                          # Find index of the first viable solution
+        #     Tbound_C = (aggLoad.Ti_C + aggLoad.To_C)/2; # Tjek om den skal bruges tidligere og flyt op
+        #     Tf_BHE_C[Tf_BHE_C > Tbound_C] = np.nan;                                # Remove solutions that violate the bound Tf > Tbound_C    
+        #     indLBHEC = np.argmin(np.isnan(Tf_BHE_C));                          # Find index of the first viable solution
 
         
-            #indLBHEC = np.argmax(Tsolc<TCC2);                                # Get rid of candidates that undersize the system. 
-            L_BHE_C = L_BHE_C_v[indLBHEC]*N_BHE;                                   # Solution BHE length for cooling (m)
+        #     #indLBHEC = np.argmax(Tsolc<TCC2);                                # Get rid of candidates that undersize the system. 
+        #     L_BHE_C = L_BHE_C_v[indLBHEC]*N_BHE;                                   # Solution BHE length for cooling (m)
         
-            if Tf_BHE_C[indLBHEC]-Tbound_C > 0.1:
-                print('Warning - the length steps used for computing the BHE length for cooling are too big. Reduce the stepsize and recompute a solution.');    
+        #     if Tf_BHE_C[indLBHEC]-Tbound_C > 0.1:
+        #         print('Warning - the length steps used for computing the BHE length for cooling are too big. Reduce the stepsize and recompute a solution.');    
         
         BHE.L_BHE_H = L_BHE_H;
         BHE.FPH = FPH;

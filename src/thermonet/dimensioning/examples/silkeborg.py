@@ -10,9 +10,9 @@ if __name__ == '__main__':
     PID = 'Silkeborg';                                     # Project name
 
     # Input files
-    # HP_file = './data/sites/Silkeborg_HPSC.dat';                 # Input file containing heat pump information
+    HP_file = './data/sites/Silkeborg_HPSC.dat';                 # Input file containing heat pump information
     # HP_file = './data/sites/Silkeborg_HPS_Heat.dat';             # Input file - only heating
-    HP_file = './data/sites/Silkeborg_HPS_Heat_COMPARE.dat';       # Input file - only heating with same yearly net load as Silkeborg_HPSC.dat for comparison
+    # HP_file = './data/sites/Silkeborg_HPS_Heat_COMPARE.dat';       # Input file - only heating with same yearly net load as Silkeborg_HPSC.dat for comparison
 
 
     TOPO_file = './data/sites/Silkeborg_TOPO.dat';               # Input file containing topology information
@@ -38,11 +38,13 @@ if __name__ == '__main__':
     # Heat source (either BHE or HHE) - with default parameters
     # source_config = HHEconfig(N_HHE=6, d=0.04, SDR=17, D=1.5)
     
-    T0_BHE = 9.028258373009810; # Bemærk løsning er følsom overfor T0    
-    source_config = BHEconfig(q_geo = 0.035, T0=T0_BHE, r_b=0.152/2, r_p=0.02, SDR=11, l_ss=2.36, rhoc_ss=2.65e6, l_g=1.75, rhoc_g=3e6, D_pipes=0.015, NX=1, D_x=15, NY=6, D_y=15);
+    # T0_BHE = 9.028258373009810; # Bemærk løsning er følsom overfor T0    
+    T0_BHE = 8.39
+    source_config = BHEconfig(q_geo = 0.0185, T0=T0_BHE, r_b=0.152/2, r_p=0.02, SDR=11, l_ss=2.36, rhoc_ss=2.65e6, l_g=1.75, rhoc_g=3e6, D_pipes=0.015, NX=1, D_x=15, NY=6, D_y=15);
 
     # Fuld beregning dimensionerer både rør og varmekilde, og udskriver begge til prompt
     run_full_dimensioning(PID, d_pipes, brine, net, hp, pipeGroupNames, source_config)
+    
     
     # KART - EXPERIMENTAL. Slet alle variable og genkør kun kildedimensionering
     del net, hp, source_config, TOPO_file
@@ -61,13 +63,12 @@ if __name__ == '__main__':
     # agg_load_file = './data/sites/Silkeborg_aggregated_load_HEAT.dat';        # Input file - only heating
     agg_load_file = './data/sites/Silkeborg_aggregated_load_HEAT_COMPARE.dat';  # Input file - only heating with same yearly net load as in Silkeborg_aggregated_load.dat for comparsion
 
-    source_config = BHEconfig(q_geo = 0.035, T0=T0_BHE, r_b=0.152/2, r_p=0.02, SDR=11, l_ss=2.36, rhoc_ss=2.65e6, l_g=1.75, rhoc_g=3e6, D_pipes=0.015, NX=1, D_x=15, NY=6, D_y=15);
+    source_config = BHEconfig(q_geo = 0.0185, T0=T0_BHE, r_b=0.152/2, r_p=0.02, SDR=11, l_ss=2.36, rhoc_ss=2.65e6, l_g=1.75, rhoc_g=3e6, D_pipes=0.015, NX=1, D_x=15, NY=6, D_y=15);
 
     aggLoad = aggregatedLoad(Ti_H = -3, Ti_C = 20, SF=1, t_peak=4)
     aggLoad = read_aggregated_load(aggLoad, brine, agg_load_file)
     source_config = run_sourcedimensioning(brine, net, aggLoad, source_config);
     print_source_dimensions(source_config)
-
 
 
     # FPH, FPC, source_config = run_sourcedimensioning(brine, net, aggLoad, source_config);

@@ -121,3 +121,20 @@ def RbMPflc(lb,lp,lg,lss,rhob,cb,rb,rp,ri,LBHE,s,QBHE,RENBHE,Pr):
     Rb2 = Rb1 * nu * mpt.coth(nu);                          #Eq. 3.68 Advances in GSHP systems
     Rb1 = Rb1 + dRb1;                                       #Use average of the two corrections as recommended in Advances in GSHP systems
     return 0.5*(Rb1+Rb2);
+
+
+def Halley(x,dx,f1,f2,f3):
+    # Computes one iteration of Halleys rootfinding method
+    # x: inital guess of x
+    # dx: step in x to compute numerical derivatives
+    # f1: f(x-dx)
+    # f2: f(x)
+    # f3: f(x+dx)
+    
+    # df: first derivative of f with respect to x
+    # ddf: second derivative of f with respect to x
+    # xn: updated estimate of x 
+    df = (f3 - f1)/2/dx;
+    ddf = (f3 - 2*f2 + f1)/dx**2
+    xn = x - 2*f2*df/(2*df**2-f2*ddf);
+    return xn;  

@@ -14,7 +14,7 @@ Created on Fri Nov  4 08:53:07 2022
 
 import numpy as np
 import pandas as pd
-from .fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, GCLS, RbMPflc
+from .fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, GCLS, RbMPflc, Halley
 from thermonet.dimensioning.thermonet_classes import aggregatedLoad
 
 
@@ -517,11 +517,6 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         [XXi,YYi] = np.meshgrid(xi,yi);                                 # Meshgrid arrays for distance calculations (m)
         Yvi = np.concatenate(YYi);                                      # YY concatenated (m)
         Xvi = np.concatenate(XXi);                                      # XX concatenated (m)
-        
-        # Solver settings for computing the flow and length corrected length of BHEs
-        dL = 0.1;                                                       # Step length for trial trial solutions (m)
-        LL = 10;                                                        # Additional length segment for which trial solutions are generated (m)
-    
     
     
         ######################### Generate G-functions ############################
@@ -616,57 +611,89 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
             L_BHE_C = (-b + np.sqrt(b**2-4*a*c))/(2*a)
 
             
-        ## REPLACE SEARCH BY OPTIMISATION    
-        # # Determine the solution by searching the neighbourhood of the approximate length solution
-        # # Heating mode
-        # L_BHE_H_v = L_BHE_H/N_BHE + np.arange(0,LL,dL);
-        # NLBHEHv = len(L_BHE_H_v);
-        # Rb_H_v = np.zeros(NLBHEHv);
+        # Search neighbourhood of the approximate solution considering length effect
         
+        eps = np.finfo(np.float64).eps # Machine precision
+        tol = 1e-4; # Tolerance for search algorithm
+        iter_max = 50;
         
-        # #KART COOLING
-        # if doCooling:
-        #     # Cooling mode
-        #     L_BHE_C_v = L_BHE_C/N_BHE + np.arange(0,LL,dL);
-        #     NLBHECv = len(L_BHE_C_v);
-        #     Rb_C_v = np.zeros(NLBHECv);
-        #     # Tsolc = np.zeros(NLBHECv);
-        
-        # Tf_BHE_H = np.zeros(NLBHEHv);
-        # for i in range(NLBHEHv):                                         # Compute Rb for the specified number of boreholes and lengths considering flow and length effects (m*K/W)
-        #     Rb_H_v[i] = RbMPflc(brine.l,net.l_p,BHE.l_g,BHE.l_ss,brine.rho,brine.c,BHE.r_b,BHE.r_p,ri,L_BHE_H_v[i],s_BHE,Q_BHEmax_H,Re_BHEmax_H,Pr);    # Compute BHE length and flow corrected multipole estimates of Rb for all candidate solutions (m*K/W)
-        #     # KART: beregn væske temperatur
-        #     Tf_BHE_H[i] = T0_BHE - np.dot(PHEH,np.array([GBHEF[0]/BHE.l_ss + Rb_H_v[i], GBHEF[1]/BHE.l_ss + Rb_H_v[i], Rw_H]))/L_BHE_H_v[i]/N_BHE;
-    
-    
-        # Tbound_H = (aggLoad.Ti_H + aggLoad.To_H)/2; # Tjek om den skal bruges tidligere og flyt op
-        # Tf_BHE_H[Tf_BHE_H < Tbound_H] = np.nan;                                # Remove solutions that violate the bound Tf < Tbound_H    
-        # indLBHEH = np.argmin(np.isnan(Tf_BHE_H));                          # Find index of the first viable solution
-    
-        # L_BHE_H = L_BHE_H_v[indLBHEH]*N_BHE;                                   # Solution to BHE length for heating (m)
-        
-        # if Tf_BHE_H[indLBHEH]-Tbound_H > 0.1:        
-        #     print('Warning - the length steps used for computing the BHE length for heating are too big. Reduce the stepsize and recompute a solution.');
-        
-        # #KART COOLING
-        # if doCooling:        
-        #     Tf_BHE_C = np.zeros(NLBHECv)
-        #     for i in range(NLBHECv):                                         # Compute Rb for the specified number of boreholes and lengths considering flow and length effects (m*K/W)
-        #         Rb_C_v[i] = RbMPflc(brine.l,net.l_p,BHE.l_g,BHE.l_ss,brine.rho,brine.c,BHE.r_b,BHE.r_p,ri,L_BHE_C_v[i],s_BHE,Q_BHEmax_C,Re_BHEmax_C,Pr);    #K. Compute BHE length and flow corrected multipole estimates of Rb for all candidate solutions (m*K/W)
-        #         # KART: beregn væske temperatur
-        #         Tf_BHE_C[i] = T0_BHE + np.dot(PHEC,np.array([GBHEF[0]/BHE.l_ss + Rb_C_v[i], GBHEF[1]/BHE.l_ss + Rb_C_v[i], Rw_C]))/L_BHE_C_v[i]/N_BHE;
-    
-        #     Tbound_C = (aggLoad.Ti_C + aggLoad.To_C)/2; # Tjek om den skal bruges tidligere og flyt op
-        #     Tf_BHE_C[Tf_BHE_C > Tbound_C] = np.nan;                                # Remove solutions that violate the bound Tf > Tbound_C    
-        #     indLBHEC = np.argmin(np.isnan(Tf_BHE_C));                          # Find index of the first viable solution
+        # Variables for single iteration of numerical search
+        dL = L_BHE_H/N_BHE*np.sqrt(eps) # Optimal stepsize depends on the square root of machine epsilon (https://en.wikipedia.org/wiki/Numerical_differentiation#Practical_considerations_using_floating_point_arithmetic)
+        L_BHE_H_v = L_BHE_H/N_BHE + np.array([-dL, 0, dL])
+        Rb_H_v = np.zeros(3)
 
-        
-        #     #indLBHEC = np.argmax(Tsolc<TCC2);                                # Get rid of candidates that undersize the system. 
-        #     L_BHE_C = L_BHE_C_v[indLBHEC]*N_BHE;                                   # Solution BHE length for cooling (m)
-        
-        #     if Tf_BHE_C[indLBHEC]-Tbound_C > 0.1:
-        #         print('Warning - the length steps used for computing the BHE length for cooling are too big. Reduce the stepsize and recompute a solution.');    
-        
+        Tbound_H = (aggLoad.Ti_H + aggLoad.To_H)/2
+        error_Tf = np.ones(3)
+         
+        N_iter = 0
+        while abs(error_Tf[1]) > tol and N_iter < iter_max + 1:
+            for i in range(3):                                         # Compute Rb for the specified number of boreholes and lengths considering flow and length effects (m*K/W)
+                Rb_H_v[i] = RbMPflc(brine.l,net.l_p,BHE.l_g,BHE.l_ss,brine.rho,brine.c,BHE.r_b,BHE.r_p,ri,L_BHE_H_v[i],s_BHE,Q_BHEmax_H,Re_BHEmax_H,Pr);    # Compute BHE length and flow corrected multipole estimates of Rb for all candidate solutions (m*K/W)
+                
+                # error is the difference between calculated fluid temperature and Tbound
+                error_Tf[i] = T0_BHE + dTdz*L_BHE_H_v[i]/2 - np.dot(PHEH,np.array([GBHEF[0]/BHE.l_ss + Rb_H_v[i], GBHEF[1]/BHE.l_ss + Rb_H_v[i], Rw_H])) / (L_BHE_H_v[i]*N_BHE) - Tbound_H;
+                
+            # Calculate updated length estimate    
+            L_H_Halley = Halley(L_BHE_H_v[1],dL,error_Tf[0],error_Tf[1],error_Tf[2])
+            L_BHE_H_v = L_H_Halley + np.array([-dL,0,dL]);
+            
+            N_iter += 1;
+            
+            # Test for convergence after exit of while loop
+        if N_iter > iter_max - 1:
+            
+            # If the maximum number of allowed iterations is exceeded fall back to initial estimate of Rb
+            print('WARNING: Convergence failed for heating solution. Defaulting to solution without thermal short-circuiting between the U-pipe legs. Boreholes may be too short!')                   
+            source_config.Rb_H = Rb_H;
+
+        else:
+            
+            # Update combined length of all BHEs and borehole resistance
+            L_BHE_H = L_H_Halley*N_BHE;
+            source_config.Rb_H = Rb_H_v[1];
+
+
+
+        # COOLING
+        if doCooling:
+            # Variables for single iteration of numerical search
+            dL = L_BHE_C/N_BHE*np.sqrt(eps) #Optimal stepsize depends on the square root of machine epsilon (https://en.wikipedia.org/wiki/Numerical_differentiation#Practical_considerations_using_floating_point_arithmetic)
+            L_BHE_C_v = L_BHE_C/N_BHE + np.array([-dL, 0, dL])
+            Rb_C_v = np.zeros(3)
+
+            Tbound_C = (aggLoad.Ti_C + aggLoad.To_C)/2
+            error_Tf = np.ones(3)
+            
+            N_iter = 0
+            while abs(error_Tf[1]) > tol and N_iter < iter_max + 1:
+                for i in range(3):                                         # Compute Rb for the specified number of boreholes and lengths considering flow and length effects (m*K/W)
+                    Rb_C_v[i] = RbMPflc(brine.l,net.l_p,BHE.l_g,BHE.l_ss,brine.rho,brine.c,BHE.r_b,BHE.r_p,ri,L_BHE_C_v[i],s_BHE,Q_BHEmax_C,Re_BHEmax_C,Pr);    # Compute BHE length and flow corrected multipole estimates of Rb for all candidate solutions (m*K/W)
+                    
+                    # error is the difference between calculated fluid temperature and Tbound
+                    error_Tf[i] = T0_BHE + dTdz*L_BHE_C_v[i]/2 + np.dot(PHEC,np.array([GBHEF[0]/BHE.l_ss + Rb_C_v[i], GBHEF[1]/BHE.l_ss + Rb_C_v[i], Rw_C])) / (L_BHE_C_v[i]*N_BHE) - Tbound_C;
+                    
+                # Calculate updated length estimate    
+                L_C_Halley = Halley(L_BHE_C_v[1],dL,error_Tf[0],error_Tf[1],error_Tf[2])
+                L_BHE_C_v = L_C_Halley + np.array([-dL,0,dL]);
+                
+                N_iter += 1;
+                
+                # Test for convergence after exit of while loop
+            if N_iter > iter_max - 1:
+                
+                # If the maximum number of allowed iterations is exceeded fall back to initial estimate of Rb
+                print('WARNING: Convergence failed for heating solution. Defaulting to solution without thermal short-circuiting between the U-pipe legs. Boreholes may be too short!')                   
+                source_config.Rb_C = Rb_C;
+
+            else:
+                
+                # Update combined length of all BHEs and borehole resistance
+                L_BHE_C = L_C_Halley*N_BHE;
+                source_config.Rb_C = Rb_C_v[1];
+
+
+
+        # Store results in BHE object
         BHE.L_BHE_H = L_BHE_H;
         BHE.FPH = FPH;
         

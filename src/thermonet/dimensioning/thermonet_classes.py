@@ -21,7 +21,6 @@ class Thermonet:
     
     # Thermonet and HHE
     D_gridpipes: float = np.nan    # Distance between forward and return pipe centers (m)
-    dpdL_t: float = np.nan  # Target pressure loss in thermonet (Pa/m). 10# reduction to account for loss in fittings. Source: Oklahoma State University, Closed-loop/ground source heat pump systems. Installation guide., (1988). Interval: 98-298 Pa/m
     l_p: float = np.nan     # Pipe thermal conductivity (W/m/K). https://www.wavin.com/da-dk/catalog/Varme/Jordvarme/PE-80-lige-ror/40mm-jordvarme-PE-80PN6-100m
     l_s_H: float = np.nan   # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
     l_s_C: float = np.nan   # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
@@ -31,10 +30,11 @@ class Thermonet:
 
     # KART tilføjet topologi information fra TOPO_FILE
     SDR: float = np.nan;
-    L_traces: float = np.nan;
-    N_traces: float = np.nan;
-    L_segments: float = np.nan;
-    I_PG: float = np.nan; 
+    L_traces: float = np.nan;   # Trace length (m)
+    N_traces: float = np.nan;   # Number of traces in a pipe group (-)
+    L_segments: float = np.nan; # Total pipe length in a pipe group i.e. both forward and return pipes (m)
+    I_PG: float = np.nan;       
+    dp_PG: float = np.nan;      # Max total pressure drop over the forward plus return pipes in a trace
     
     d_selectedPipes_H: float = np.nan;
     di_selected_H: float = np.nan;

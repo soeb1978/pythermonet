@@ -28,7 +28,7 @@ if __name__ == '__main__':
     brine = Brine(rho=965, c=4450, mu=5e-3, l=0.45);
 
     # Initialise thermonet object - with default parameters
-    net = Thermonet(D_gridpipes=0.3, dpdL_t=90, l_p=0.4, l_s_H=1.25, l_s_C=1.25, rhoc_s=2.5e6, z_grid=1.2);
+    net = Thermonet(D_gridpipes=0.3, l_p=0.4, l_s_H=1.25, l_s_C=1.25, rhoc_s=2.5e6, z_grid=1.2);
     net, pipeGroupNames = read_topology(net, TOPO_file); # Read remaining data from user specified file
 
     # Initialise HP object - with default parameters
@@ -55,7 +55,7 @@ if __name__ == '__main__':
     TOPO_file = './data/sites/Silkeborg_TOPO_dimensioneret.dat';               # Input file containing topology information
     
     # Initialise thermonet object - with default parameters
-    net = Thermonet(D_gridpipes=0.3, dpdL_t=90, l_p=0.4, l_s_H=1.25, l_s_C=1.25, rhoc_s=2.5e6, z_grid=1.2);
+    net = Thermonet(D_gridpipes=0.3, l_p=0.4, l_s_H=1.25, l_s_C=1.25, rhoc_s=2.5e6, z_grid=1.2);
     net, pipeGroupNames = read_dimensioned_topology(net, brine, TOPO_file); # Read remaining data from user specified file
 
 

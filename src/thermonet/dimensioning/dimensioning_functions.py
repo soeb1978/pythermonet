@@ -72,15 +72,17 @@ def read_heatpumpdata(hp, HP_file):
 def read_topology(net, TOPO_file):
     
     # Load grid topology
-    TOPO = np.loadtxt(TOPO_file,skiprows = 1,usecols = (1,2,3));          # Load numeric data from topology file
+    TOPO = np.loadtxt(TOPO_file,skiprows = 1,usecols = (1,2,3,4));          # Load numeric data from topology file
     net.SDR = TOPO[:,0];
     net.L_traces = TOPO[:,1];
     net.N_traces = TOPO[:,2];
+    net.dp_PG = TOPO[:,3];      # Total allowed pressure drop over the forward + retun pipe in a trace
     net.L_segments = 2 * net.L_traces * net.N_traces;
+    
     
     I_PG = pd.read_csv(TOPO_file, sep = '\t+', engine='python');                              # Load the entire file into Panda dataframe
     pipeGroupNames = I_PG.iloc[:,0];                                             # Extract pipe group IDs
-    I_PG = I_PG.iloc[:,4];                                                # Extract IDs of HPs connected to the different pipe groups
+    I_PG = I_PG.iloc[:,5];                                                # Extract IDs of HPs connected to the different pipe groups
     # Create array containing arrays of integers with HP IDs for all pipe sections.
     # Convert 1-based indices from file to 0-based indices for code.
     IPGA = [np.asarray(I_PG.iloc[i].split(',')).astype(int) - 1 for i in range(len(I_PG))]
@@ -289,12 +291,12 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
     # Select the smallest diameter pipe that fulfills the pressure drop criterion
     for i in range(N_PG):                                 
         di_pipes = d_pipes*(1-2/net.SDR[i]);                                # Compute inner diameters (m). Variable TOPO_H or TOPO_C are identical here.
-        ind_H[i] = np.argmax(dp(brine.rho,brine.mu,Q_PG_H[i],di_pipes)<net.dpdL_t);           # Find first pipe with a pressure loss less than the target for heating (-)
+        ind_H[i] = np.argmax(2*net.L_traces[i]*dp(brine.rho,brine.mu,Q_PG_H[i],di_pipes)<net.dp_PG[i]);           # Find first pipe with a pressure loss less than the target for heating (-)
         d_selectedPipes_H[i] = d_pipes[int(ind_H[i])];                              # Store pipe selection for heating in new variable (m)
 
         #KART COOLING
         if doCooling:
-            ind_C[i] = np.argmax(dp(brine.rho,brine.mu,Q_PG_C[i],di_pipes)<net.dpdL_t);           # Find first pipe with a pressure loss less than the target for cooling (-)
+            ind_C[i] = np.argmax(2*net.L_traces[i]*dp(brine.rho,brine.mu,Q_PG_C[i],di_pipes)<net.dp_PG[i]);
             d_selectedPipes_C[i] = d_pipes[int(ind_C[i])]; 
 
     net.d_selectedPipes_H = d_selectedPipes_H;

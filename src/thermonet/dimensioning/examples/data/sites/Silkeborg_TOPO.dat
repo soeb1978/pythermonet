@@ -1,7 +1,7 @@
-Section				SDR	Trace_(m)	Number_of_traces	HP_ID_vector
-Main_line			17	40		1			1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
-Inner_distribution_ring_1	17	63		1			1,2,3,4,5,6,7,8,9,10
-Inner_distribution_rings_2	17	58		1			11,12,13,14,15
-Single_branches			17	63		1			1,2,3,4
-Connection_pipes_6_kW		17	20		14			1,2,3,4,5,6,7,8,9,10,11,12,13,14
-Connection_pipes_10_kW		17	20		1			15
+Section				SDR	Trace_(m)	Number_of_traces	Max_pressure_loss_(Pa)	HP_ID_vector
+Main_line			17	40		1			7200			1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+Inner_distribution_ring_1	17	63		1			11340			1,2,3,4,5,6,7,8,9,10
+Inner_distribution_rings_2	17	58		1			10440			11,12,13,14,15
+Single_branches			17	63		1			11340			1,2,3,4
+Connection_pipes_6_kW		17	20		14			3600			1,2,3,4,5,6,7,8,9,10,11,12,13,14
+Connection_pipes_10_kW		17	20		1			3600			15

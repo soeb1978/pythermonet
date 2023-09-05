@@ -53,7 +53,7 @@ def run_full_dimensioning(PID:str, d_pipes, brine:Brine, net:Thermonet, hp:Heatp
     source_config = run_sourcedimensioning(brine, net, aggLoad, source_config)
 
     # Print results to console
-    print_source_dimensions(source_config)
+    print_source_dimensions(source_config,net)
 
     # Output computation time to console
     print(' ');

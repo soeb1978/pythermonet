@@ -35,6 +35,8 @@ class Thermonet:
     L_segments: float = np.nan; # Total pipe length in a pipe group i.e. both forward and return pipes (m)
     I_PG: float = np.nan;       
     dp_PG: float = np.nan;      # Max total pressure drop over the forward plus return pipes in a trace
+    V_brine: float = np.nan;    # Volume of brine in all pipes (m^3)
+    T_dimv: float = np.nan;     # Vector of brine temperatures (Celcius) after each of the three pulses (year, month, peak)
     
     d_selectedPipes_H: float = np.nan;
     di_selected_H: float = np.nan;
@@ -103,6 +105,8 @@ class HHEconfig:
     d:float = np.nan;  # Outer diameter of HE pipe (m)
     SDR:float = np.nan;  # SDR for HE pipes (-)
     D:float = np.nan;  # Pipe segment spacing (m)
+    V_brine: float = np.nan;    # Volume of brine in the pipes (m^3)
+    T_dimv: float = np.nan;     # Vector of brine temperatures (Celcius) after each of the three pulses (year, month, peak)
     
     # Results
     FPH:float = np.nan;
@@ -132,6 +136,8 @@ class BHEconfig:
     l_g:float = np.nan  # Grout thermal conductivity (W/m/K)
     rhoc_g:float = np.nan  # Grout volumetric heat capacity (J/m3/K)
     D_pipes:float = np.nan  # Wall to wall distance U-pipe legs (m)
+    V_brine: float = np.nan;    # Volume of brine in heat exchanger pipes (m^3)
+    T_dimv: float = np.nan;     # Vector of brine temperatures (Celcius) after each of the three pulses (year, month, peak)
 
     # BHE field
     NX:int = np.nan  # Number of boreholes in the x-direction (-)

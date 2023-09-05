@@ -68,7 +68,7 @@ if __name__ == '__main__':
     aggLoad = aggregatedLoad(Ti_H = -3, Ti_C = 20, SF=1, t_peak=4)
     aggLoad = read_aggregated_load(aggLoad, brine, agg_load_file)
     source_config = run_sourcedimensioning(brine, net, aggLoad, source_config);
-    print_source_dimensions(source_config)
+    print_source_dimensions(source_config,net)
 
 
     # FPH, FPC, source_config = run_sourcedimensioning(brine, net, aggLoad, source_config);

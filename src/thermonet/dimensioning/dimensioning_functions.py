@@ -103,7 +103,7 @@ def read_dimensioned_topology(net, brine, TOPO_file):
     net.L_traces = TOPO[:,2];
     net.N_traces = TOPO[:,3];
     net.L_segments = 2 * net.L_traces * net.N_traces;
-    
+        
     I_PG = pd.read_csv(TOPO_file, sep = '\t+', engine='python');            # Load the entire file into Panda dataframe
     pipeGroupNames = I_PG.iloc[:,0];                                        # Extract pipe group IDs
     
@@ -115,6 +115,8 @@ def read_dimensioned_topology(net, brine, TOPO_file):
     v_H = Q_PG_H/np.pi/net.di_selected_H**2*4;                                        # Compute flow velocity for selected pipes (m/s)
     net.Re_selected_H = Re(brine.rho,brine.mu,v_H,net.di_selected_H);                                      # Compute Reynolds numbers for the selected pipes (-)
     
+    # Calculate total brine volume in the grid pipes
+    net.V_brine = sum(net.L_segments*np.pi*net.di_selected_H**2/4);
     
     return net, pipeGroupNames
 
@@ -198,7 +200,7 @@ def print_pipe_dimensions(net, pipeGroupNames):
 
 
 # Print source dimensioning results to console
-def print_source_dimensions(source_config):
+def print_source_dimensions(source_config,net):
     
     FPH = source_config.FPH;
     FPC = source_config.FPC;
@@ -229,6 +231,7 @@ def print_source_dimensions(source_config):
         #KART COOLING    
         if doCooling:
             print(f'Maximum pressure loss in BHEs in cooling mode = {int(np.ceil(source_config.dpdL_BHEmax_C))} Pa/m, Re = {int(round(source_config.Re_BHEmax_C))}');
+               
 
     elif source_config.source =='HHE':
 
@@ -245,6 +248,20 @@ def print_source_dimensions(source_config):
         #KART COOLING    
         if doCooling:
             print(f'Maximum pressure loss in HHE pipes in cooling mode {int(np.ceil(source_config.dpdL_HHEmax_C))} Pa/m, Re = {int(round(source_config.Re_HHEmax_C))}');
+
+
+    # Average brine temperature calculated as weighted average between source and grid
+    T_dimv = (net.V_brine*net.T_dimv + source_config.V_brine*source_config.T_dimv)/(net.V_brine + source_config.V_brine)
+ 
+    print('');
+    print('********************** Average brine temperatures **********************');
+    print(f'Long-term brine temperature: {T_dimv[0]:.2f}{chr(176)}C')
+    print(f'Winter brine temperature: {T_dimv[1]:.2f}{chr(176)}C')
+    print(f'Peak load brine temperature: {T_dimv[2]:.2f}{chr(176)}C')
+
+    if source_config.T_dimv[0] < 0:
+        print('WARNING: The long-term brine temperature is below zero degrees Celsius which can cause ground freezing. Consider increasing the minimum brine inlet temperature.')
+
 
 
 # Function for dimensioning pipes
@@ -310,6 +327,10 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
     net.di_selected_H = d_selectedPipes_H*(1-2/net.SDR);                                 # Compute inner diameter of selected pipes (m)
     v_H = Q_PG_H/np.pi/net.di_selected_H**2*4;                                        # Compute flow velocity for selected pipes (m/s)
     net.Re_selected_H = Re(brine.rho,brine.mu,v_H,net.di_selected_H);                                      # Compute Reynolds numbers for the selected pipes (-)
+    
+    # Calculate totale brine volume in grid pipes
+    net.V_brine = sum(net.L_segments*np.pi*net.di_selected_H**2/4);
+
     
     #KART COOLING    
     if doCooling:
@@ -431,11 +452,11 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
     # Compute temperature responses in heating and cooling mode for all pipes
     # KART bliv enige om sigende navne der følger konvention og implementer x 4
     FPH = np.zeros(N_PG);                                                # Vector with total heating load fractions supplied by each pipe segment (-)
-    GTHMH = np.zeros([N_PG,3]); #KART: G_grid_H
+    G_grid_H = np.zeros([N_PG,3]); 
 
     if doCooling:    
        FPC = np.zeros(N_PG);                                                # Vector with total cooling load fractions supplied by each pipe segment (-)
-       GTHMC = np.zeros([N_PG,3]); #KART: G_grid_C
+       G_grid_C = np.zeros([N_PG,3]);
     
     
     # Heat pump and temperature conditions in the sizing equation
@@ -443,19 +464,30 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
     # To_H = hp.Ti_H - sum(hp.Qdim_H*hp.dT_H)/sum(hp.Qdim_H);                         # Volumetric flow rate weighted average brine delta-T (C)
     # To_C = hp.Ti_C + sum(hp.Qdim_C*hp.dT_C)/sum(hp.Qdim_C);                         # Volumetric flow rate weighted average brine delta-T (C)
     
+    T_tmp = np.zeros([N_PG,3])
     K1 = ils(a_s,t,net.D_gridpipes) - ils(a_s,t,2*net.z_grid) - ils(a_s,t,np.sqrt(net.D_gridpipes**2+4*net.z_grid**2));
     # KART: gennemgå nye varmeberegning - opsplittet på segmenter
     for i in range(N_PG):
-        GTHMH[i,:] = CSM(net.d_selectedPipes_H[i]/2,net.d_selectedPipes_H[i]/2,t,a_s) + K1;
-        # FPH[i] = (T0 - (aggLoad.Ti_H + aggLoad.To_H)/2 - TP)*net.L_segments[i]/np.dot(cdPSH,GTHMH[i]/net.l_s_H + R_H[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
-        # KART opdateret aggregering
-        FPH[i] = (T0 - (aggLoad.Ti_H + aggLoad.To_H)/2 - TP)*net.L_segments[i]/np.dot(dP_s_H, GTHMH[i]/net.l_s_H + R_H[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
+        # G-function for grid pipes in i'th pipe group
+        G_grid_H[i,:] = CSM(net.d_selectedPipes_H[i]/2,net.d_selectedPipes_H[i]/2,t,a_s) + K1;
+        # Fraction of loaf that can be supplied by the pipe group
+        FPH[i] = (T0 - (aggLoad.Ti_H + aggLoad.To_H)/2 - TP)*net.L_segments[i]/np.dot(dP_s_H, G_grid_H[i]/net.l_s_H + R_H[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
         
-        #KART COOLING
-        if doCooling:
-            GTHMC[i,:] = CSM(net.d_selectedPipes_C[i]/2,net.d_selectedPipes_C[i]/2,t,a_s) + K1;
+        # Fluid temperature in i'th pipe group following three-pulse sequence (year,month,peak)
+        T_tmp[i,:] = T0 - TP - FPH[i]*np.cumsum(dP_s_H*(G_grid_H[i]/net.l_s_H + R_H[i])/net.L_segments[i])
+        # Multiply temperature by pipe group volume for calculation of weighted average after for-loop
+        T_tmp[i,:] = T_tmp[i,:]*net.L_segments[i]*np.pi*net.di_selected_H[i]**2/4;
+    
+    # Weighted average fluid temperature for the grid pipes
+    net.T_dimv = np.sum(T_tmp,0)/net.V_brine
+    del T_tmp
+        
+    #KART COOLING
+    if doCooling:
+        for i in range(N_PG):
+            G_grid_C[i,:] = CSM(net.d_selectedPipes_C[i]/2,net.d_selectedPipes_C[i]/2,t,a_s) + K1;
             # KART opdateret aggregering
-            FPC[i] = ((aggLoad.Ti_C + aggLoad.To_C)/2 - T0 - TP)*net.L_segments[i]/np.dot(dP_s_C, GTHMC[i]/net.l_s_C + R_C[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
+            FPC[i] = ((aggLoad.Ti_C + aggLoad.To_C)/2 - T0 - TP)*net.L_segments[i]/np.dot(dP_s_C, G_grid_C[i]/net.l_s_C + R_C[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
 
     
     # KART - mangler at gennemgå ny beregning af energi fra grid/kilder
@@ -642,18 +674,24 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
             N_iter += 1;
             
             # Test for convergence after exit of while loop
-        if N_iter > iter_max - 1:
-            
+        if N_iter > iter_max - 1:   
             # If the maximum number of allowed iterations is exceeded fall back to initial estimate of Rb
             print('WARNING: Convergence failed for heating solution. Defaulting to solution without thermal short-circuiting between the U-pipe legs. Boreholes may be too short!')                   
-            source_config.Rb_H = Rb_H;
 
         else:
-            
             # Update combined length of all BHEs and borehole resistance
             L_BHE_H = L_H_Halley*N_BHE;
-            source_config.Rb_H = Rb_H_v[1];
+            Rb_H = Rb_H_v[1]
 
+        # Save final estimate of borehole resistance
+        source_config.Rb_H = Rb_H
+        
+        # Total brine volume in BHE heat exchanger - 1U pipe        
+        BHE.V_brine = 2*L_BHE_H*np.pi*ri**2;
+        
+        # Brine temperature after three pulses
+        BHE.T_dimv =  T0_BHE + dTdz*L_BHE_H/(N_BHE*2) - np.cumsum((PHEH*np.array([GBHEF[0]/BHE.l_ss + Rb_H, GBHEF[1]/BHE.l_ss + Rb_H, Rw_H]))/L_BHE_H)
+        
 
 
         # COOLING
@@ -761,6 +799,11 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         G_HHE_H = G_HHE/net.l_s_H + Rp_HHE_H;                                         # Add annual and monthly thermal resistances to G_HHE (m*K/W)
         L_HHE_H = np.dot(PHEH,G_HHE_H) / (T0 - (aggLoad.Ti_H + aggLoad.To_H)/2 - TP );
         
+        # Total brine volume in HHE pipes
+        HHE.V_brine = np.pi*ri_HHE**2*L_HHE_H
+        # Brine temperature after three pulses (year, month, peak)
+        HHE.T_dimv = T0 - TP - np.cumsum(PHEH*G_HHE_H)/L_HHE_H
+               
         #KART COOLING
         if doCooling:        
             # Cooling

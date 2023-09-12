@@ -97,8 +97,10 @@ def read_topology(net, TOPO_file):
 def read_dimensioned_topology(net, brine, TOPO_file):
     
     # Load grid topology
-    TOPO = np.loadtxt(TOPO_file,skiprows = 1,usecols = (1,2,3,4,5));          # Load numeric data from topology file
+    TOPO = np.loadtxt(TOPO_file,skiprows = 1,usecols = (1,2,3,4,5,6));          # Load numeric data from topology file
     net.d_selectedPipes_H = TOPO[:,0] / 1000;      # Pipe outer diameters, convert from [mm] to [m]
+    net.d_selectedPipes_C = net.d_selectedPipes_H   # User specified pipe dimensions are both for heating and cooling
+    
     net.SDR = TOPO[:,1];
     net.L_traces = TOPO[:,2];
     net.N_traces = TOPO[:,3];
@@ -107,13 +109,21 @@ def read_dimensioned_topology(net, brine, TOPO_file):
     I_PG = pd.read_csv(TOPO_file, sep = '\t+', engine='python');            # Load the entire file into Panda dataframe
     pipeGroupNames = I_PG.iloc[:,0];                                        # Extract pipe group IDs
     
-    # User supplied dimensioning flow
+    # User supplied peak flows
     Q_PG_H = TOPO[:,4]
+    Q_PG_C = TOPO[:,5]
     
-    # Compute Reynolds number for selected pipes for heating
+    
+    # Calculate Reynolds number for selected pipes for heating
     net.di_selected_H = net.d_selectedPipes_H*(1-2/net.SDR);                                 # Compute inner diameter of selected pipes (m)
     v_H = Q_PG_H/np.pi/net.di_selected_H**2*4;                                        # Compute flow velocity for selected pipes (m/s)
     net.Re_selected_H = Re(brine.rho,brine.mu,v_H,net.di_selected_H);                                      # Compute Reynolds numbers for the selected pipes (-)
+    
+    # Calculate Reynolds numbers for selected pipes for cooling
+    net.di_selected_C = net.di_selected_H    # User specified pipe dimensions are both for heating and cooling
+    v_C = Q_PG_C/np.pi/net.di_selected_C**2*4;                                        # Compute flow velocity for selected pipes (m/s)
+    net.Re_selected_C = Re(brine.rho,brine.mu,v_C,net.di_selected_C);                                      # Compute Reynolds numbers for the selected pipes (-)
+
     
     # Calculate total brine volume in the grid pipes
     net.V_brine = sum(net.L_segments*np.pi*net.di_selected_H**2/4);

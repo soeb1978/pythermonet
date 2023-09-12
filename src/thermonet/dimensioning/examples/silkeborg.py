@@ -10,8 +10,8 @@ if __name__ == '__main__':
     PID = 'Silkeborg';                                     # Project name
 
     # Input files
-    # HP_file = './data/sites/Silkeborg_HPSC.dat';                 # Input file containing heat pump information
-    HP_file = './data/sites/Silkeborg_HPS_Heat.dat';             # Input file - only heating
+    HP_file = './data/sites/Silkeborg_HPSC.dat';                 # Input file containing heat pump information
+    # HP_file = './data/sites/Silkeborg_HPS_Heat.dat';             # Input file - only heating
     # HP_file = './data/sites/Silkeborg_HPS_Heat_COMPARE.dat';       # Input file - only heating with same yearly net load as Silkeborg_HPSC.dat for comparison
 
 
@@ -57,8 +57,8 @@ if __name__ == '__main__':
     net, pipeGroupNames = read_dimensioned_topology(net, brine, TOPO_file); # Read remaining data from user specified file
 
 
-    # agg_load_file = './data/sites/Silkeborg_aggregated_load.dat';             # Input file for specifying only aggregated load for heating and cooling. Same totale load as in Silkeborg_HPSC.dat
-    agg_load_file = './data/sites/Silkeborg_aggregated_load_HEAT.dat';        # Input file - only heating
+    agg_load_file = './data/sites/Silkeborg_aggregated_load.dat';             # Input file for specifying only aggregated load for heating and cooling. Same totale load as in Silkeborg_HPSC.dat
+    # agg_load_file = './data/sites/Silkeborg_aggregated_load_HEAT.dat';        # Input file - only heating
     # agg_load_file = './data/sites/Silkeborg_aggregated_load_HEAT_COMPARE.dat';  # Input file - only heating with same yearly net load as in Silkeborg_aggregated_load.dat for comparsion
 
     source_config = BHEconfig(q_geo = 0.0185, r_b=0.152/2, r_p=0.02, SDR=11, l_ss=2.36, rhoc_ss=2.65e6, l_g=1.75, rhoc_g=3e6, D_pipes=0.015, NX=1, D_x=15, NY=6, D_y=15);

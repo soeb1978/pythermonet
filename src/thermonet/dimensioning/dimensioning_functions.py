@@ -399,12 +399,10 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
     Pr = nu_f/a_f;                                                       # Prandtl number (-)                
 
     # Shallow soil (not for BHEs! - see below)
-    A = 7.900272987633280;                                              # Surface temperature amplitude (K) 
-    T0 = 9.028258373009810;                                             # Undisturbed soil temperature (C) 
-    omega = 2*np.pi/86400/365.25;                                           # Angular velocity of surface temperature variation (rad/s) 
+    omega = 2*np.pi/86400/365.25;                                           # Angular frequency of surface temperature variation (rad/s) 
     a_s = net.l_s_H/net.rhoc_s; # KART potentielt et problem med to ledningsevner, her vælges bare den ene                                                    # Shallow soil thermal diffusivity (m2/s) - ONLY for pipes!!! 
     # KART: følg op på brug af TP i forhold til bogen / gammel kode
-    TP = A*np.exp(-net.z_grid*np.sqrt(omega/2/a_s));                               # Temperature penalty at burial depth from surface temperature variation (K). Minimum undisturbed temperature is assumed . 
+    TP = net.A*np.exp(-net.z_grid*np.sqrt(omega/2/a_s));                               # Temperature penalty at burial depth from surface temperature variation (K). Minimum undisturbed temperature is assumed . 
 
     # Compute thermal resistances for pipes in heating mode
     R_H = np.zeros(N_PG);                                                 # Allocate pipe thermal resistance vector for heating (m*K/W)
@@ -471,10 +469,10 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         # G-function for grid pipes in i'th pipe group
         G_grid_H[i,:] = CSM(net.d_selectedPipes_H[i]/2,net.d_selectedPipes_H[i]/2,t,a_s) + K1;
         # Fraction of loaf that can be supplied by the pipe group
-        FPH[i] = (T0 - (aggLoad.Ti_H + aggLoad.To_H)/2 - TP)*net.L_segments[i]/np.dot(dP_s_H, G_grid_H[i]/net.l_s_H + R_H[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
+        FPH[i] = (net.T0 - (aggLoad.Ti_H + aggLoad.To_H)/2 - TP)*net.L_segments[i]/np.dot(dP_s_H, G_grid_H[i]/net.l_s_H + R_H[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
         
         # Fluid temperature in i'th pipe group following three-pulse sequence (year,month,peak)
-        T_tmp[i,:] = T0 - TP - FPH[i]*np.cumsum(dP_s_H*(G_grid_H[i]/net.l_s_H + R_H[i])/net.L_segments[i])
+        T_tmp[i,:] = net.T0 - TP - FPH[i]*np.cumsum(dP_s_H*(G_grid_H[i]/net.l_s_H + R_H[i])/net.L_segments[i])
         # Multiply temperature by pipe group volume for calculation of weighted average after for-loop
         T_tmp[i,:] = T_tmp[i,:]*net.L_segments[i]*np.pi*net.di_selected_H[i]**2/4;
     
@@ -487,7 +485,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         for i in range(N_PG):
             G_grid_C[i,:] = CSM(net.d_selectedPipes_C[i]/2,net.d_selectedPipes_C[i]/2,t,a_s) + K1;
             # KART opdateret aggregering
-            FPC[i] = ((aggLoad.Ti_C + aggLoad.To_C)/2 - T0 - TP)*net.L_segments[i]/np.dot(dP_s_C, G_grid_C[i]/net.l_s_C + R_C[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
+            FPC[i] = ((aggLoad.Ti_C + aggLoad.To_C)/2 - net.T0 - TP)*net.L_segments[i]/np.dot(dP_s_C, G_grid_C[i]/net.l_s_C + R_C[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
 
     
     # KART - mangler at gennemgå ny beregning af energi fra grid/kilder
@@ -522,7 +520,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         ri = BHE.r_p*(1 - 2/BHE.SDR);                                         # Inner radius of U pipe (m)
         a_ss = BHE.l_ss/BHE.rhoc_ss;                                               # BHE soil thermal diffusivity (m2/s)
         a_g = BHE.l_g/BHE.rhoc_g;                                                  # Grout thermal diffusivity (W/m/K)
-        T0_BHE = BHE.T0;                                                     # Measured undisturbed BHE temperature (C)
+        T0_BHE = net.T0;                                                     # Measured undisturbed BHE temperature (C)
         s_BHE = 2*BHE.r_p + BHE.D_pipes;                                     # Calculate shank spacing U-pipe (m)
     
         # Borehole field
@@ -797,12 +795,12 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         # Heating
         Rp_HHE_H = Rp(2*ri_HHE,2*ro_HHE,Re_HHEmax_H,Pr,brine.l,net.l_p);                   # Compute the pipe thermal resistance (m*K/W)
         G_HHE_H = G_HHE/net.l_s_H + Rp_HHE_H;                                         # Add annual and monthly thermal resistances to G_HHE (m*K/W)
-        L_HHE_H = np.dot(PHEH,G_HHE_H) / (T0 - (aggLoad.Ti_H + aggLoad.To_H)/2 - TP );
+        L_HHE_H = np.dot(PHEH,G_HHE_H) / (net.T0 - (aggLoad.Ti_H + aggLoad.To_H)/2 - TP );
         
         # Total brine volume in HHE pipes
         HHE.V_brine = np.pi*ri_HHE**2*L_HHE_H
         # Brine temperature after three pulses (year, month, peak)
-        HHE.T_dimv = T0 - TP - np.cumsum(PHEH*G_HHE_H)/L_HHE_H
+        HHE.T_dimv = net.T0 - TP - np.cumsum(PHEH*G_HHE_H)/L_HHE_H
                
         #KART COOLING
         if doCooling:        
@@ -810,7 +808,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
             Rp_HHE_C = Rp(2*ri_HHE,2*ro_HHE,Re_HHEmax_C,Pr,brine.l,net.l_p);                   # Compute the pipe thermal resistance (m*K/W)
             G_HHE_C = G_HHE/net.l_s_C + Rp_HHE_C;                                         # Add annual and monthly thermal resistances to G_HHE (m*K/W)
             #L_HHE_C = np.dot(PHEC,G_HHE_C/TCC1);                                 # Sizing equation for computing the required borehole meters (m)
-            L_HHE_C = np.dot(PHEC,G_HHE_C) / ((aggLoad.Ti_C + aggLoad.To_C)/2 - T0 - TP);
+            L_HHE_C = np.dot(PHEC,G_HHE_C) / ((aggLoad.Ti_C + aggLoad.To_C)/2 - net.T0 - TP);
         
         
         # Add results to source configuration

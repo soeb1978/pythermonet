@@ -26,7 +26,9 @@ class Thermonet:
     l_s_C: float = np.nan   # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
     rhoc_s: float = np.nan  # Soil volumetric heat capacity  thermonet and HHE (J/m3/K) OK. Guestimate
     z_grid: float = np.nan  # Burial depth of thermonet and HHE (m)
-    T0: float = np.nan      # Surface temperature (C)
+    T0: float = np.nan      # Yearly average surface temperature (C)
+    A: float = np.nan       # Amplitude of yearly sinusoidal temperature variation (C)
+    
 
     # KART tilføjet topologi information fra TOPO_FILE
     SDR: float = np.nan;

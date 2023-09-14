@@ -1,5 +1,4 @@
-import pandas as pd
-from thermonet.dimensioning.dimensioning_functions import run_pipedimensioning, print_pipe_dimensions, print_source_dimensions, run_sourcedimensioning
+from thermonet.dimensioning.dimensioning_functions import print_project_id, run_pipedimensioning, print_pipe_dimensions, print_source_dimensions, run_sourcedimensioning
 from thermonet.dimensioning.thermonet_classes import Brine, Thermonet, Heatpump, HHEconfig, FullDimension, BHEconfig
 
 import time
@@ -23,13 +22,14 @@ DISKUTER
 """
 
 def run_full_dimensioning(PID:str, d_pipes, brine:Brine, net:Thermonet, hp:Heatpump, pipeGroupNames, source_config:HHEconfig|BHEconfig):
-    # Output to prompt
-    print(' ');
-    print('************************************************************************')
-    print('************************** ThermonetDim v. 1 ************************')
-    print('************************************************************************')
-    print(' ');
-    print(f'Project: {PID}');
+    # # Output to prompt
+    # print(' ');
+    # print('************************************************************************')
+    # print('************************** ThermonetDim v. 1 ************************')
+    # print('************************************************************************')
+    # print(' ');
+    # print(f'Project: {PID}');
+    print_project_id(PID)
 
 
 

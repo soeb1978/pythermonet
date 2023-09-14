@@ -189,13 +189,22 @@ def read_aggregated_load(aggLoad, brine, agg_load_file):
     return aggLoad
 
 
+def print_project_id(PID):
+    # Output to prompt
+    print(' ');
+    print('************************************************************************')
+    print('************************** ThermonetDim v. 1 ************************')
+    print('************************************************************************')
+    print(' ');
+    print(f'Project: {PID}');
+    print(' ');
+
 # Print results to console
 def print_pipe_dimensions(net, pipeGroupNames):
     
     doCooling = not np.isnan(net.Re_selected_C).any();
     
     # Print pipe dimensioning results
-    print(' ');
     print('******************* Suggested pipe dimensions heating ******************'); 
     for i in range(len(net.I_PG)):
         print(f'{pipeGroupNames.iloc[i]}: Ø{int(1000*net.d_selectedPipes_H[i])} mm SDR {int(net.SDR[i])}, Re = {int(round(net.Re_selected_H[i]))}');

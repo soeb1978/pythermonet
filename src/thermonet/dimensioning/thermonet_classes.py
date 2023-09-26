@@ -24,7 +24,7 @@ class Thermonet:
     l_p: float = np.nan     # Pipe thermal conductivity (W/m/K). https://www.wavin.com/da-dk/catalog/Varme/Jordvarme/PE-80-lige-ror/40mm-jordvarme-PE-80PN6-100m
     l_s_H: float = np.nan   # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
     l_s_C: float = np.nan   # Soil thermal conductivity thermonet and HHE (W/m/K) Guestimate (0.8-1.2 W/m/K)
-    rhoc_s: float = np.nan  # Soil volumetric heat capacity  thermonet and HHE (J/m3/K) OK. Guestimate
+    rhoc_s: float = np.nan  # Soil volumetric heat capacity  thermonet and HHE (J/m3/K). Guestimate
     z_grid: float = np.nan  # Burial depth of thermonet and HHE (m)
     T0: float = np.nan      # Yearly average surface temperature (C)
     A: float = np.nan       # Amplitude of yearly sinusoidal temperature variation (C)

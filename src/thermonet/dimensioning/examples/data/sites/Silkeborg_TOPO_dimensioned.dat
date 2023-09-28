@@ -1,0 +1,8 @@
+Section				do_(mm)	SDR	Trace_(m)	Number_of_traces	Peak_flow_heating_m3/s	Peak_flow_cooling_m3/s
+Hovedlinje			90	17	40		1			0.00313915		0.0023481
+Distribution_1			75	17	63		1			0.00204304		0.00159613
+Distribution_2			63	17	58		1			0.00122458		0.00084415
+Enkeltledninger			63	17	63		1			0.00088801		0.00069376
+Stikledninger_lille		40	17	20		14			0.00031049		0.00024257
+Stikledninger_stor		50	17	20		1			0.00051749		0.00024257
+

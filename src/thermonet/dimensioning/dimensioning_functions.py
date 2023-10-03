@@ -397,9 +397,9 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
     SECONDS_IN_MONTH = 24 * (365/12) * SECONDS_IN_HOUR
     SECONDS_IN_YEAR = 12 * SECONDS_IN_MONTH;
 
-    # Evaluation times for three-pulse analysis are t = [10y 3m t_peak, 3m t_peak, t_peak]
+    # Evaluation times for three-pulse analysis are t = [20y 3m t_peak, 3m t_peak, t_peak]
     t_peak = aggLoad.t_peak; # Peak load duration [h]
-    t = np.asarray([10 * SECONDS_IN_YEAR + 3 * SECONDS_IN_MONTH + t_peak * SECONDS_IN_HOUR, 3 * SECONDS_IN_MONTH + t_peak * SECONDS_IN_HOUR, t_peak * SECONDS_IN_HOUR], dtype=float);            # time = [10 years + 3 months + 4 hours; 3 months + 4 hours; 4 hours]. Time vector for the temporal superposition (s).       
+    t = np.asarray([20 * SECONDS_IN_YEAR + 3 * SECONDS_IN_MONTH + t_peak * SECONDS_IN_HOUR, 3 * SECONDS_IN_MONTH + t_peak * SECONDS_IN_HOUR, t_peak * SECONDS_IN_HOUR], dtype=float);            # time = [10 years + 3 months + 4 hours; 3 months + 4 hours; 4 hours]. Time vector for the temporal superposition (s).       
     
     # Brine (fluid)
     nu_f = brine.mu/brine.rho;                                          # Brine kinematic viscosity (m2/s)  

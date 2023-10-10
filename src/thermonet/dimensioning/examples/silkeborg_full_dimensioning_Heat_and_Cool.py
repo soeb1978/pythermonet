@@ -29,7 +29,7 @@ if __name__ == '__main__':
     net, pipeGroupNames = read_topology(net, TOPO_file) 
 
     # Initialise heat pump object
-    hp = Heatpump(Ti_H=-3, Ti_C=20, SF=1, t_peak=4)
+    hp = Heatpump(Ti_H=-3, Ti_C=20, f_peak=1, t_peak=4)
     # Read remaining data from user specified file
     hp = read_heatpumpdata(hp, HP_file) 
 

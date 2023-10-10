@@ -1,2 +1,2 @@
-No. consumers	Yearly heating load (W)	Winter heating load (W)	Daily heating load (W)	Year COP	Winter COP	Hour COP	dT HP Heating	Yearly cooling demand (W)	Summer cooling load (W)	Daily cooling load (W)	EER	dt HP Cooling
+No. consumers	Yearly_heating_load_(W)	Winter_heating_load_(W)	Daily_heating_load_(W)	Year_COP	Winter_COP	Hour_COP	dT_HP_Heating	Yearly_cooling_load_(W)	Summer_cooling_load_(W)	Daily_cooling_load_(W)	EER	dT_HP_Cooling
 15		18256	29215	94000	3.3	3.4	3	3	5130	20535	60000	25	4

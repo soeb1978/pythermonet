@@ -24,7 +24,9 @@ def read_heatpumpdata(hp, HP_file):
     
     HPS = pd.read_csv(HP_file, sep = '\t+', engine='python');                                # Heat pump input file
     HPS = HPS.values  # Load numeric data from HP file
-
+    
+    # Sort heatpumps in ascending order by heat pump ID
+    HPS = HPS[HPS[:,0].argsort()]
    
     P_y_H = HPS[:,1];
     P_m_H = HPS[:,2];
@@ -56,9 +58,9 @@ def read_heatpumpdata(hp, HP_file):
     
         # Convert building loads to ground loads - cooling
         hp.P_s_C = np.zeros([N_HP,3]);
-        hp.P_s_C[:,0] = EER/(EER - 1) * P_y_C; # Annual load (W)
-        hp.P_s_C[:,1] = EER/(EER - 1) * P_m_C; # Monthly load (W)
-        hp.P_s_C[:,2] = EER/(EER - 1) * P_d_C; # Daily load (W)
+        hp.P_s_C[:,0] = (EER + 1)/EER * P_y_C; # Annual load (W)
+        hp.P_s_C[:,1] = (EER + 1)/EER * P_m_C; # Monthly load (W)
+        hp.P_s_C[:,2] = (EER + 1)/EER * P_d_C; # Daily load (W)
     
         # First column in hp.P_s_H respectively hp.P_s_C  are equal but with opposite signs 
         hp.P_s_H[:,0] = hp.P_s_H[:,0] - hp.P_s_C[:,0];                          # Annual imbalance between heating and cooling, positive for heating (W)
@@ -152,9 +154,8 @@ def read_aggregated_load(aggLoad, brine, agg_load_file):
     EER = load[0,11];
     dT_C = load[0,12];
 
-    # KART: BRUGER SKAL SELV ANGIVE SF og/eller S??
   
-    S = aggLoad.SF*(0.62 + 0.38/N_HP);
+    S = aggLoad.f_peak*(0.62 + 0.38/N_HP);
 
     # Calculate ground loads from COP (heating)
     P_s_H = np.zeros(3);
@@ -166,9 +167,9 @@ def read_aggregated_load(aggLoad, brine, agg_load_file):
     if np.abs(P_y_C) > 1e-6:
         # Calculate ground loads from EER (cooling)
         P_s_C = np.zeros(3);
-        P_s_C[0] = EER/(EER - 1) * P_y_C;       # Annual load (W)
-        P_s_C[1] = EER/(EER - 1) * P_m_C;       # Monthly load (W)
-        P_s_C[2] = EER/(EER - 1) * P_d_C * S;   # Daily load (W)
+        P_s_C[0] = (EER + 1)/EER * P_y_C;       # Annual load (W)
+        P_s_C[1] = (EER + 1)/EER * P_m_C;       # Monthly load (W)
+        P_s_C[2] = (EER + 1)/EER * P_d_C * S;   # Daily load (W)
 
         # First columns in hp.P_s_H respectively hp.P_s_C are equal but with opposite signs 
         P_s_H[0] = P_s_H[0] - P_s_C[0];         # Annual imbalance between heating and cooling, positive for heating (W)
@@ -314,7 +315,7 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
         # KART: np.ndarray.tolist er overflødig?
         # KART: nye S'er for hver rørgruppe
        N_HP_per_trace = len(net.I_PG[i]) / net.N_traces[i]; 
-       S = hp.SF*(0.62 + 0.38/N_HP_per_trace);
+       S = hp.f_peak*(0.62 + 0.38/N_HP_per_trace);
        
        Q_PG_H[i] =  S * sum(Qdim_H[np.ndarray.tolist(net.I_PG[i])])/net.N_traces[i];                        # Sum the heating brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
 
@@ -354,8 +355,8 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
     # Calculate aggregated load for later calculations
     N_HP = len(hp.P_s_H);
     
-    aggLoad = aggregatedLoad(Ti_H = hp.Ti_H, Ti_C = hp.Ti_C, SF=hp.SF, t_peak=hp.t_peak)
-    S = hp.SF*(0.62 + 0.38/N_HP);
+    aggLoad = aggregatedLoad(Ti_H = hp.Ti_H, Ti_C = hp.Ti_C, f_peak=hp.f_peak, t_peak=hp.t_peak)
+    S = hp.f_peak*(0.62 + 0.38/N_HP);
     
     aggLoad.Ti_H = hp.Ti_H;
     aggLoad.To_H = hp.Ti_H - sum(Qdim_H*hp.dT_H)/sum(Qdim_H);           # Volumetric flow rate weighted average brine delta-T (C)

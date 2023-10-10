@@ -19,12 +19,11 @@ if __name__ == '__main__':
 
     # Initialise thermonet object
     net = Thermonet(D_gridpipes=0.3, l_p=0.4, l_s_H=1.25, l_s_C=1.25, rhoc_s=2.5e6, z_grid=1.2, T0 = 9.03, A = 7.90)
-
     # Read remaining data from user specified file
     net, pipeGroupNames = read_dimensioned_topology(net, brine, TOPO_file)  
 
     # Initialise aggregated load object
-    aggLoad = aggregatedLoad(Ti_H = -3, Ti_C = 20, SF=1, t_peak=4)
+    aggLoad = aggregatedLoad(Ti_H = -3, Ti_C = 20, f_peak=1, t_peak=4)
     # Read remaining data from user specified file
     aggLoad = read_aggregated_load(aggLoad, brine, agg_load_file)           
 

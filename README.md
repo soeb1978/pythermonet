@@ -1,42 +1,70 @@
 # Thermonet Dimensioning Tool
 
-More text to be added!
+The tool can be used to dimension the diameters of gridpipes in a thermonet as well as the length of Borehole Heat Exchangers (BHES) or Horizontal Heat Exchangers (HHEs) supplying the grid.
 
-## Code Nomenclature
-Variables should consistently be named using a combination of variable names and suffixes below. For instance the density of the fluid (brine) is rho_f. An additional suffix is used to discriminate heating from cooling modes e.g. G_BHE_H and G_BHE_C are the G functions for the BHEs in heating and cooling mode respectively.
-### Variables
+## Input
+Inputs are supplied by a combination of plain text data files and input parameters for class objects (e.g. brine, BHEs etc.). Please refer to the accompanying example files. 
+
+Input parameters for class objects are defined below:
+
+### Brine
 | Var | Description              |Unit|
 |-----|--------------------------|-----|
-| c   | specific heat            |[J/kg K]|
-| d   | 	outer diameter of x	    |[m]|
-|D| 	distance                |		[m]|
-|dpdL| 	pressure drop per meter	 |[Pa/m]|
-|l	|thermal conductivity| [W/m K]|
-|L	|length e.g. of pipes|	[m]|
-|mu	|dynamic viscosity|	[Pa s]|
-|N|	Number of…|		[-]|
-|nu|	kinematic viscosity|	[m2/s]|
-|P|	thermal ground load|	[W]|
-|Q|	flow rate		|[m3/s]|
-|r|	outer radius of x	|[m]|
 |rho	|density 		|[kg/m3]|
-|rhoc|	volumetric heat capacity|	[J/m3 K]|
-|ri	|inner radius		|[m]|
-|R|	thermal resistance	|[m K/W]|
-|s_BHE|	Shank spacing	|	[m] |	Could use s_HHE for distance between pipes
-|SFRP|	?? ||
-|T|	temperature		|[K] or [°C]|
-|v	|flow velocity		|[m/s]|
-|z|	depth coordinate	|[m]|
+| c   | specific heat            |[J/kg K]|
+|mu	|dynamic viscosity|	[Pa s]|
+|l	|thermal conductivity| [W/m K]|
 
-### Suffixes
-|b	|borehole|
-|---|-------|
-|BHE|	Borehole heat exchanger|
-|f	|fluid (brine)|
-|g|	grout|
-|HHE|	Horisontal heat exchanger|
-|p|	pipe|
-|s|	soil|
-|ss|	also soil  - but average over BHEs|
-|t|	target|
+
+### Thermonet
+| Var | Description              |Unit|
+|-----|--------------------------|-----|
+|D_gridpipes| 	distance between forward/return pipe centers                |		[m]|
+|l_p	|pipe thermal conductivity| [W/m K]|
+|l_s	|soil thermal conductivity| [W/m K]|
+|rhoc_s|	soil volumetric heat capacity|	[J/m3 K]|
+|z_grid|	burial depth of grid pipes	|[m]|
+|T0|	yearly average surface temperature		|[°C]|
+|A|	amplitude of sinusoidal yearly temperature variation		|[°C]|
+
+### Heatpump and aggregated load
+| Var | Description              |Unit|
+|-----|--------------------------|-----|
+|Ti|	inlet temperature		| [°C]|
+|f_peak|		Fraction of peak load supplied by heatpumps	|[-]|
+|t_peak|	duration of peak load 		|[h]|
+
+
+
+### Borehole Heat Exchangers (BHE)
+| Var | Description              |Unit|
+|-----|--------------------------|-----|
+|q_geo| geothermal heat flux|[W/m2]|
+|r_b| borehole radius | [m] |
+|r_p| U-pipe outer radius| [m]|
+|SDR| U-pipe SDR value |[-]|
+|l_ss| average soil thermal conductivity along BHE|[W/m K]|
+|rhoc_ss| average soil volumetric heat capacity along BHE|[J/m3 K]|
+|l_g| grout thermal conductivity | [W/m K] |
+|rhoc_g| grout volumetric heat capacity | [J/m3 K] |
+|D_pipes| U-pipe wall to wall distance| [m] |
+|NX| Number of BHEs in x-direction|[-]|
+|D_x| Spacing between BHEs in x-direction| [m] |
+|NY|Number of BHEs in y-direction|[-]|
+|D_y|Spacing between BHEs in x-direction| [m]|
+
+
+### Horizontal Heat Exchangers (HHE)
+| Var | Description              |Unit|
+|-----|--------------------------|-----|
+|N_HHE | Number of HE loops| [-]|
+|d | outer diameter of HE pipes| [m] |
+|SDR | SDR values for HE pipes| [-]|
+|D| pipe segment spacing| [m] |
+
+## Getting started
+Download the latest version of the code from github. Navigate to the base folder (the folder that contains the file setup.py) and install
+```
+pip install --e .
+```
+You should now be able to run the examples provided in \src\thermonet\dimensioning\examples

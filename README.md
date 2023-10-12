@@ -65,6 +65,6 @@ Input parameters for class objects are defined below:
 ## Getting started
 Download the latest version of the code from github. Navigate to the base folder (the folder that contains the file setup.py) and install
 ```
-pip install --e .
+pip install -e .
 ```
 You should now be able to run the examples provided in \src\thermonet\dimensioning\examples

@@ -571,8 +571,6 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
     
     
         # BHE heating
-        # KART flyttet aggregering
-        # Q_BHEmax_H = sum(hp.Qdim_H)/N_BHE;                            # Peak flow in BHE pipes (m3/s)
         Q_BHEmax_H = aggLoad.Qdim_H / N_BHE;                            # Peak flow in BHE pipes (m3/s)
         v_BHEmax_H = Q_BHEmax_H/np.pi/ri**2;                            # Flow velocity in BHEs (m/s)
         Re_BHEmax_H = Re(brine.rho,brine.mu,v_BHEmax_H,2*ri);           # Reynold number in BHEs (-)
@@ -587,8 +585,6 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
 
         if doCooling:
             # BHE cooling
-            # KART flyttet aggregering
-            # Q_BHEmax_C = sum(hp.Qdim_C)/N_BHE;                        # Peak flow in BHE pipes (m3/s)
             Q_BHEmax_C = aggLoad.Qdim_C/N_BHE;                          # Peak flow in BHE pipes (m3/s)
             v_BHEmax_C = Q_BHEmax_C/np.pi/ri**2;                        # Flow velocity in BHEs (m/s)
             Re_BHEmax_C = Re(brine.rho,brine.mu,v_BHEmax_C,2*ri);       # Reynold number in BHEs (-)
@@ -629,22 +625,23 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
             Rw_C = G1/BHE.l_ss + G2c/BHE.l_g - G3/BHE.l_g;              # Step response for short term model on the form q*Rw = T (m*K/W). Rw indicates that it is in fact a thermal resistance
     
         # Compute approximate combined length of BHES (length effects not considered)
-        # KART: hvorfor kun een GBHEF (ingen H/C)
-        GBHEF = G_BHE;                                                  # Retain a copy of the G function for length correction later on (-)
-        G_BHE_H = np.asarray([G_BHE[0]/BHE.l_ss+Rb_H,G_BHE[1]/BHE.l_ss+Rb_H, Rw_H]);    # Heating G-function
+        
+        # G-function for heating mode (KART NOT ESKILSSON)
+        G_BHE_H = np.asarray([G_BHE[0], G_BHE[1], (Rw_H-Rb_H)*BHE.l_ss])
         
         dTdz = BHE.q_geo/BHE.l_ss                                       # Geothermal gradient (K/m)
         a = dTdz/(2*N_BHE)
         b = T0_BHE - (aggLoad.Ti_H + aggLoad.To_H)/2
-        c = -np.dot(PHEH, G_BHE_H)
+        c = -np.dot(PHEH, G_BHE_H/BHE.l_ss + Rb_H)
         L_BHE_H = (-b + np.sqrt(b**2-4*a*c))/(2*a)
         
         
         if doCooling:        
-            G_BHE_C = np.asarray([G_BHE[0]/BHE.l_ss+Rb_C,G_BHE[1]/BHE.l_ss+Rb_C, Rw_C]);    # Cooling G-function
-            
+            # G-function for heating mode (KART NOT ESKILSSON)
+            G_BHE_C = np.asarray([G_BHE[0], G_BHE[1], (Rw_C-Rb_C)*BHE.l_ss])
+
             b = - T0_BHE + (aggLoad.Ti_C + aggLoad.To_C)/2
-            c = -np.dot(PHEC, G_BHE_C)
+            c = -np.dot(PHEC, G_BHE_C/BHE.l_ss + Rb_C)
             L_BHE_C = (-b + np.sqrt(b**2-4*a*c))/(2*a)
 
             
@@ -656,7 +653,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         # Variables for single iteration of numerical search
         dL = L_BHE_H/N_BHE*np.sqrt(eps)                                 # Optimal stepsize depends on the square root of machine epsilon (https://en.wikipedia.org/wiki/Numerical_differentiation#Practical_considerations_using_floating_point_arithmetic)
         L_BHE_H_v = L_BHE_H/N_BHE + np.array([-dL, 0, dL])
-        Rb_H_v = np.zeros(3)
+        Rb_H_v = np.zeros(3) #KART NØDVENDIGT AT BEHOLDE ALLE TRE VÆRDIER? -> DITTO KØL
 
         Tbound_H = (aggLoad.Ti_H + aggLoad.To_H)/2
         error_Tf = np.ones(3)
@@ -664,10 +661,15 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         N_iter = 0
         while abs(error_Tf[1]) > tol and N_iter < iter_max + 1:
             for i in range(3):                                          # Compute Rb for the specified number of boreholes and lengths considering flow and length effects (m*K/W)
+                
+                # Recalculate lenghth dependent Rb and G-function
                 Rb_H_v[i] = RbMPflc(brine.l,net.l_p,BHE.l_g,BHE.l_ss,brine.rho,brine.c,BHE.r_b,BHE.r_p,ri,L_BHE_H_v[i],s_BHE,Q_BHEmax_H,Re_BHEmax_H,Pr);    # Compute BHE length and flow corrected multipole estimates of Rb for all candidate solutions (m*K/W)
                 
+                # G-function for heating mode (KART NOT ESKILSSON)
+                G_BHE_H = np.asarray([G_BHE[0], G_BHE[1], (Rw_H-Rb_H_v[i])*BHE.l_ss])
+                
                 # error is the difference between calculated fluid temperature and Tbound
-                error_Tf[i] = T0_BHE + dTdz*L_BHE_H_v[i]/2 - np.dot(PHEH,np.array([GBHEF[0]/BHE.l_ss + Rb_H_v[i], GBHEF[1]/BHE.l_ss + Rb_H_v[i], Rw_H])) / (L_BHE_H_v[i]*N_BHE) - Tbound_H;
+                error_Tf[i] = T0_BHE + dTdz*L_BHE_H_v[i]/2 - (np.dot(PHEH,G_BHE_H / BHE.l_ss + Rb_H_v[i])) / (L_BHE_H_v[i]*N_BHE) - Tbound_H;
                 
             # Calculate updated length estimate    
             L_H_Halley = Halley(L_BHE_H_v[1],dL,error_Tf[0],error_Tf[1],error_Tf[2])
@@ -691,10 +693,12 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         # Total brine volume in BHE heat exchanger - 1U pipe        
         BHE.V_brine = 2*L_BHE_H*np.pi*ri**2;
         
-        # Brine temperature after three pulses
-        BHE.T_dimv =  T0_BHE + dTdz*L_BHE_H/(N_BHE*2) - np.cumsum((PHEH*np.array([GBHEF[0]/BHE.l_ss + Rb_H, GBHEF[1]/BHE.l_ss + Rb_H, Rw_H]))/L_BHE_H)
         
-
+        # Final G-function for heating mode (KART NOT ESKILSSON)
+        G_BHE_H = np.array([G_BHE[0], G_BHE[1], (Rw_H-Rb_H)*BHE.l_ss])
+        # Brine temperature after three pulses
+        BHE.T_dimv =  T0_BHE + dTdz*L_BHE_H/(N_BHE*2) - np.cumsum((PHEH * (G_BHE_H/BHE.l_ss + Rb_H)) / L_BHE_H)
+        
 
         if doCooling:
             # Variables for single iteration of numerical search
@@ -710,8 +714,11 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
                 for i in range(3):                                      # Compute Rb for the specified number of boreholes and lengths considering flow and length effects (m*K/W)
                     Rb_C_v[i] = RbMPflc(brine.l,net.l_p,BHE.l_g,BHE.l_ss,brine.rho,brine.c,BHE.r_b,BHE.r_p,ri,L_BHE_C_v[i],s_BHE,Q_BHEmax_C,Re_BHEmax_C,Pr);    # Compute BHE length and flow corrected multipole estimates of Rb for all candidate solutions (m*K/W)
                     
+                    # G-function for heating mode (KART NOT ESKILSSON)
+                    G_BHE_C = np.asarray([G_BHE[0], G_BHE[1], (Rw_C-Rb_C_v[i])*BHE.l_ss])
+
                     # error is the difference between calculated fluid temperature and Tbound
-                    error_Tf[i] = T0_BHE + dTdz*L_BHE_C_v[i]/2 + np.dot(PHEC,np.array([GBHEF[0]/BHE.l_ss + Rb_C_v[i], GBHEF[1]/BHE.l_ss + Rb_C_v[i], Rw_C])) / (L_BHE_C_v[i]*N_BHE) - Tbound_C;
+                    error_Tf[i] = T0_BHE + dTdz*L_BHE_C_v[i]/2 + (np.dot(PHEC,G_BHE_C / BHE.l_ss + Rb_C_v[i])) / (L_BHE_C_v[i]*N_BHE) - Tbound_C;
                     
                 # Calculate updated length estimate    
                 L_C_Halley = Halley(L_BHE_C_v[1],dL,error_Tf[0],error_Tf[1],error_Tf[2])

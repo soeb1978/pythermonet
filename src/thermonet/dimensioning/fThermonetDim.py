@@ -88,12 +88,12 @@ def CSM(r,r0,t,a):
 
 def RbMP(lb,lp,lg,lss,rb,rp,ri,s,RENBHE,Pr):
     # Multipole computation of the borehole thermal resistance (K*m/W)
-    b = 2*mt.pi*lg*Rp(2*ri,2*rp,RENBHE,Pr,lb,lp) 
-    C1 = s/2/rb 
-    C2 = rb/rp
-    C3 = 1/2/C1/C2
-    si = (lg-lss)/(lg+lss)
-    return 1/4/mt.pi/lg*(b + np.log(C2/2/C1/(1-C1**4)**si) - C3**2*(1-(4*si*C1**4)/(1-C1**4))**2/((1+b)/(1-b) + C3**2*(1+16*si*C1**4/(1-C1**4)**2)))
+    b = 2*mt.pi*lg*Rp(2*ri,2*rp,RENBHE,Pr,lb,lp)        # Eq. 3.47 Advances in GSHP systems
+    C1 = s/2/rb                                         # Eq. 3.29 Advances in GSHP systems
+    C2 = rb/rp                                          # Eq. 3.30 Advances in GSHP systems
+    C3 = 1/2/C1/C2                                      # Eq. 3.31 Advances in GSHP systems
+    si = (lg-lss)/(lg+lss)                              # Eq. 3.32 Advances in GSHP systems
+    return 1/4/mt.pi/lg*(b + np.log(C2/2/C1/(1-C1**4)**si) - C3**2*(1-(4*si*C1**4)/(1-C1**4))**2/((1+b)/(1-b) + C3**2*(1+16*si*C1**4/(1-C1**4)**2)))    # Eq. 3.60 Advances in GSHP systems
 
 def GCLS(Fo):
     # Computes the approximate composite cylinder source G-function

@@ -470,7 +470,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
     # To_C = hp.Ti_C + sum(hp.Qdim_C*hp.dT_C)/sum(hp.Qdim_C);           # Volumetric flow rate weighted average brine delta-T (C)
     
     T_tmp = np.zeros([N_PG,3])
-    K1 = ils(a_s,t,net.D_gridpipes) - 0.25*(ils(a_s,t,2*net.z_grid) + ils(a_s,t,np.sqrt(net.D_gridpipes**2+4*net.z_grid**2)));
+    K1 = ils(a_s,t,net.D_gridpipes) - ils(a_s,t,2*net.z_grid) - ils(a_s,t,np.sqrt(net.D_gridpipes**2+4*net.z_grid**2));
     # KART: gennemgå nye varmeberegning - opsplittet på segmenter
     for i in range(N_PG):
         # G-function for grid pipes in i'th pipe group

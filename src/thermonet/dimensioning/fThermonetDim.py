@@ -80,10 +80,17 @@ def CSM(r,r0,t,a):
     p = r/r0
     z = a*t/r**2
     fCSM = lambda b, p, z: ((np.exp(-b**2*z)-1)*(f.jv(0,p*b)*f.yn(1,b)-f.yn(0,p*b)*f.jv(1,b))/(b**2*(f.jv(1,b)**2+f.yn(1,b)**2)))
-    NT = len(t)
-    G = np.zeros(NT)
-    for i in range(NT):
-        G[i] = quad(fCSM, 0, np.Inf, args=(p,z[i]))[0]
+    
+    if np.ndim(t) == 0:
+        G = quad(fCSM, 0, np.Inf, args=(p,z))[0]
+        
+    else:
+        NT = len(t)
+        G = np.zeros(NT)
+        for i in range(NT):
+            G[i] = quad(fCSM, 0, np.Inf, args=(p,z[i]))[0]
+    
+    
     return G/mt.pi**2
 
 def RbMP(lb,lp,lg,lss,rb,rp,ri,s,RENBHE,Pr):
@@ -95,9 +102,6 @@ def RbMP(lb,lp,lg,lss,rb,rp,ri,s,RENBHE,Pr):
     si = (lg-lss)/(lg+lss)                              # Eq. 3.32 Advances in GSHP systems
     return 1/4/mt.pi/lg*(b + np.log(C2/2/C1/(1-C1**4)**si) - C3**2*(1-(4*si*C1**4)/(1-C1**4))**2/((1+b)/(1-b) + C3**2*(1+16*si*C1**4/(1-C1**4)**2)))    # Eq. 3.60 Advances in GSHP systems
 
-def GCLS(Fo):
-    # Computes the approximate composite cylinder source G-function
-    return 10.**(-0.89129+0.36081*mt.log10(Fo)-0.05508*mt.log10(Fo)**2+0.00359617*mt.log10(Fo)**3)
 
 def RbMPflc(lb,lp,lg,lss,rhob,cb,rb,rp,ri,LBHE,s,QBHE,RENBHE,Pr):
     # Multipole computation of the borehole thermal resistance considering flow and length effects

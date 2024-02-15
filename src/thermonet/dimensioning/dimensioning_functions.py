@@ -14,7 +14,7 @@ Created on Fri Nov  4 08:53:07 2022
 
 import numpy as np
 import pandas as pd
-from .fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, GCLS, RbMPflc, Halley
+from .fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, RbMPflc, Halley
 from thermonet.dimensioning.thermonet_classes import aggregatedLoad
 import pygfunction as gt
 
@@ -352,18 +352,13 @@ def gfunction(t,BHE,Rb):
 
     # Composite cylindrical source model for short term response. Hu et al. 2014. Paper here: https://www.sciencedirect.com/science/article/abs/pii/S0378778814005866?via#3Dihub
     re = BHE.r_b/np.exp(2*np.pi*BHE.l_g*Rb);                    # Heating: Compute the equivalent pipe radius for cylindrical symmetry (m). This is how Hu et al. 2014 define it.
+     
+    G1 = CSM(BHE.r_b, BHE.r_b, t[2], a_ss)
+    G2h = CSM(re, re, t[2], a_g)
+    G3 = CSM(BHE.r_b, BHE.r_b, t[2], a_g)
     
-    # The Fourier numbers Fo1-Fo3 are neccesary for computing the solution 
-    Fo1 = a_ss*t[2]/BHE.r_b**2;                                    
-    G1 = GCLS(Fo1); 
-
-    Fo2h = a_g*t[2]/re**2;
-    G2h = GCLS(Fo2h);
-
-    Fo3 = a_g*t[2]/BHE.r_b**2;
-    G3 = GCLS(Fo3);
-
     Rw = G1/BHE.l_ss + G2h/BHE.l_g - G3/BHE.l_g;                  # Step response for short term model on the form q*Rw = T (m*K/W). Rw indicates that it is in fact a thermal resistance
+    
 
     # G-function for heating mode
     G_BHE = np.asarray([G_BHE[0], G_BHE[1], (Rw-Rb)*BHE.l_ss])

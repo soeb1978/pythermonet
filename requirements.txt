@@ -6,3 +6,4 @@ pytest
 dataclasses_json
 json2html
 pygfunction
+pandapipes

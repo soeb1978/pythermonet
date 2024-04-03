@@ -6,326 +6,287 @@ import pandas as pd
 import pandapipes as pp
 
 
-def load_topology_csv_to_pp_net(topo_file, settings_file):
+def mass_flow_from_load(load, COP_heat=3., delta_temperature=3.,
+                        fluid_heat_capacity=4.184e3, heating=True, **kwargs):
     """
+    Calculates the required mass flow of brine based on the specified
+    thermal load in heating mode.
+
+    :param load: the load of the heat pump [W]
+    :type load: float
+    :param COP_heat: the coefficient of performance in heating mode [~]
+    :type COP_heat: float
+    :param delta_temperature: the change in brine tempereature across
+                              the heat pump [K]
+    :type delta_temperature: float
+    :param fluid_heat_capacity: the heat capacity of the brine[J/(kg*K)]
+    :type fluid_heat_capacity: float
     """
-    # Load the layout of the topology
-    network_df = pd.read_csv(topo_file)
-
-    # load the flow settings file.
-    with open(settings_file, 'r') as file:
-        data = json.load(file)
-
-    # the number of junctions
-    n_junctions = network_df.shape[0]
-    # if we want to simulate the flow in both directions
-    if setting_dict["full_network"]:
-        n_junctions = n_junctions*2
-        from_connection, to_connection, pipe_lengths = \
-            pipe_connection_lists(network_df, **setting_dict)
-    else:
-        from_connection, to_connection, pipe_lengths = \
-            pipe_connection_lists(network_df, **setting_dict)
-
-    if setting_dict["add_BHE"]:
-        n_junctions += 1
-
-    # make a list of where the heat pumps are conncted.
-    heat_pump_connections = np.where(network_df['heat_pump_loads'] > 0)[0]
-
-    # calculate the mass flow from the each heat pump
-    mass_flow_heat_pumps = flow_from_load_heating(network_df['heat_pump_loads']
-                                                  [heat_pump_connections])
-
-    # $$$ we do not use this. 
-    total_mass_flow = np.sum(mass_flow_heat_pumps)
-
-    if setting_dict["add_BHE"]:
-        if setting_dict["full_network"]:
-            ext_grid_loc = n_junctions-2
-        else:
-            ext_grid_loc = n_junctions - 1
-    else:
-        ext_grid_loc = 0
-
-topo_file
-{
-    "fluid_density": 965.0,
-    "fluid_heat_capacity": 4450.0,
-    "fluid_viscosity": 0.005,
-    "init_junction_pressure": 0,
-    "init_junction_temp": 293.15,
-    "init_source_pressure": 0,
-    "init_source_temp": 293.15,
-    "pipe_roughness_mm": 0.0001,
-    "friction_model": "Swamee-Jain"
-}
-setting_dict = {
-    "COP_heating": 3.0,
-    "pipe_material": "PE 100",
-    "temperature_drop_at_pump": 3.0,
-    "add_BHE": True,
-    "BHE_length": 150,
-    "max_pressure_drop_per_m": 100,
-    "full_network": False,  # toggle to save time, if false only half of
-                            # the network is calculated due to symmetry
-    "pipe_SDR": 17,
-    }
+    # Calculate the energy extracted from the brine
+    heating_sign = -1 if heating is True else 1
+    load_on_thermonet = np.multiply(load, (1 + heating_sign *
+                                           np.divide(1, COP_heat)))
+    mass_flow = np.divide(load_on_thermonet,
+                          np.multiply(fluid_heat_capacity, delta_temperature))
+    return mass_flow
 
 
-# %%
-# Test = optimal_pipe_diameter(0.20, 300, 0.2, 2, 1000, max_iter=100)
-# print(Test)
-# exit()
-net = pp.create_empty_network(fluid='water')
-pp.create_junctions(net, n_junctions, pn_bar=1, tfluid_k=293.15)
-# should use pp.create_pipes_from_parameters(net, from_junctions, to_junctions, length_km, diameter_m, k_mm=0.2,
-                                #  loss_coefficient=0, sections=1, alpha_w_per_m2k=0., text_k=293,
-                                #  qext_w=0., name=None, index=None, geodata=None, in_service=True,
-                                #  type="pipe", **kwargs)
-
-pp.create_pipes(net, from_junctions=from_connection,
-                to_junctions=to_connection, length_km=pipe_lengths,
-                std_type=pipe_name)
-
-pp.create_sources(
-    net, junctions=heat_pump_connections,
-    mdot_kg_per_s=mass_flow_heat_pumps,
-    scaling=1.,
-    name=None,
-    index=None,
-    in_service=True,
-    type='source',
-    )
-
-pp.create_ext_grid(net, ext_grid_loc, p_bar=1, type='p')
-# pp.create_sink(net, 0, Mass_flow_sink, scaling=1., name=None, index=None,
-#                 in_service=True, type='sink')
-
-
-
-# %% 
-# exit()
-pp.pipeflow(net, mode="hydraulics")
-print('test')
-print(net["_options"])
-print(net.pipe)
-net.res_pipe['p_loss_pa_per_m'] = np.abs(((net.res_pipe['p_from_bar']
-                                           - net.res_pipe['p_to_bar'])
-                                           / net.pipe['length_km']/1000)*10e5)
-print("net.res_pipe")
-print(net.res_pipe)
-print("net.res_junction")
-print(net.res_junction)
-
-# %%
-
-
-
-"""
-A collection of all the functions I have made when working with 
-pandapipes
-"""
-
-
-
-
-def load_pandapipes_pipe_data_to_dataframe(pipe_material="PE 100", pipe_SDR=False, **kwargs):
-    # create a dictionary which only contains the specified pipe types
-    pipe_file = os.path.join(pp.pp_dir, "std_types", "library", "Pipe.csv")
-    pipe_data = pp.std_types.get_data(pipe_file, "pipe").T
-    pipe_types = np.unique(pipe_data["material"])
-    if pipe_material not in pipe_types:
-        Errormsg = (f"Invalid pipe material, {pipe_material} given.\n"
-                    f"Please select one of the following types"
-                    f" {", ".join(pipe_types)}")
-        raise ValueError(Errormsg)
-    else:
-        pipe_data = pipe_data[pipe_data["material"] == pipe_material]
-    if pipe_SDR is not False:
-        selected_pipes = pipe_data[pipe_data.index.str.contains("SDR_17")]
-    return selected_pipes
-
-
-def pipe_name_from_outer_diameter(df, requested_diameter):
+def fluid_update_constants(net, brine_dict, **kwargs):
     """
-    #### Notes to self
-    Should consider the SDR value if we want a certain presssure
-    capacity
-    ####
-
-    Finds the pipe diameter closest to the input diameter, treating the
-    input as the mininum acceptable diameter, i.e., the output will not
-    be less than the input. The input is the outer diameter of the pipe
+    Update the net fluid parameters to the constant values specified in
+    brine_dict.
+    The elements should be either "viscosity", "density", or
+    "heat_capacity".
 
     input
-    :param df: pandas DataFrame of the different pipe types, each pipe
-               is its own row.
-    :type dict: pandas DataFrame
-    :param requested_diameter: the desired internal pipe diameter [mm]
-    :type requested_diameter: float
+    :param net: The pandapipes net initialized with a standard fluid,
+        e.g. "water"
+    :type  net: pandapipes Net object
+    :param brine_dict: A dictionary containing the fluid parameters
+        we want to change to constant values
+    :type  brine_dict: dict
 
     output
-    :param output_diameter: the name of the pipe which have the closest
-                            but larger diameter than the input diameter
-                            [~]
-    :type output_diameter: str
+    :None: The changes are stored in the pandapipesNet
     """
-    # requested_diameter *= 1000  # convert from m to mm
-    temp_df = df.copy()
-
-    temp_df = temp_df[temp_df["outer_diameter_mm"] >= requested_diameter]
-    pipe_name = temp_df.index[
-        np.argmin(temp_df["outer_diameter_mm"])
-        ]
-    # this might be faster less comparisons,
-    # Current_smallest_name = ""
-    # Current_smallest_diff = 1000
-    # for pipe_diameter_diff in zip((df["outer_diameter_mm"]-requested_diameter),
-    # df.index):
-    #     if pipe_diameter_diff < 0:
-    #         continue
-    #     if Current_smallest_diff > pipe_diameter_diff:
-    #         Current_smallest_diff = pipe_diameter_diff
-    #         Current_smallest_name
-    # if len(np.where)
-    return pipe_name
+    # mute the warning from pandapipes
+    flags = {"warn_on_duplicates": False, }
+    # the current mutable properties
+    fluid_parameters = ["viscosity", "density", "heat_capacity"]
+    for f_param in fluid_parameters:
+        if "fluid_" + f_param in brine_dict:
+            pp.create_constant_property(net, f_param,
+                                        brine_dict["fluid_" + f_param],
+                                        **flags)
+    return None
 
 
+def pipe_inner_diameter(outer_diameter, SDR=17, **kwargs):
+    """
+    Calculates the inner pipe diameter given the outer diameter and the
+    SDR
+
+    Args
+    :param outer_diameter: The outer diameter of the pipes
+    :type  outer_diameter: float or list of floats
+    :param SDR: The surface to diameter ratio of the pipe
+    :type  SDR: float or list of floats
+
+    Return
+    :param -: The inner diameter of the pipes
+    :type  -: float or list of floats
+
+    """
+    return np.multiply(outer_diameter, (1. - np.divide(2., SDR)))
 
 
-def gen_pipe_connection_list_from_data_frame(df, add_BHE=False, BHE_length=100, **kwargs):
-    from_connection = []
-    to_connection = []
-    pipe_lengths = []
-    pipe_scale = 0.001  # from m to km
-    if add_BHE:
-        size_df = df.shape[0]
-        BHE_from_connection = []
-        BHE_to_connection = []
-        BHE_pipe_lengths = []
-    for n, pipe_connections in enumerate(df["pipe_connections"]):
-        for m, pipe_connection in enumerate(pipe_connections):
-            if pipe_connection == -1:
-                continue
-            else:
-                from_connection.append(n)
-                to_connection.append(pipe_connection)
-                pipe_lengths.append(df["pipe_length"][n][m]*pipe_scale)
-        if ((add_BHE is True) and (df["BHE_location(ext_net)"][n] == True)):
-            BHE_from_connection.append(n)
-            BHE_to_connection.append(size_df)
-            BHE_pipe_lengths.append(BHE_length*pipe_scale)
-            size_df += 1
-    if add_BHE:
-        # inverted flow so far everything is connected from the
-        # sink to the sources, but to achieve this we need to say
-        # from the bottom of the BHE to the surface
-        from_connection += BHE_to_connection
-        to_connection += BHE_from_connection
-        pipe_lengths += BHE_pipe_lengths
-    # pipe_lengths /=1000 # pandapipes works in km for some reason
-    return from_connection, to_connection, pipe_lengths
+def update_pp_net_before_save(net):
+    """
+    Updates the net object before the flow date is save in the geosjon
 
+    The function adds three new columns to the net's sub classes.
 
-def gen_pipe_connection_list_from_lists(connect_list, **kwargs):
-    from_connection = []
-    to_connection = []
-    for n, pipe_connections in enumerate(connect_list):
-        for m, pipe_connection in enumerate(pipe_connections):
-            if pipe_connection == -1:
-                continue
-            else:
-                from_connection.append(n)
-                to_connection.append(pipe_connection)
-    return from_connection, to_connection
+    Args
+    :param net: The net object containing the flow calculations from
+        pandapipes
+    :type  net: pp.net object
 
-def gen_pipe_connection_list_dublicate_from_data_frame(df, add_BHE=False, BHE_length=100,
-                                       **kwargs):
-    from_connection = []
-    to_connection = []
-    pipe_lengths = []
-    pipe_scale = 0.001  # from m to km
-    size_df = df.shape[0]
-    if add_BHE:
-        count_BHE_connections = 0
-        BHE_from_connection = []
-        BHE_to_connection = []
-        BHE_pipe_lengths = []
-    for n, pipe_connections in enumerate(df["pipe_connections"]):
-        for m, pipe_connection in enumerate(pipe_connections):
-            if pipe_connection == -1:
-                continue
-            else:
-                from_connection.extend([n, pipe_connection + size_df])
-                to_connection.extend([pipe_connection, n + size_df])
-                pipe_lengths.extend([df["pipe_length"][n][m]*pipe_scale,]*2)
-        if ((add_BHE is True) and (df["BHE_location(ext_net)"][n] == True)):
-            BHE_from_connection.extend([2*size_df + count_BHE_connections,
-                                        n + size_df])
-            BHE_to_connection.extend([n, 2*size_df + count_BHE_connections])
-            count_BHE_connections += 1
-            BHE_pipe_lengths.extend([BHE_length*pipe_scale,]*2)
-    if add_BHE:
-        from_connection += BHE_from_connection
-        to_connection += BHE_to_connection
-        pipe_lengths += BHE_pipe_lengths
-    # pipe_lengths /=1000 # pandapipes works in km for some reason
-    return from_connection, to_connection, pipe_lengths
-
-## Not done ##
-def set_up_net(net, df, full_network=False,**kwargs):
-    #### Currently working on this one
-    n_junctions = df.shape[0]
-    if full_network:
-        n_junctions = n_junctions*2
-    n_junctions += 1
-    heat_pump_connections = np.where(df["heat_pump_loads"] > 0)[0]
-    mass_flow_heat_pumps = flow_from_load_heating(
-        df["heat_pump_loads"][heat_pump_connections])
-    total_mass_flow = np.sum(mass_flow_heat_pumps)
-    ## I need initial guesses for the pipe diameter
-
-    pp.create_junctions(net, n_junctions, pn_bar=1, tfluid_k=293.15)
-    pp.create_pipes(net, from_junctions=from_connection,
-                to_junctions=to_connection, length_km=pipe_lengths,
-                std_type=pipe_name)
-    pp.create_sources(
-        net, junctions=heat_pump_connections,
-        mdot_kg_per_s=mass_flow_heat_pumps,
-        scaling=1.,
-        name=None,
-        index=None,
-        in_service=True,
-        type="source",
+    Returns
+    :None: The three new columns are added to the subclasses in the net
+    """
+    # Add the name(IDs) to "res_*" data frames
+    net.res_pipe["name"] = net.pipe["name"]
+    net.res_junction["name"] = net.junction["name"]
+    # Calculate the pressure loss per meter and add to "res_pipe"
+    net.res_pipe["p_loss_bar_per_m"] = (
+        (net.res_pipe["p_from_bar"] - net.res_pipe["p_to_bar"])
+        / (net.pipe["length_km"] * 1e3)  # km to m
     )
+    return None
+
+
+def load_and_prepare_data(pipe_file, heat_pump_load_file, settings_file):
+    """
+    Unpacks the pipe data and settings and prepare it for the pandapipes
+
+    Args
+    :param pipe_file: The path to the csv file containing the pipe data
+    :type  pipe_file: str (path)
+    :param heat_pump_load_file: The path to the csv file containing the
+        heat pump data
+    :type  heat_pump_load_file: str (path)
+    :param settings_file: The path to the file containing the settings
+        for the fluid and friction model
+    :type  settings_file: str (path)
+
+    Returns
+    :param pipe_data: A dataframe containing the properties of the
+        pipes, the naming follows that of pandapipes
+    :type  pipe_data: pandas Dataframe
+    :param heat_pump_data: A dictionary containing the fluid settings
+    :type  heat_pump_data: dict
+    :param heat_pump_data: A dictionary containing the fluid settings
+    :type  heat_pump_data: dict
+    """
+    pipe_data = pd.read_csv(pipe_file)
+    heat_pump_data = pd.read_csv(heat_pump_load_file)
+    with open(settings_file, 'r') as file:
+        settings = json.load(file)
+
+    # pandapipes needs the inner pipe diameters
+    pipe_data["inner_diameter_m"] = pipe_inner_diameter(
+            outer_diameter=np.divide(pipe_data["outer_diameter(mm)"], 1000.),
+            SDR=pipe_data["SDR"]
+        )
+
+    # calculate the mass flow from the each heat pump
+    heat_pump_data['mass_flow_kg_per_s'] = mass_flow_from_load(
+        heat_pump_data['peak_load(W)'],
+        heat_pump_data['hour_COP'],
+        heat_pump_data['dT_heat_pump_heating'],
+        settings['fluid_heat_capacity'],
+        heating=True
+        )
+
+    return pipe_data, heat_pump_data, settings
+
+
+def save_pp_flow_csv(net, pipe_file, overwrite_csv=True, pipe_file_new=""):
+    """
+    Saves the results of the pythermonet calculation to the geojson
+
+    Args
+    :param net: The pandapipes net object containing the results from
+        the flow calculation
+    :type  net: pandapipes net object
+    :param pipe_file: The path to the csv file containing the pipe data
+    :type  pipe_file: str (path)
+    :param overwrite_csv: Toggle to control whether the results are
+        saved in the origional csv file (True) or if a new is created
+        (False)
+    :type  overwrite_csv: bool
+    :param pipe_file_new: The path to the new csv file, is only used if
+        overwrite_csv if False
+    :type  pipe_file_new: str (path)
+
+    Returns
+    :None: The data is dumped in either the original csv file or in the
+        new file specified in pipe_file_new
+    """
+    # reload the original pipe data
+    pipe_data = pd.read_csv(pipe_file)
+
+    # first add names and pressure loss to the res_pipes subclass
+    update_pp_net_before_save(net)
+    # the params which should be added to the pipes in the geojson
+    # the names followes the names in pandapipes
+    res_pipe_params = [
+        "v_mean_m_per_s",
+        "vdot_norm_m3_per_s",
+        "reynolds",
+        "lambda",
+        "p_loss_bar_per_m"
+        ]
+    params_translate = {
+        "v_mean_m_per_s": "Mean flow velocity (m/s)",
+        "vdot_norm_m3_per_s": "Volumetric flow (m^3/s)",
+        "reynolds": "Reynolds number",
+        "lambda": "Friction factor",
+        "p_loss_bar_per_m": "Pressure loss (bar/m)",
+        "p_bar": "Pressure (bar)"
+        }
+    for pipe_ind in net.res_pipe["name"]:
+        for param in res_pipe_params:
+            pipe_data.at[pipe_ind, params_translate[param]] = \
+                net.res_pipe[param][pipe_ind]
+
+    if overwrite_csv is True:
+        pipe_data.to_csv(pipe_file)
+    else:
+        if pipe_file_new == "":
+            raise ValueError("Overwrite is False but no new path to where the"
+                             " file should be save was given, specify as "
+                             "pipe_file_new")
+        else:
+            pipe_data.to_csv(pipe_file_new)
 
     return None
 
 
-# Not done ##def Initial_optimal_pipe_diameter(net, pressure_loss_pa_per_m, k_mm):
-def optimal_pipe_diameter_old_notworking(guess_pipe_diameter, pressure_loss_pa_per_m, k_mm, mass_flow_kg_per_s, density_fluid, max_iter=100):
-    front_factor = (2 * mass_flow_kg_per_s**2 * np.log(10)**2) / (np.pi * density_fluid) 
-    pipe_diameter = guess_pipe_diameter
-    niter = 0
-    converged = False
-    k_mm /= 1000
-    gamma = 0.01
-    while not converged and niter < max_iter:
-        logarithm_factor = np.log(k_mm / (3.17*pipe_diameter))
-        f = front_factor / (np.power(pipe_diameter, 5) * logarithm_factor**2) \
-            + pressure_loss_pa_per_m
-        df_ddiameter = front_factor / np.power(pipe_diameter, 6) / \
-                       np.power(logarithm_factor, 3) * (2 - 5*logarithm_factor)
-        diameter_step = f/df_ddiameter
-        # diameter_old = pipe_diameter
-        pipe_diameter -= diameter_step * gamma
-        print(pipe_diameter, diameter_step)
-        # dx = np.abs(lambda_cb - lambda_cb_old) * dummy
-        # error_lambda.append(linalg.norm(dx) / (len(dx)))
+def wrapper_pandapipes_flow_from_csv(pipe_file, heat_pump_load_file,
+                                     settings_file, overwrite_pipe_csv=True,
+                                     pipe_file_new=""):
+    """
+    A wrapper for running the flow calculations in pandapipes using the
+    topology specified in csv
 
-        if np.abs(diameter_step) <= 1e-4:
-            converged = True
+    Args
+    :param pipe_file: The path to the csv file containing the topology
+        data
+    :type  pipe_file: str (path)
+    :param heat_pump_load_file: The path to the csv file containing the
+        heat pump data
+    :type  heat_pump_load_file: str (path)
+    :param setting_file: The path to the json file containing the
+        fluid values and friction model
+    :type  setting_file: str (path)
+    :param overwrite_pipe_csv: Toggle to specify is the original pipe
+        csv should be update (True) and a new should be made (False)
+    :type  overwrite_pipe_csv: bool
+    :param pipe_file_new: The path to the new csv file if
+        overwrite_pipe_csv is false
+    :type  pipe_file_new: str (path)
 
-        niter += 1
-    return pipe_diameter
+    Returns
+    :None: The data is dumped in the original or the new pipe csv file.
+    """
+    # Load the layout of the topology
+    pipe_data, heat_pump_data, settings = \
+        load_and_prepare_data(pipe_file, heat_pump_load_file, settings_file)
+
+    # Extract how many junctions the grid contains
+    n_junctions = np.max(pipe_data[["junction_from", "junction_to"]])+1
+
+    # Set the location of the external gird, this is always 0 this setup
+    ext_grid_loc = 0
+
+    # initialize the pandapipes objects
+    net = pp.create_empty_network(fluid='water')
+    # The fluid parameters need to be updated accordingly to the settings
+    # dictionary
+    fluid_update_constants(net, settings)
+
+    # add the different components to the net
+    pp.create_junctions(net, n_junctions, pn_bar=1, tfluid_k=293.15)
+
+    pp.create_pipes_from_parameters(
+        net,
+        from_junctions=pipe_data["junction_from"],
+        to_junctions=pipe_data["junction_to"],
+        length_km=np.divide(pipe_data['length(m)'], 1000.),
+        k_mm=pipe_data["roughness(mm)"],
+        diameter_m=pipe_data['inner_diameter_m'],
+        name=list(pipe_data.index)
+        )
+
+    pp.create_sources(
+        net,
+        junctions=heat_pump_data["junction_connection"],
+        mdot_kg_per_s=heat_pump_data['mass_flow_kg_per_s'],
+        name=list(heat_pump_data.index)
+        )
+
+    pp.create_ext_grid(net, ext_grid_loc, p_bar=1, type='p')
+
+    # run the flow simulation
+    pp.pipeflow(
+        net,
+        mode="hydraulics",
+        friction_model=settings["friction_model"]
+        )
+
+    # %%
+    save_pp_flow_csv(net, pipe_file, overwrite_csv=overwrite_pipe_csv,
+                     pipe_file_new=pipe_file_new)
+
+    return None

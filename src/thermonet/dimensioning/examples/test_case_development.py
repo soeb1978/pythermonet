@@ -1,24 +1,31 @@
 # %%
 
-import json
-import os
 
-import numpy as np
-import pandas as pd
-import pandapipes as pp
-
-heat_pump_file = r'data\sites\test_case_heat_pumps.csv'
-pipe_file = r'data\sites\test_case_pipe.csv'
-
-
-# Load the layout of the topology
-pipe_data = pd.read_csv(pipe_file)
-heat_pump_data = pd.read_csv(heat_pump_file)
-
-
-
+from thermonet.dimensioning.pipe_flow_functions import \
+    wrapper_pandapipes_flow_from_csv
 
 # %%
+##### inputs #####
+
+# The paths for the pipe topology
+pipe_file = r'data\sites\test_case_pipe.csv'
+# Toggle if the original topology file should be overwritten.
+overwrite_pipe_csv = False
+# and the path for the new file containing the topology plus flow data
+pipe_file_new = r'data\sites\test_case_pipe_with_flow.csv'
+
+# path for the files containing the heat pumps and the loads
+heat_pump_load_file = r'data\sites\test_case_heat_pumps.csv'
+
+# path for the settings file, for fluid properties and frictions model
+settings_file = r'data\misc\test.json'
+
+##### Automatic from here #####
+wrapper_pandapipes_flow_from_csv(pipe_file, heat_pump_load_file, settings_file,
+                                 overwrite_pipe_csv, pipe_file_new)
+
+# %%
+
 # import pandas as pd
 # from thermonet.dimensioning.thermonet_classes import Brine, Thermonet, Heatpump, BHEconfig
 # from thermonet.dimensioning.dimensioning_functions import read_heatpumpdata, read_topology

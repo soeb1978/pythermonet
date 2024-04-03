@@ -1,0 +1,6 @@
+{
+    "fluid_density": 965.0,
+    "fluid_heat_capacity": 4450.0,
+    "fluid_viscosity": 0.005,
+    "friction_model": "Swamee-Jain"
+}

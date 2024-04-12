@@ -1,0 +1,11 @@
+{
+    "pipe trace separation (m)": 0.3,
+    "pipe thermal conductivity (W/m/K)": 0.4,
+    "top soil thermal conductivity in heating mode (W/m/K)": 1.25,
+    "top soil thermal conductivity in cooling mode (W/m/K)": 1.25,
+    "top soil volumetric heat capacity (J/m3/K)": 2.5e6,
+    "pipe burial depth (m)": 1.2,
+    "annual mean surface temperature (C)": 9.03,
+    "annual temperature amplitude (C)": 7.9,
+    "maximal pressure drop per meter(bar/m)" : 100e-5
+}

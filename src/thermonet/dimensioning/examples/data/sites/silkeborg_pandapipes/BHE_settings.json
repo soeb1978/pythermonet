@@ -1,0 +1,15 @@
+{
+    "Geothermal heat flux (W/m2)": 0.0185,
+    "Borehole radius (m)": 0.076,
+    "Outer U-pipe radius (m)": 0.02,
+    "SDR of U-pipe": 11,
+    "Soil thermal conductivity along the BHE (W/m/K)": 2.36,
+    "Soil volumetric hear capacity along the BHE ": 2.65e6,
+    "Grout thermal conductivity (W/m/K)": 1.75,
+    "Grout volumentric heat capacity (J/m3/K)": 3e6,
+    "Wall to wall distance between U-pipe legs (m)": 0.015,
+    "Number of boreholes in the x direction": 1,
+    "Borehole spacing in x direction (m)": 15,
+    "Number of boreholes in the y direction": 6,
+    "Borehole spacing in y direction (m)": 15
+}

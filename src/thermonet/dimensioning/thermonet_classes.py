@@ -28,7 +28,7 @@ class Thermonet:
     z_grid: float = np.nan  # Burial depth of thermonet and HHE (m)
     T0: float = np.nan      # Yearly average surface temperature (C)
     A: float = np.nan       # Amplitude of yearly sinusoidal temperature variation (C)
-    
+    friction_model_pp: str = 'swamee-jain'  # The friction models use in pandapipes' flow calulation, options 'colebrook', 'swamee-jain' and 'nikuradse'
 
     # KART tilføjet topologi information fra TOPO_FILE
     SDR: float = np.nan;

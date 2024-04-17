@@ -14,6 +14,7 @@ Created on Fri Nov  4 08:53:07 2022
 
 import numpy as np
 import pandas as pd
+import pandapipes as pp
 from .fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, RbMPflc, Halley
 from thermonet.dimensioning.thermonet_classes import aggregatedLoad
 import pygfunction as gt
@@ -132,6 +133,398 @@ def read_dimensioned_topology(net, brine, TOPO_file):
     net.V_brine = sum(net.L_segments*np.pi*net.di_selected_H**2/4);
     
     return net, pipeGroupNames
+
+
+def update_net_with_pandapipes_flow(net_pthn, brine, TOPO_file, HP_file):
+    """
+    A wrapper from the pandapipes flow calculation which also updates 
+    the pythermonet net object with both the topology used in pandapipes 
+    (list of pipes) and with results of the flow calculation. 
+
+    Args
+    :param net_pthn: The pythermonet net to which we want to add the 
+        topology and the results of the pandapipes flow calculation
+    :type  net_pthn: pythermonet net object
+    :param brine: The pythermonet brine containing the fluid parameters
+    :type  brine: pythermonet brine object
+    :param TOPO_file: The path to the csv file containing the pipe 
+        topology need for pandapipes, one line for each pipe
+    :type  TOPO_file: str (path)
+    :param HP_file: The path to the csv file containing the heat pump 
+        information, one line for each heat pump
+    :type  HP_file: str (path)
+
+    Returns
+    :param net_pthn: The pythermonet net updated with the topology and
+        the results of the pandapipes flow calculation
+    :type  net_pthn: pythermonet net object
+    """
+    # initialise the pandapipes network
+    net_pp = pp.create_empty_network(fluid='water')
+    # Change the parameters of the pandapipe fluid to match the brine
+    net_pp = update_pandapipes_fluid(net_pp, brine)
+    
+    # add the pipe and junctions to net_pp
+    net_pp = read_pandapipes_topology(net_pp, TOPO_file)
+    # and add it to net_pthn 
+    net_pthn = read_pipe_list_topology(net_pthn, TOPO_file) 
+
+    # Set the location of the external gird, this is always 0 this setup
+    ext_grid_loc = 0
+    pp.create_ext_grid(net_pp, ext_grid_loc, p_bar=1, type='p')
+
+    # Load the heat pump data here, as we need to check if we also have
+    # to run a flow calculation for the cooling case
+    heat_pump_data = pd.read_csv(HP_file, sep='\t+', engine='python')
+    
+    # $$$ KRI, I'm doing it in this way because then it should be easier
+    # to generalise to the case where we need many different
+    # configurations
+    net_modes = ['heating']
+    # check if we need to calculate a flow cooling
+    if (heat_pump_data['Yearly_cooling_load_(W)'] > 0).any():
+        net_modes.append('cooling')
+
+    # toggle to remove the sources between 1st and 2nd run
+    first_run = True 
+    for mode in net_modes:
+        if mode == 'heating':
+            mass_flow_kg_per_s = mass_flow_from_heat_pump_load(
+                    load=heat_pump_data['Daily_heating_load_(W)'],
+                    COP=heat_pump_data['Hour_COP'],
+                    delta_temperature=heat_pump_data['dT_HP_Heating'],
+                    fluid_heat_capacity=brine.c,
+                    heating=True
+                )
+        elif mode == 'cooling':
+            mass_flow_kg_per_s = mass_flow_from_heat_pump_load(
+                load=heat_pump_data['Daily_cooling_load_(W)'],
+                COP=heat_pump_data['EER'],
+                delta_temperature=heat_pump_data['dT_HP_Cooling'],
+                fluid_heat_capacity=brine.c,
+                heating=False
+            )
+        # before the connecting the source in the second run we need to
+        # remove the previous loads/sources
+        if first_run is False:
+            pp.drop_elements_at_junctions(
+                net_pp,
+                heat_pump_data['at_junction_no'],
+                branch_elements=False
+            )
+        pp.create_sources(net_pp, junctions=heat_pump_data['at_junction_no'],
+                          mdot_kg_per_s=mass_flow_kg_per_s)
+
+        # after the completion of the first run, change the toggle
+        first_run = False
+
+        pp.pipeflow(net_pp, mode="hydraulics", 
+                    friction_model=net_pthn.friction_model_pp)
+        # update with flow (renolds numbers)
+        net_pthn = update_pthn_net_with_pandapipes_flow(net_pthn, net_pp, mode)
+
+    return net_pthn
+
+
+def update_pthn_net_with_pandapipes_flow(net_pthn, net_pp, mode):
+    """
+    Adds the reynolds numbers to the pythermonet net object from the 
+    pandapipes flow calculation
+
+    Args
+    :param net_pthn: The pythermonet net to which we want to add the
+        results of the pandapipes flow calculation
+    :type  net_pthn: pythermonet net object
+    :param net_pp: The pandapipe net with flow calculations
+    :type  net_pp: pandapipes net object
+    :param mode: The current mode of the flow calculation, either
+        'heating' or 'cooling'
+    :type  mode: str
+    
+    Returns 
+    :param net_pthn: The pythermonet net with reynolds numbers from the
+        the pandapipes flow calculation
+    :type  net_pthn: pythermonet net object
+    """
+    if mode == 'heating':
+        net_pthn.Re_selected_H = net_pp.res_pipe['reynolds'].values
+    elif mode == 'cooling':
+        net_pthn.Re_selected_C = net_pp.res_pipe['reynolds'].values
+    else:
+        raise ValueError('Somehting is wrong the pandapipes mode, check the'
+                         'loop in "update_net_with_pandapipes_flow"')
+
+    return net_pthn
+
+
+def read_pipe_list_topology(net_pthn, TOPO_file):
+    """
+    Loads the pipe list topology to the pythermonet net object
+
+    Args
+    :param net_pthn: The pythermonet net object 
+    :type  net_pthn: pythermonet net object
+    :param TOPO_file: The path to the csv file containg the pipe 
+        topology in a list format, i.e., one line per pipe
+    :type  TOPO_file: str (path)
+
+    Returns    
+    :param net_pthn: The pythermonet net object with the pipe topology
+    :type  net_pthn: pythermonet net object
+    """
+    # Load grid topology
+    pipe_data = pd.read_csv(TOPO_file, sep='\t+', engine='python')
+    # when loading pipe outer diameters convert from mm to m
+    net_pthn.d_selectedPipes_H = pipe_data["outer_diameter(mm)"].values / 1000
+    net_pthn.d_selectedPipes_C = net_pthn.d_selectedPipes_H
+    net_pthn.SDR = pipe_data['SDR'].values
+    net_pthn.L_traces = pipe_data['length(m)'].values
+    net_pthn.N_traces = np.ones_like(pipe_data['SDR'])  # is redundant,but keep
+    net_pthn.L_segments = 2 * net_pthn.L_traces  # back and forth
+
+    # Calculate Reynolds number for selected pipes for heating
+    net_pthn.di_selected_H = pipe_inner_diameter(net_pthn.d_selectedPipes_H, 
+                                                 net_pthn.SDR)
+    net_pthn.di_selected_C = net_pthn.di_selected_H
+
+    # Calculate total brine volume in the grid pipes
+    net_pthn.V_brine = sum(net_pthn.L_segments*np.pi*net_pthn.di_selected_H**2
+                           / 4)
+
+    return net_pthn
+
+
+def mass_flow_from_heat_pump_load(load, COP=3., delta_temperature=3.,
+                                  fluid_heat_capacity=4.184e3, heating=True):
+    """
+    Calculates the required mass flow of brine based on the specified
+    thermal load in heating mode.
+
+    Args
+    :param load: the load of the heat pump [W]
+    :type  load: float or list
+    :param COP: the coefficient of performance in heating mode [~]
+    :type  COP: float or list
+    :param delta_temperature: the change in brine tempereature across
+                              the heat pump [K]
+    :type  delta_temperature: float or list
+    :param fluid_heat_capacity: the heat capacity of the brine[J/(kg*K)]
+        The default value is for water
+    :type  fluid_heat_capacity: float or list
+
+    Returns
+    :param mass_flow: The mass flow need to provide the thermal load of
+        the heat pump(s)
+    :type  mass_flow: float or numpy array
+    """
+    # Calculate the energy extracted from the brine
+    heating_sign = -1 if heating is True else 1
+    load_on_thermonet = np.multiply(load, (1 + heating_sign *
+                                           np.divide(1, COP)))
+    mass_flow = np.divide(load_on_thermonet,
+                          np.multiply(fluid_heat_capacity, delta_temperature))
+    return mass_flow
+
+
+def update_pandapipes_fluid(net_pp, brine):
+    """
+    Update the pandapipes net fluid parameters to the constant values
+    as specified in pythermonet brine object.
+
+    Args
+    :param net_pp: The pandapipes net initialized with a standard fluid,
+        e.g. "water"
+    :type  net_pp: pandapipes net object
+    :param brine: The pythermonet brine object
+    :type  brine: pythermonet brine object
+
+    Return
+    :param net_pp: The pandapipes net now with set fixed values for the 
+        density, heat capacity, and viscosity
+    :type  net_pp: pandapipes net object
+    """
+    # mute the warning from pandapipes
+    flags = {"warn_on_duplicates": False, }
+    # the current mutable properties
+    pp.create_constant_property(net_pp, 'density', brine.rho, **flags)
+    pp.create_constant_property(net_pp, 'heat_capacity', brine.c, **flags)
+    pp.create_constant_property(net_pp, 'viscosity', brine.mu, **flags)
+    return net_pp
+
+
+def pipe_inner_diameter(outer_diameter, SDR=17, **kwargs):
+    """
+    Calculates the inner pipe diameter given the outer diameter and the
+    SDR
+
+    Args
+    :param outer_diameter: The outer diameter of the pipes
+    :type  outer_diameter: float or list of floats
+    :param SDR: The surface to diameter ratio of the pipe
+    :type  SDR: float or list of floats
+
+    Return
+    :param -: The inner diameter of the pipes
+    :type  -: float or list of floats
+
+    """
+    return np.multiply(outer_diameter, (1. - np.divide(2., SDR)))
+
+
+def read_pandapipes_topology(net_pp, TOPO_file):
+    """
+    Reads the topology and passes it to the pandapipes structures
+
+    Args
+    :param net_pp: The pandapipe net
+    :type  net_pp: pandapipes net object
+    :param TOPO_file: The path to the csv file containing the pipe 
+        topology need for pandapipes, one line for each pipe
+    :type  TOPO_file: str (path)
+
+    Returns 
+    :param net_pp: The pandapipe net now with update pipe topology
+    :type  net_pp: pandapipes net object
+    """
+    pipe_data = pd.read_csv(TOPO_file, sep='\t+', engine='python')
+    # the junction count start at zero so we need +1 
+    n_junctions = np.max(pipe_data[["from_junction", "to_junction"]]) + 1
+
+    pipe_data["inner_diameter_m"] = pipe_inner_diameter(
+            outer_diameter=np.divide(pipe_data["outer_diameter(mm)"], 1000.),
+            SDR=pipe_data["SDR"]
+        )
+    
+    # initialise the juncions and pipes
+    pp.create_junctions(net_pp, n_junctions, pn_bar=1, tfluid_k=293.15)
+
+    pp.create_pipes_from_parameters(
+        net_pp,
+        from_junctions=pipe_data["from_junction"],
+        to_junctions=pipe_data["to_junction"],
+        length_km=np.divide(pipe_data['length(m)'], 1000.),
+        k_mm=pipe_data["roughness(mm)"],
+        diameter_m=pipe_data['inner_diameter_m'],
+        )
+    
+    return net_pp
+
+
+def read_aggregated_load_pandapipes(aggLoad, brine, HP_file):
+    """
+    Reads the heat pump loads and estimates the thermal load on the
+    network
+
+    Args:
+    :param heat_pump_load_file: The file containing the heat pump data
+    :type  heat_pump_load_file: str (path)
+    :param heat_pump_settings_file: The file containing the temperature
+        limits for the heat pumps, the fraction of the load covered
+        by the ground source system, and the peak duration.
+    :type  heat_pump_settings_file: str (path)
+    :param brine: the brine used in the current network
+    :type  brine: pythermonet brine object
+
+    Returns:
+    :param aggLoad: The aggregated load object containing the total load
+        from the heat pumps on the ground source system
+    :type  aggLoad: pythermonet aggregatedLoad object
+    """
+    heat_pump_load = pd.read_csv(HP_file, sep='\t+', engine='python')
+
+    doCooling = (heat_pump_load['Yearly_cooling_load_(W)'] > 0).any()
+    # Extract the minimum heat temperature lift/drop at the heat pumps
+    dT_H = np.min(heat_pump_load['dT_HP_Heating'])
+    dT_C = np.min(heat_pump_load['dT_HP_Cooling'])
+
+    # use the number of heat pumps to estimate the coincidence factor
+    n_heat_pump = len(heat_pump_load)
+    coincidence_factor = aggLoad.f_peak*(0.62 + 0.38/n_heat_pump)
+
+    # Calculate ground loads from COP (heating)
+    network_thermal_loads_heating = np.zeros(3)
+    network_thermal_loads_heating[0] = np.sum(heat_pump_network_thermal_load(
+        heat_pump_load['Yearly_heating_load_(W)'],
+        heat_pump_load['Year_COP'],
+        heating=True
+        ))
+    network_thermal_loads_heating[1] = np.sum(heat_pump_network_thermal_load(
+        heat_pump_load['Winter_heating_load_(W)'],
+        heat_pump_load['Winter_COP'],
+        heating=True
+        ))
+    network_thermal_loads_heating[2] = np.sum(heat_pump_network_thermal_load(
+        heat_pump_load['Daily_heating_load_(W)'],
+        heat_pump_load['Hour_COP'],
+        heating=True
+        )) * coincidence_factor
+
+    # KART COOLING
+    if doCooling:
+        network_thermal_loads_cooling = np.zeros(3)
+        # Calculate ground loads from EER (cooling)
+        network_thermal_loads_cooling[0] = np.sum(
+            heat_pump_network_thermal_load(
+                heat_pump_load['Yearly_cooling_load_(W)'],
+                heat_pump_load['EER'],
+                heating=False
+            ))
+        network_thermal_loads_cooling[1] = np.sum(
+            heat_pump_network_thermal_load(
+                heat_pump_load['Summer_cooling_load_(W)'],
+                heat_pump_load['EER'],
+                heating=False
+            ))
+        network_thermal_loads_cooling[2] = np.sum(
+            heat_pump_network_thermal_load(
+                heat_pump_load['Daily_cooling_load_(W)'],
+                heat_pump_load['EER'],
+                heating=False
+            )) * coincidence_factor
+        # Calculate the yearly imbalance respectively, the first column
+        # in the two load vectors are equal but with oposite signs
+        network_thermal_loads_heating[0] = network_thermal_loads_heating[0] \
+            - network_thermal_loads_cooling[0]  # Annual imbalance
+        network_thermal_loads_cooling[0] = - network_thermal_loads_heating[0]
+
+    aggLoad.Qdim_H = network_thermal_loads_heating[2] / dT_H / brine.rho \
+        / brine.c
+    aggLoad.To_H = aggLoad.Ti_H - dT_H
+    aggLoad.P_s_H = network_thermal_loads_heating
+
+    # COOLING
+    if doCooling:
+        aggLoad.Qdim_C = network_thermal_loads_cooling[2] / dT_C / brine.rho \
+            / brine.c
+        aggLoad.To_C = aggLoad.Ti_C + dT_C
+        aggLoad.P_s_C = network_thermal_loads_cooling
+
+    return aggLoad
+
+
+def heat_pump_network_thermal_load(heat_pump_load, cop=3, heating=True):
+    """
+    Calculates the themral load on the network given the heat pump load
+    and Coefficient Of Performance(COP)
+
+    Args
+    :param heat_pump_load: The total load on the heat pump
+    :type  heat_pump_load: float or list/1D array
+    :param cop: The Coefficient Of Performance of the heat pump
+    :type  cop: float or list/1D array
+    :param heating: Toggle to indicate if the load is heating or cooling
+    :type  heating: bool
+
+    Returns
+    :param thermal_load: The part of the load the thermal network has to
+        provide
+    :type  thermal_load: float or list/1D array
+    """
+    if heating is True:
+        thermal_load = np.multiply(heat_pump_load, 1 - np.divide(1, cop))
+    else:
+        thermal_load = np.multiply(heat_pump_load, 1 + np.divide(1, cop))
+    return thermal_load
 
 
 def read_aggregated_load(aggLoad, brine, agg_load_file):

@@ -1,8 +1,6 @@
-# %% 
 from thermonet.dimensioning.thermonet_classes import Brine, Thermonet, BHEconfig, aggregatedLoad
 from thermonet.dimensioning.dimensioning_functions import print_project_id, read_dimensioned_topology, update_net_with_pandapipes_flow, read_aggregated_load_pandapipes, read_aggregated_load, run_sourcedimensioning, print_source_dimensions
 
-# %%
 
 if __name__ == '__main__':
     # Inputs
@@ -15,7 +13,6 @@ if __name__ == '__main__':
     agg_load_file = './data/sites/Silkeborg_aggregated_load_Heat_and_Cool.dat'  # Input file for specifying aggregated load for heating and cooling.
     TOPO_file = './data/sites/Silkeborg_TOPO_pandapipes.dat'                    # Input file containing topology information
 
-# %%
     # User specified input
 
     # flow_calculation: str = 'tree_structure' # Toggle for whether the flow have been calculated in the tree structure model or if pandapipes should be used: 'tree_structure' the flow has been calculated according to the tree structure, 'pandapipes' is the net has been dimensioned and the flow need to be calculated.

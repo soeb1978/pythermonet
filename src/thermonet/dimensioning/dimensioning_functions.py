@@ -226,6 +226,116 @@ def update_net_with_pandapipes_flow(net_pthn, brine, TOPO_file, HP_file):
     return net_pthn
 
 
+def plot_pandapipes_topology(TOPO_file, HP_file, plot_pipe_ID=True, 
+                             plot_source_ID=True, pipe_ID_color='k',
+                             source_ID_color='g'):
+    """
+    A wrapper to combine the pipe list format with the pandapipes 
+    plotting routine. Note the pandapipes can also compile features in
+    collections, this is not done here.
+
+    Args
+    :param TOPO_file: The path to the csv file containing the pipe 
+        topology need for pandapipes, one line for each pipe
+    :type  TOPO_file: str (path)
+    :param HP_file: The path to the csv file containing the heat pump 
+        information, one line for each heat pump
+    :type  HP_file: str (path)
+
+    Returns
+    :param net_pthn: The pythermonet net updated with the topology and
+        the results of the pandapipes flow calculation
+    :type  net_pthn: pythermonet net object
+    """
+    import matplotlib.pyplot as plt 
+    # initialise the pandapipes network
+    net_pp = pp.create_empty_network(fluid='water')
+    # Change the parameters of the pandapipe fluid to match the brine
+    
+    # add the pipe and junctions to net_pp
+    net_pp = read_pandapipes_topology(net_pp, TOPO_file)
+
+    # Set the location of the external gird, this is always 0 this setup
+    ext_grid_loc = 0
+    pp.create_ext_grid(net_pp, ext_grid_loc, p_bar=1, type='p')
+
+    # Load the heat pump data here, as we need to check if we also have
+    # to run a flow calculation for the cooling case
+    heat_pump_data = pd.read_csv(HP_file, sep='\t+', engine='python')
+    
+    mass_flow_kg_per_s = mass_flow_from_heat_pump_load(
+        load=heat_pump_data['Daily_heating_load_(W)'],
+        COP=heat_pump_data['Hour_COP'],
+        delta_temperature=heat_pump_data['dT_HP_Heating'],
+        heating=True
+    )
+    # before the connecting the source in the second run we need to
+    # remove the previous loads/sources
+    pp.create_sources(net_pp, junctions=heat_pump_data['at_junction_no'],
+                      mdot_kg_per_s=mass_flow_kg_per_s)
+
+    ax = pp.plotting.simple_plot(net_pp, plot_sources=True, show_plot=False)
+    if plot_pipe_ID is True:
+        ax = add_pipe_numbers_to_simple_plot(ax, net_pp, 
+                                             text_color=pipe_ID_color)
+    if plot_source_ID is True:
+        ax = add_source_numbers_to_simple_plot(ax, net_pp, 
+                                               text_color=source_ID_color)
+        
+    return ax
+
+
+def add_pipe_numbers_to_simple_plot(ax, net_pp, text_color='k'):
+    """
+    Adds the pipe IDs  to the middle of the pipe in the supplied plot
+
+    Args
+    :param ax: A matplotlib.pyplot Axes object containing the layout of
+        the network
+    :type  ax: matplotlib.pyplot Axes object
+    :param net_pp: The pandapipe net
+    :type  net_pp: pandapipes net object
+    :param text_color: The color that the IDs are plotted in. 
+    :type  text_color: str
+
+    Returns
+    :param ax: A matplotlib.pyplot Axes object containing the layout of
+        the network with the pipe ID added
+    :type  ax: matplotlib.pyplot Axes object
+    """
+    for index, pipe in net_pp.pipe.iterrows():
+        avg_pipe_coords = np.average(net_pp.junction_geodata.iloc[
+            pipe[['from_junction', 'to_junction']].values], axis=0)
+        ax.text(avg_pipe_coords[0], avg_pipe_coords[1], index, c=text_color)
+
+    return ax    
+
+
+def add_source_numbers_to_simple_plot(ax, net_pp, text_color='b'):
+    """
+    Adds the source IDs next to the junction to which the source is 
+    connected following the layout of the supplied Axes
+
+    Args
+    :param ax: A matplotlib.pyplot Axes object containing the layout of
+        the network
+    :type  ax: matplotlib.pyplot Axes object
+    :param net_pp: The pandapipe net
+    :type  net_pp: pandapipes net object
+    :param text_color: The color that the IDs are plotted in. 
+    :type  text_color: str
+
+    Returns
+    :param ax: A matplotlib.pyplot Axes object containing the layout of
+        the network with the source ID added
+    :type  ax: matplotlib.pyplot Axes object
+    """
+    for index, source in net_pp.source.iterrows():
+        source_coords = net_pp.junction_geodata.iloc[source['junction']].values
+        ax.text(source_coords[0], source_coords[1], index, c=text_color)
+    return ax    
+
+
 def update_pthn_net_with_pandapipes_flow(net_pthn, net_pp, mode):
     """
     Adds the reynolds numbers to the pythermonet net object from the 

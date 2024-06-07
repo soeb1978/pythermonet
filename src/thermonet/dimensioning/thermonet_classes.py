@@ -107,8 +107,8 @@ class HHEconfig:
     d:float = np.nan;  # Outer diameter of HE pipe (m)
     SDR:float = np.nan;  # SDR for HE pipes (-)
     D:float = np.nan;  # Pipe segment spacing (m)
-    V_brine: float = np.nan;    # Volume of brine in the pipes (m^3)
-    T_dimv: float = np.nan;     # Vector of brine temperatures (Celcius) after each of the three pulses (year, month, peak)
+    V_brine: float = np.nan;    # Volume of brine in the pipes (m^3) - calculated
+    T_dimv: float = np.nan;     # Vector of brine temperatures (Celcius) after each of the three pulses (year, month, peak) - calculated
     
     # Results
     FPH:float = np.nan;
@@ -128,7 +128,6 @@ class BHEconfig:
     # Borehole heat exchangers (BHE)
     source:str = 'BHE';
     
-    T0: float = np.nan      # Surface temperature (C)
     q_geo: float = np.nan   # Geothermal heat flux (W/m2)
     r_b:float = np.nan      # Borehole radius (m)
     r_p:float = np.nan      # Outer radius of U pipe (m)
@@ -138,8 +137,8 @@ class BHEconfig:
     l_g:float = np.nan      # Grout thermal conductivity (W/m/K)
     rhoc_g:float = np.nan   # Grout volumetric heat capacity (J/m3/K)
     D_pipes:float = np.nan  # Wall to wall distance U-pipe legs (m)
-    V_brine: float = np.nan;# Volume of brine in heat exchanger pipes (m^3)
-    T_dimv: float = np.nan; # Vector of brine temperatures (Celcius) after each of the three pulses (year, month, peak)
+    V_brine: float = np.nan;# Volume of brine in heat exchanger pipes (m^3) - calculated
+    T_dimv: float = np.nan; # Vector of brine temperatures (Celcius) after each of the three pulses (year, month, peak) - calculated
 
     # BHE field
     NX:int = np.nan         # Number of boreholes in the x-direction (-)

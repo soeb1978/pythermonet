@@ -82,13 +82,13 @@ def CSM(r,r0,t,a):
     fCSM = lambda b, p, z: ((np.exp(-b**2*z)-1)*(f.jv(0,p*b)*f.yn(1,b)-f.yn(0,p*b)*f.jv(1,b))/(b**2*(f.jv(1,b)**2+f.yn(1,b)**2)))
     
     if np.ndim(t) == 0:
-        G = quad(fCSM, 0, np.Inf, args=(p,z))[0]
+        G = quad(fCSM, 0, np.inf, args=(p,z))[0]
         
     else:
         NT = len(t)
         G = np.zeros(NT)
         for i in range(NT):
-            G[i] = quad(fCSM, 0, np.Inf, args=(p,z[i]))[0]
+            G[i] = quad(fCSM, 0, np.inf, args=(p,z[i]))[0]
     
     
     return G/mt.pi**2

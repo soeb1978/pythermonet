@@ -96,6 +96,22 @@ def read_topology(net, TOPO_file):
     
     return net, pipeGroupNames
 
+# Read foundation pile heat exchanger data
+def read_PHEdata(phe, Rc_file, Gc_file, coord_file):
+    
+    # Read fitting parameters for concrete thermal resistance from file
+    Rc_data = np.loadtxt(Rc_file,skiprows = 2)
+    phe.Rc_coeff = Rc_data 
+    """ SAMLE I ENN LINJE? x 2"""
+    
+    Gc_data = np.loadtxt(Gc_file, skiprows=1)
+    phe.Gc_coeff = Gc_data
+    
+    coord_data = np.loadtxt(coord_file, skiprows=1)
+    phe.coord = coord_data
+    
+    return phe
+
 # Read topology for thermonet with already dimesnioned pipe system
 def read_dimensioned_topology(net, brine, TOPO_file):
     

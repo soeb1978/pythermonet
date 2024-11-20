@@ -166,6 +166,8 @@ class PHEconfig:
     source:str = 'PHE'; 
     
     S: float = np.nan           # Pile side length (m)
+    L: float = np.nan           # Pile active length (m)
+    AR: float = np.nan          # Pile aspect ratio (AR = L/S)
     n: int = np.nan             # Number of heat exchanger pipes in pile cross section (-)
     do: float = np.nan          # Pipe outer diameter (m)
     di: float = np.nan          # Pipe inner diameter (m)
@@ -177,6 +179,7 @@ class PHEconfig:
     coord: float = np.nan       # Matrix of pile coordinates (m) - first and second columns contain x- and y-coordinates for the piles. The number of rows is equal to the number of piles
     Rc_coeff: float = np.nan    # Fitting parameters for concrete thermal resistance
     Gc_coeff: float = np.nan    # Fitting parameters for concrete G-functions
+    Gg_coeff: float = np.nan    # Fitting parameters for soil G-function
     
 
 @dataclass_json

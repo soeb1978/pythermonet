@@ -13,6 +13,7 @@ Created on Fri Nov  4 08:53:07 2022
 # Conceptual model drawings are found below the code
 
 import numpy as np
+import scipy
 import pandas as pd
 from .fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, RbMPflc, Halley
 from thermonet.dimensioning.thermonet_classes import aggregatedLoad
@@ -97,18 +98,24 @@ def read_topology(net, TOPO_file):
     return net, pipeGroupNames
 
 # Read foundation pile heat exchanger data
-def read_PHEdata(phe, Rc_file, Gc_file, coord_file):
+def read_PHEdata(phe, Rc_file, Gc_file,Gg_file, coord_file):
     
     # Read fitting parameters for concrete thermal resistance from file
-    Rc_data = np.loadtxt(Rc_file,skiprows = 2)
-    phe.Rc_coeff = Rc_data 
-    """ SAMLE I ENN LINJE? x 2"""
+    phe.Rc_coeff = np.loadtxt(Rc_file,skiprows = 2)
+    phe.Gc_coeff = np.loadtxt(Gc_file, skiprows=1)
+     
+    # Read pile coordinates
+    phe.coord = np.loadtxt(coord_file, skiprows=1)
     
-    Gc_data = np.loadtxt(Gc_file, skiprows=1)
-    phe.Gc_coeff = Gc_data
-    
-    coord_data = np.loadtxt(coord_file, skiprows=1)
-    phe.coord = coord_data
+    # Read fitting parameters for soil response
+    M = np.load(Gg_file)
+    keys = list(M.keys())
+
+    ARr = M[keys[0]]
+    # Find index af the closest value to AR in ARv
+    index = np.argmin(np.abs(ARr-phe.AR))
+    # Extract matrix with the corresponsong key, note first key is the AR vector so add 1
+    phe.coeffGg = M[keys[index+1]]
     
     return phe
 
@@ -319,8 +326,6 @@ def pygfunction(t,BHE,L):
 
 
 # Function for calculating g-function
-
-# def gfunction(t,BHE,aggLoad,brine,net,Rb):
 def gfunction(t,BHE,Rb):
 
 # Note the gfunction gives the BHE wall temperature, but since the applied short 
@@ -336,7 +341,6 @@ def gfunction(t,BHE,Rb):
     [XX,YY] = np.meshgrid(x,y);                                     # Meshgrid arrays for distance calculations (m)    
     
     # Logistics for symmetry considerations and associated efficiency gains
-    # KART: har ikke tjekket
     NXi = int(np.ceil(BHE.NX/2));                                   # Find half the number of boreholes in the x-direction. If not an equal number then round up to complete symmetry.
     NYi = int(np.ceil(BHE.NY/2));                                   # Find half the number of boreholes in the y-direction. If not an equal number then round up to complete symmetry.
     w = np.ones((NYi,NXi));                                         # Define weight matrix for temperature responses at a distance (-)
@@ -356,6 +360,8 @@ def gfunction(t,BHE,Rb):
 
     # 2) CSM for long term response (months + years)
     G_BHE = CSM(BHE.r_b,BHE.r_b,t[0:2],a_ss);                       # Compute G-functions for t[0] and t[1] with the cylindrical source model (-)
+    
+    
     s1 = 0;                                                         # Summation variable for t[0] G-function (-)
     s2 = 0;                                                         # Summation variable for t[1] G-function (-)
     for i in range(NXi*NYi):                                        # Line source superposition for all neighbour boreholes for 1/4 of the BHE field (symmetry)
@@ -383,6 +389,56 @@ def gfunction(t,BHE,Rb):
     g_BHE = 2*np.pi*G_BHE
 
     return g_BHE
+
+# G-function for a single foundation pile heat exchanger
+def Gpile(Fo, r, AR, coeffGg):
+    # Select the fit parameters for the given AR, for given Fo calculate single 
+    # pile G-function at Table distances ra, and interpolate to input r.
+    # Cutoffs at G(Fo<Fomin) = 0 and G(r>rmax) = G(rmax)
+        
+    # Interpolate for single pile G-function
+    ra = coeffGg[0,:]       # Distance from pile edge (m)
+    coeff = coeffGg[1:11,:] # Fit parameters for the given AR
+    Fomin = coeffGg[11,:]   # Minimum Fourier numbers tabulated with parameters. Gg should be set to zero for Fo<Fomin
+    Nra = np.size(ra)
+    NFo = np.size(Fo)        
+
+    # Max Fourier number for all cases is 1e4, see Alberdi-Pagola et al (2018) - DCE Technical Report No. 243
+    Fomax = 1e4
+    if isinstance(Fo, np.ndarray):
+        Focut = Fo.copy() # Create new Fo vector for cutoff - Note Focut = Fo only creates new pointer to same object Fo
+    else:
+        Focut = np.array([Fo]) # If Fo is int or float convert to subscriptable array
+    
+    Focut[Focut>Fomax] = Fomax   
+
+
+    Gg = np.nan*np.ones((NFo,Nra))
+    for i in range(0,Nra):
+        # Evaluate fit polynomial
+        Gg[:,i] = np.polyval(coeff[:,i],np.log(Focut))
+        # Implement cutoff at Fomin
+        Gg[Focut<Fomin[i],i] = 0
+    
+    
+
+    if np.max(r) > ra[-1]:
+        Gg = np.concatenate((Gg, np.zeros((np.shape(Gg)[0],1))), axis=1) 
+        ra = np.append(ra,100) # Temporary - hard code "large r" where G=0 
+
+    # Finally do the interpolation
+    Gpile = np.zeros((NFo, np.size(r)))
+    if not isinstance(r, np.ndarray):
+        r = np.array([r])
+    
+    for i in range(NFo):
+        f = scipy.interpolate.interp1d(ra, Gg[i,:]) # NB! respons for r>ramax afhænger af max(r) !!
+        
+        Gpile[i,:] = f(r)
+    
+    return Gpile
+
+
 
 # Function for dimensioning pipes
 def run_pipedimensioning(d_pipes, brine, net, hp):

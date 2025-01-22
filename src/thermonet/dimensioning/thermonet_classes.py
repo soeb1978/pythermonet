@@ -60,6 +60,8 @@ class Heatpump:
     Ti_C: float = np.nan    # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
     f_peak: float = np.nan  # Fraction of peak heating demand to be covered by the heat pump [0-1]. If f_peak = 0.8 then the heat pump delivers 80% of the peak heating load. The deficit is then supplied by an auxilliary heating device
 
+    HP_IDs: float = np.nan # Unique IDs for each heatpump in the grid
+
     # Peak load duration in hours
     t_peak: float = np.nan
 

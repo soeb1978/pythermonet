@@ -30,6 +30,7 @@ def read_heatpumpdata(hp, HP_file):
     # Sort heatpumps in ascending order by heat pump ID
     HPS = HPS[HPS[:,0].argsort()]
    
+    hp.HP_IDs = HPS[:,0]
     P_y_H = HPS[:,1];
     P_m_H = HPS[:,2];
     P_d_H = HPS[:,3];
@@ -88,8 +89,7 @@ def read_topology(net, TOPO_file):
     pipeGroupNames = I_PG.iloc[:,0];                                        # Extract pipe group IDs
     I_PG = I_PG.iloc[:,5];                                                  # Extract IDs of HPs connected to the different pipe groups
     # Create array containing arrays of integers with HP IDs for all pipe sections.
-    # Convert 1-based indices from file to 0-based indices for code.
-    IPGA = [np.asarray(I_PG.iloc[i].split(',')).astype(int) - 1 for i in range(len(I_PG))]
+    IPGA = [np.asarray(I_PG.iloc[i].split(',')).astype(int) for i in range(len(I_PG))]
     I_PG = IPGA                                                             # Redefine I_PG
     net.I_PG = I_PG;
     del IPGA, I_PG;                                                         # Get rid of IPGA
@@ -468,16 +468,18 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
         Qdim_C =  hp.P_s_C[:,2]/hp.dT_C/brine.rho/brine.c;              # Design flow cooling (m3/s). 
 
     # Compute design flow for the pipes
+    sorter = np.argsort(hp.HP_IDs) # for sorting and finding IDs of heatpumps in pipe groups
     for i in range(N_PG):
-        # KART: np.ndarray.tolist er overflødig?
         # KART: nye S'er for hver rørgruppe
        N_HP_per_trace = len(net.I_PG[i]) / net.N_traces[i]; 
        S = hp.f_peak*(0.62 + 0.38/N_HP_per_trace);
        
-       Q_PG_H[i] =  S * sum(Qdim_H[np.ndarray.tolist(net.I_PG[i])])/net.N_traces[i];                        # Sum the heating brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
+       # Find index of HP IDs in each group
+       Itmp = sorter[np.searchsorted(hp.HP_IDs, net.I_PG[i], sorter=sorter)] # Match IDs from each pipe group against total list of IDs in eth grid              
+       Q_PG_H[i] =  S * sum(Qdim_H[Itmp])/net.N_traces[i];                        # Sum the heating brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
 
        if doCooling:
-           Q_PG_C[i] =  S * sum(Qdim_C[np.ndarray.tolist(net.I_PG[i])])/net.N_traces[i];                    # Sum the cooling brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
+            Q_PG_C[i] =  S * sum(Qdim_C[Itmp])/net.N_traces[i]
     
     # Select the smallest diameter pipe that fulfills the pressure drop criterion
     for i in range(N_PG):                                 

@@ -1,7 +1,7 @@
-from thermonet.dimensioning.dimensioning_functions import read_heatpumpdata, read_topology
-from thermonet.dimensioning.main import run_full_dimensioning_single_combined_input
-from thermonet.dimensioning.thermonet_classes import FullDimension
-from thermonet.dimensioning.thermonet_classes import Brine, Thermonet, Heatpump, HHEconfig
+from pythermonet.dimensioning.dimensioning_functions import read_heatpumpdata, read_topology
+from pythermonet.dimensioning.main import run_full_dimensioning_single_combined_input
+from pythermonet.dimensioning.thermonet_classes import FullDimension
+from pythermonet.dimensioning.thermonet_classes import Brine, Thermonet, Heatpump, HHEconfig
 import json
 import pandas as pd
 import numpy as np

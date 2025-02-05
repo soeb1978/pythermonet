@@ -1,5 +1,5 @@
-from thermonet.dimensioning.thermonet_classes import PHEconfig
-from thermonet.dimensioning.dimensioning_functions import read_PHEdata
+from pythermonet.dimensioning.thermonet_classes import PHEconfig
+from pythermonet.dimensioning.dimensioning_functions import read_PHEdata
 
 if __name__ == '__main__':
     Rc_file = '../data/concrete_resistance_parameters.txt'

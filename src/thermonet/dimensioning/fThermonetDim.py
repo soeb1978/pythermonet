@@ -93,6 +93,29 @@ def CSM(r,r0,t,a):
     
     return G/mt.pi**2
 
+def VFLS(x, y, H, a, U, t):
+    rr = x * x + y * y
+    
+    # Allocate g-function
+    NT = len(t)
+    G = np.zeros(NT)
+    UU = U * U
+    aa = a * a
+
+    def erfi(x):
+        return x * f.erf(x) - (1 - np.exp(-x**2)) / np.sqrt(np.pi)
+    
+    # Define analytical solution
+    def fun(s):    
+        return np.exp(-UU / (16 * aa * s * s) - rr * s * s) * 2 * erfi(H * s) / (H * s * s)
+    
+    for i in range(0, NT):
+        #print(t[i])
+        G[i], _ = quad(fun, 1 / np.sqrt(4 * a * t[i]), np.inf)
+    
+    G = f.iv(0, x * U / (2 * a)) * G  # Modified Bessel function of the first kind
+    return G/4/mt.pi
+
 def RbMP(lb,lp,lg,lss,rb,rp,ri,s,RENBHE,Pr):
     # Multipole computation of the borehole thermal resistance (K*m/W)
     b = 2*mt.pi*lg*Rp(2*ri,2*rp,RENBHE,Pr,lb,lp)        # Eq. 3.47 Advances in GSHP systems

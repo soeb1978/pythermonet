@@ -15,7 +15,7 @@ Created on Fri Nov  4 08:53:07 2022
 import numpy as np
 import scipy
 import pandas as pd
-from .fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, RbMPflc, Halley
+from .fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, RbMPflc, Halley, VFLS
 from thermonet.dimensioning.thermonet_classes import aggregatedLoad
 import pygfunction as gt
 
@@ -304,10 +304,6 @@ def print_source_dimensions(source_config,net):
 
     if source_config.T_dimv[0] < 0:
         print('WARNING: The long-term brine temperature is below zero degrees Celsius which can cause ground freezing. Consider increasing the minimum brine inlet temperature.')
-
-
-
-
 
 # Wrapper for pygfunction
 def pygfunction(t,BHE,L):
@@ -866,7 +862,8 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         for i in range(HHE.N_HHE):                                      # For half the pipe segments (2 per loop). Advantage from symmetry.
             s[0] = s[0] + sum(ils(a_s,t[0],abs(DIST[ind!=i]-i*HHE.D))) - sum(ils(a_s,t[0],np.sqrt((DIST-i*HHE.D)**2 + 4*net.z_grid**2))); # Sum annual temperature responses from distant pipes (C)
             s[1] = s[1] + sum(ils(a_s,t[1],abs(DIST[ind!=i]-i*HHE.D))) - sum(ils(a_s,t[1],np.sqrt((DIST-i*HHE.D)**2 + 4*net.z_grid**2))); # Sum monthly temperature responses from distant pipes (C)
-        G_HHE = CSM(ro_HHE,ro_HHE,t,a_s);                               # Pipe wall response (-)
+        #G_HHE = CSM(ro_HHE,ro_HHE,t,a_s);                               # Pipe wall response (-)
+        G_HHE = VFLS(0,ro_HHE,293,a_s,0,t); #VFLS(x, y, H, a, U, t)
         #KART: tjek - i tidligere version var en faktor 2 til forskel
         G_HHE[0:2] = G_HHE[0:2] + s/HHE.N_HHE;                          # Add thermal disturbance from neighbour pipes (-)
         

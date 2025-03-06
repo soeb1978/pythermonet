@@ -854,29 +854,69 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
     
         ri_HHE = HHE.d*(1 - 2/HHE.SDR)/2;                               # Inner radius of HHE pipes (m)
         ro_HHE = HHE.d/2;                                               # Outer radius of HHE pipes (m)
-    
-        # Compute combined length of HHEs   
-        ind = np.linspace(0,2*HHE.N_HHE-1,2*HHE.N_HHE);                 # Unit distance vector for HHE (-)
-        s = np.zeros(2);                                                # s is a temperature summation variable, s[0]: annual, s[1] monthly, hourly effects are insignificant and ignored (C)
-        DIST = HHE.D*ind;                                               # Distance vector for HHE (m)
-        for i in range(HHE.N_HHE):                                      # For half the pipe segments (2 per loop). Advantage from symmetry.
-            s[0] = s[0] + sum(ils(a_s,t[0],abs(DIST[ind!=i]-i*HHE.D))) - sum(ils(a_s,t[0],np.sqrt((DIST-i*HHE.D)**2 + 4*net.z_grid**2))); # Sum annual temperature responses from distant pipes (C)
-            s[1] = s[1] + sum(ils(a_s,t[1],abs(DIST[ind!=i]-i*HHE.D))) - sum(ils(a_s,t[1],np.sqrt((DIST-i*HHE.D)**2 + 4*net.z_grid**2))); # Sum monthly temperature responses from distant pipes (C)
-        #G_HHE = CSM(ro_HHE,ro_HHE,t,a_s);                               # Pipe wall response (-)
-        G_HHE = VFLS(0,ro_HHE,293,a_s,0,t); #VFLS(x, y, H, a, U, t)
-        #KART: tjek - i tidligere version var en faktor 2 til forskel
-        G_HHE[0:2] = G_HHE[0:2] + s/HHE.N_HHE;                          # Add thermal disturbance from neighbour pipes (-)
-        
-        # HHE heating
-        # KART flyttet aggregering
-        # Q_HHEmax_H = sum(hp.Qdim_H)/HHE.N_HHE;                        # Peak flow in HHE pipes (m3/s)
+
         Q_HHEmax_H = aggLoad.Qdim_H / HHE.N_HHE;                        # Peak flow in HHE pipes (m3/s)
         v_HHEmax_H = Q_HHEmax_H/np.pi/ri_HHE**2;                        # Peak flow velocity in HHE pipes (m/s)
         Re_HHEmax_H = Re(brine.rho,brine.mu,v_HHEmax_H,2*ri_HHE);       # Peak Reynolds numbers in HHE pipes (-)
         dpdL_HHEmax_H = dp(brine.rho,brine.mu,Q_HHEmax_H,2*ri_HHE);     # Peak pressure loss in HHE pipes (Pa/m)
-    
         HHE.Re_HHEmax_H = Re_HHEmax_H;                                  # Add Re to HHE instance
         HHE.dpdL_HHEmax_H = dpdL_HHEmax_H;                              # Add pressure loss to HHE instance
+        Rp_HHE_H = Rp(2*ri_HHE,2*ro_HHE,Re_HHEmax_H,Pr,brine.l,net.l_p);# Compute the pipe thermal resistance (m*K/W)
+
+        # Search neighbourhood of the approximate solution considering length effect - heating mode
+        # Result is an updated estimate of L_BHE_H and Rb_H 
+        eps = np.finfo(np.float64).eps # Machine precision
+        tol = 1e-4; # Tolerance for search algorithm
+        iter_max = 50;
+
+        # First guess - must be input in HHE instance
+        L_HHE_H = 150*HHE.N_HHE;
+    
+        # Compute combined length of HHEs   
+        ind = np.linspace(0,2*HHE.N_HHE-1,2*HHE.N_HHE);                 # Unit distance vector for HHE (-)
+
+        Tbound_H = (aggLoad.Ti_H + aggLoad.To_H)/2
+        error_Tf = np.ones(3)
+
+        # Variables for single iteration of numerical search
+        dL = L_HHE_H/HHE.N_HHE*np.sqrt(eps)                                 # Optimal stepsize depends on the square root of machine epsilon (https://en.wikipedia.org/wiki/Numerical_differentiation#Practical_considerations_using_floating_point_arithmetic)
+        L_HHE_H_v = L_HHE_H/HHE.N_HHE + np.array([-dL, 0, dL])
+        N_iter = 0
+        while abs(error_Tf[1]) > tol and N_iter < iter_max + 1:
+
+            for i in range(3):                                          # Compute Rb for the specified number of boreholes and lengths considering flow and length effects (m*K/W)
+                s = np.zeros(2);                                                # s is a temperature summation variable, s[0]: annual, s[1] monthly, hourly effects are insignificant and ignored (C)
+                DIST = HHE.D*ind;                                               # Distance vector for HHE (m)
+                for j in range(HHE.N_HHE):                                      # For half the pipe segments (2 per loop). Advantage from symmetry.
+                    s[0] = s[0] + sum(VFLS(abs(DIST[ind!=j]-j*HHE.D),L_HHE_H_v[i],a_s,0,t[0])) - sum(VFLS(np.sqrt((DIST-j*HHE.D)**2 + 4*net.z_grid**2),L_HHE_H_v[i],a_s,0,t[0])); # Sum annual temperature responses from distant pipes (C)
+                    s[1] = s[1] + sum(VFLS(abs(DIST[ind!=j]-j*HHE.D),L_HHE_H_v[i],a_s,0,t[1])) - sum(VFLS(np.sqrt((DIST-j*HHE.D)**2 + 4*net.z_grid**2),L_HHE_H_v[i],a_s,0,t[1])); # Sum monthly temperature responses from distant pipes (C)
+                    #G_HHE = CSM(ro_HHE,ro_HHE,t,a_s);                               # Pipe wall response (-)
+                
+                G_HHE = VFLS(ro_HHE,L_HHE_H_v[i],a_s,0,t); #VFLS(x, y, H, a, U, t)
+                #KART: tjek - i tidligere version var en faktor 2 til forskel
+                G_HHE[0:2] = G_HHE[0:2] + s/HHE.N_HHE;                          # Add thermal disturbance from neighbour pipes (-)
+                # Heating
+
+                G_HHE_H = G_HHE/net.l_s_H + Rp_HHE_H;                           # Add annual and monthly thermal resistances to G_HHE (m*K/W)
+                #L_HHE_H = np.dot(PHEH,G_HHE_H) / (net.T0 - (aggLoad.Ti_H + aggLoad.To_H)/2 - TP );
+
+                                # error is the difference between calculated fluid temperature and Tbound
+                error_Tf[i] = (net.T0 - TP - Tbound_H) - np.dot(PHEH,G_HHE_H)/(L_HHE_H_v[i]*HHE.N_HHE);
+                
+            # Calculate updated length estimate    
+            L_H_Halley = Halley(L_HHE_H_v[1],dL,error_Tf[0],error_Tf[1],error_Tf[2])
+            print(L_H_Halley)
+            L_HHE_H_v = L_H_Halley + np.array([-dL,0,dL]);           
+            N_iter += 1;
+
+        if N_iter > iter_max - 1:   
+            # If the maximum number of allowed iterations is exceeded fall back to initial estimate of Rb
+            print('WARNING: Convergence failed for heating solution. Defaulting to solution without thermal short-circuiting between the U-pipe legs. Boreholes may be too short!')                   
+
+        else:
+            # Update combined length of all BHEs and borehole resistance
+            L_HHE_H = L_H_Halley*HHE.N_HHE;
+            source_config.V_brine = L_HHE_H*np.pi*ri_HHE**2; 
 
 
         if doCooling:
@@ -892,10 +932,6 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
             HHE.dpdL_HHEmax_C = dpdL_HHEmax_C;                          # Add pressure loss to HHE instance
 
         
-        # Heating
-        Rp_HHE_H = Rp(2*ri_HHE,2*ro_HHE,Re_HHEmax_H,Pr,brine.l,net.l_p);# Compute the pipe thermal resistance (m*K/W)
-        G_HHE_H = G_HHE/net.l_s_H + Rp_HHE_H;                           # Add annual and monthly thermal resistances to G_HHE (m*K/W)
-        L_HHE_H = np.dot(PHEH,G_HHE_H) / (net.T0 - (aggLoad.Ti_H + aggLoad.To_H)/2 - TP );
         
         # Total brine volume in HHE pipes
         HHE.V_brine = np.pi*ri_HHE**2*L_HHE_H

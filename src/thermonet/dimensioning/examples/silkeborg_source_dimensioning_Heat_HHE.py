@@ -33,4 +33,3 @@ if __name__ == '__main__':
     source_config = run_sourcedimensioning(brine, net, aggLoad, source_config)
     print_project_id(PID)
     print_source_dimensions(source_config,net)
-

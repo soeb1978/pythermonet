@@ -93,28 +93,53 @@ def CSM(r,r0,t,a):
     
     return G/mt.pi**2
 
-def VFLS(x, y, H, a, U, t):
-    rr = x * x + y * y
+import numpy as np
+import scipy.special as f
+import scipy.integrate as integrate
+import math as mt
+
+import numpy as np
+import scipy.special as f
+import scipy.integrate as integrate
+import math as mt
+
+def VFLS(r, H, a, U, t):
+    # Ensure r and t are at least 1D arrays but allow scalars
+    r = np.atleast_1d(r)
+    t = np.atleast_1d(t)
     
+    rr = r[:, None]**2  # Convert r to a column vector for broadcasting
+
     # Allocate g-function
     NT = len(t)
-    G = np.zeros(NT)
+    NR = len(r)
+    G = np.zeros((NR, NT))  # 2D array to store results for each (r, t)
     UU = U * U
     aa = a * a
 
     def erfi(x):
         return x * f.erf(x) - (1 - np.exp(-x**2)) / np.sqrt(np.pi)
-    
+
     # Define analytical solution
-    def fun(s):    
-        return np.exp(-UU / (16 * aa * s * s) - rr * s * s) * 2 * erfi(H * s) / (H * s * s)
-    
-    for i in range(0, NT):
-        #print(t[i])
-        G[i], _ = quad(fun, 1 / np.sqrt(4 * a * t[i]), np.inf)
-    
-    G = f.iv(0, x * U / (2 * a)) * G  # Modified Bessel function of the first kind
-    return G/4/mt.pi
+    def fun(s, rr_val):    
+        return np.exp(-UU / (16 * aa * s * s) - rr_val * s * s) * 2 * erfi(H * s) / (H * s * s)
+
+    for j, r_val in enumerate(r):  # Iterate over each r value
+        rr_val = r_val**2
+        for i, t_val in enumerate(t):  # Iterate over each t value
+            G[j, i], _ = integrate.quad(fun, 1 / np.sqrt(4 * a * t_val), np.inf, args=(rr_val,))
+
+    G = f.iv(0, 0 * U / (2 * a)) * G  # Modified Bessel function of the first kind
+    G /= (4 * mt.pi)
+
+    # Return a scalar if both r and t were scalars, otherwise return the appropriate shape
+    if G.shape == (1, 1):  
+        return G.item()  # Return a scalar
+    elif G.shape[0] == 1:  
+        return G.flatten()  # Return a 1D array if r was a scalar
+    elif G.shape[1] == 1:
+        return G[:, 0]  # Return a 1D array if t was a scalar
+    return G  # Otherwise, return a 2D array
 
 def RbMP(lb,lp,lg,lss,rb,rp,ri,s,RENBHE,Pr):
     # Multipole computation of the borehole thermal resistance (K*m/W)

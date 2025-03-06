@@ -28,7 +28,7 @@ if __name__ == '__main__':
     aggLoad = read_aggregated_load(aggLoad, brine, agg_load_file)           
 
     # Heat source (either BHE or HHE)
-    source_config = HHEconfig(N_HHE=6, d=0.04, SDR=17, D=1.5)
+    source_config = HHEconfig(N_HHE=10, d=0.04, SDR=17, D=1.5)
     # Dimensioning of sources - reuslts printed to console
     source_config = run_sourcedimensioning(brine, net, aggLoad, source_config)
     print_project_id(PID)

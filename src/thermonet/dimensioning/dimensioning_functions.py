@@ -979,6 +979,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
                     
                 # Calculate updated length estimate    
                 L_C_Halley = Halley(L_HHE_C_v[1],dL,error_Tf[0],error_Tf[1],error_Tf[2])
+                print(L_C_Halley)
                 L_HHE_C_v = L_C_Halley + np.array([-dL,0,dL]);           
                 N_iter += 1;
 
@@ -987,10 +988,10 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
                 print('WARNING: Convergence failed for heating solution. Defaulting to solution without thermal short-circuiting between the U-pipe legs. Boreholes may be too short!')                   
 
             else:
-                # Update combined length of all BHEs and borehole resistance
+                # Update combined length of all HHEs
                 L_HHE_C = L_C_Halley*HHE.N_HHE;
-                source_config.V_brine = L_HHE_C*np.pi*ri_HHE**2; 
-                HHE.T_dimv = net.T0 - TP - np.cumsum(PHEC*G_HHE_C)/L_HHE_C
+                # source_config.V_brine = L_HHE_C*np.pi*ri_HHE**2; 
+                # HHE.T_dimv = net.T0 - TP - np.cumsum(PHEC*G_HHE_C)/L_HHE_C
         
         if doCooling:        
             HHE.FPC = FPC;

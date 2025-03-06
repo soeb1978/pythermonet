@@ -9,7 +9,7 @@ if __name__ == '__main__':
     PID = 'Silkeborg'   # Project name
 
     # Input files
-    agg_load_file = './data/sites/Silkeborg_aggregated_load_Heat.dat'       # Input file for specifying aggregated load for heating
+    agg_load_file = './data/sites/Silkeborg_aggregated_load_Heat_and_Cool.dat'       # Input file for specifying aggregated load for heating
     TOPO_file = './data/sites/Silkeborg_TOPO_dimensioned.dat'               # Input file containing topology information
 
     # User specified input

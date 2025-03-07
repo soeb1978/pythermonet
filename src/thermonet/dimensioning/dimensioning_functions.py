@@ -13,6 +13,7 @@ Created on Fri Nov  4 08:53:07 2022
 # Conceptual model drawings are found below the code
 
 import numpy as np
+import scipy
 import pandas as pd
 from .fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, RbMPflc, Halley
 from thermonet.dimensioning.thermonet_classes import aggregatedLoad
@@ -29,6 +30,7 @@ def read_heatpumpdata(hp, HP_file):
     # Sort heatpumps in ascending order by heat pump ID
     HPS = HPS[HPS[:,0].argsort()]
    
+    hp.HP_IDs = HPS[:,0]
     P_y_H = HPS[:,1];
     P_m_H = HPS[:,2];
     P_d_H = HPS[:,3];
@@ -87,14 +89,35 @@ def read_topology(net, TOPO_file):
     pipeGroupNames = I_PG.iloc[:,0];                                        # Extract pipe group IDs
     I_PG = I_PG.iloc[:,5];                                                  # Extract IDs of HPs connected to the different pipe groups
     # Create array containing arrays of integers with HP IDs for all pipe sections.
-    # Convert 1-based indices from file to 0-based indices for code.
-    IPGA = [np.asarray(I_PG.iloc[i].split(',')).astype(int) - 1 for i in range(len(I_PG))]
+    IPGA = [np.asarray(I_PG.iloc[i].split(',')).astype(int) for i in range(len(I_PG))]
     I_PG = IPGA                                                             # Redefine I_PG
     net.I_PG = I_PG;
     del IPGA, I_PG;                                                         # Get rid of IPGA
 
     
     return net, pipeGroupNames
+
+# Read foundation pile heat exchanger data
+def read_PHEdata(phe, Rc_file, Gc_file,Gg_file, coord_file):
+    
+    # Read fitting parameters for concrete thermal resistance from file
+    phe.Rc_coeff = np.loadtxt(Rc_file,skiprows = 2)
+    phe.Gc_coeff = np.loadtxt(Gc_file, skiprows=1)
+     
+    # Read pile coordinates
+    phe.coord = np.loadtxt(coord_file, skiprows=1)
+    
+    # Read fitting parameters for soil response
+    M = np.load(Gg_file)
+    keys = list(M.keys())
+
+    ARr = M[keys[0]]
+    # Find index af the closest value to AR in ARv
+    index = np.argmin(np.abs(ARr-phe.AR))
+    # Extract matrix with the corresponsong key, note first key is the AR vector so add 1
+    phe.coeffGg = M[keys[index+1]]
+    
+    return phe
 
 # Read topology for thermonet with already dimesnioned pipe system
 def read_dimensioned_topology(net, brine, TOPO_file):
@@ -303,8 +326,6 @@ def pygfunction(t,BHE,L):
 
 
 # Function for calculating g-function
-
-# def gfunction(t,BHE,aggLoad,brine,net,Rb):
 def gfunction(t,BHE,Rb):
 
 # Note the gfunction gives the BHE wall temperature, but since the applied short 
@@ -320,7 +341,6 @@ def gfunction(t,BHE,Rb):
     [XX,YY] = np.meshgrid(x,y);                                     # Meshgrid arrays for distance calculations (m)    
     
     # Logistics for symmetry considerations and associated efficiency gains
-    # KART: har ikke tjekket
     NXi = int(np.ceil(BHE.NX/2));                                   # Find half the number of boreholes in the x-direction. If not an equal number then round up to complete symmetry.
     NYi = int(np.ceil(BHE.NY/2));                                   # Find half the number of boreholes in the y-direction. If not an equal number then round up to complete symmetry.
     w = np.ones((NYi,NXi));                                         # Define weight matrix for temperature responses at a distance (-)
@@ -340,6 +360,8 @@ def gfunction(t,BHE,Rb):
 
     # 2) CSM for long term response (months + years)
     G_BHE = CSM(BHE.r_b,BHE.r_b,t[0:2],a_ss);                       # Compute G-functions for t[0] and t[1] with the cylindrical source model (-)
+    
+    
     s1 = 0;                                                         # Summation variable for t[0] G-function (-)
     s2 = 0;                                                         # Summation variable for t[1] G-function (-)
     for i in range(NXi*NYi):                                        # Line source superposition for all neighbour boreholes for 1/4 of the BHE field (symmetry)
@@ -367,6 +389,56 @@ def gfunction(t,BHE,Rb):
     g_BHE = 2*np.pi*G_BHE
 
     return g_BHE
+
+# G-function for a single foundation pile heat exchanger
+def Gpile(Fo, r, AR, coeffGg):
+    # Select the fit parameters for the given AR, for given Fo calculate single 
+    # pile G-function at Table distances ra, and interpolate to input r.
+    # Cutoffs at G(Fo<Fomin) = 0 and G(r>rmax) = G(rmax)
+        
+    # Interpolate for single pile G-function
+    ra = coeffGg[0,:]       # Distance from pile edge (m)
+    coeff = coeffGg[1:11,:] # Fit parameters for the given AR
+    Fomin = coeffGg[11,:]   # Minimum Fourier numbers tabulated with parameters. Gg should be set to zero for Fo<Fomin
+    Nra = np.size(ra)
+    NFo = np.size(Fo)        
+
+    # Max Fourier number for all cases is 1e4, see Alberdi-Pagola et al (2018) - DCE Technical Report No. 243
+    Fomax = 1e4
+    if isinstance(Fo, np.ndarray):
+        Focut = Fo.copy() # Create new Fo vector for cutoff - Note Focut = Fo only creates new pointer to same object Fo
+    else:
+        Focut = np.array([Fo]) # If Fo is int or float convert to subscriptable array
+    
+    Focut[Focut>Fomax] = Fomax   
+
+
+    Gg = np.nan*np.ones((NFo,Nra))
+    for i in range(0,Nra):
+        # Evaluate fit polynomial
+        Gg[:,i] = np.polyval(coeff[:,i],np.log(Focut))
+        # Implement cutoff at Fomin
+        Gg[Focut<Fomin[i],i] = 0
+    
+    
+
+    if np.max(r) > ra[-1]:
+        Gg = np.concatenate((Gg, np.zeros((np.shape(Gg)[0],1))), axis=1) 
+        ra = np.append(ra,100) # Temporary - hard code "large r" where G=0 
+
+    # Finally do the interpolation
+    Gpile = np.zeros((NFo, np.size(r)))
+    if not isinstance(r, np.ndarray):
+        r = np.array([r])
+    
+    for i in range(NFo):
+        f = scipy.interpolate.interp1d(ra, Gg[i,:]) # NB! respons for r>ramax afhænger af max(r) !!
+        
+        Gpile[i,:] = f(r)
+    
+    return Gpile
+
+
 
 # Function for dimensioning pipes
 def run_pipedimensioning(d_pipes, brine, net, hp):
@@ -396,16 +468,18 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
         Qdim_C =  hp.P_s_C[:,2]/hp.dT_C/brine.rho/brine.c;              # Design flow cooling (m3/s). 
 
     # Compute design flow for the pipes
+    sorter = np.argsort(hp.HP_IDs) # for sorting and finding IDs of heatpumps in pipe groups
     for i in range(N_PG):
-        # KART: np.ndarray.tolist er overflødig?
         # KART: nye S'er for hver rørgruppe
        N_HP_per_trace = len(net.I_PG[i]) / net.N_traces[i]; 
        S = hp.f_peak*(0.62 + 0.38/N_HP_per_trace);
        
-       Q_PG_H[i] =  S * sum(Qdim_H[np.ndarray.tolist(net.I_PG[i])])/net.N_traces[i];                        # Sum the heating brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
+       # Find index of HP IDs in each group
+       Itmp = sorter[np.searchsorted(hp.HP_IDs, net.I_PG[i], sorter=sorter)] # Match IDs from each pipe group against total list of IDs in eth grid              
+       Q_PG_H[i] =  S * sum(Qdim_H[Itmp])/net.N_traces[i];                        # Sum the heating brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
 
        if doCooling:
-           Q_PG_C[i] =  S * sum(Qdim_C[np.ndarray.tolist(net.I_PG[i])])/net.N_traces[i];                    # Sum the cooling brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
+            Q_PG_C[i] =  S * sum(Qdim_C[Itmp])/net.N_traces[i]
     
     # Select the smallest diameter pipe that fulfills the pressure drop criterion
     for i in range(N_PG):                                 

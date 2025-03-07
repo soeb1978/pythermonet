@@ -60,6 +60,8 @@ class Heatpump:
     Ti_C: float = np.nan    # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.
     f_peak: float = np.nan  # Fraction of peak heating demand to be covered by the heat pump [0-1]. If f_peak = 0.8 then the heat pump delivers 80% of the peak heating load. The deficit is then supplied by an auxilliary heating device
 
+    HP_IDs: float = np.nan # Unique IDs for each heatpump in the grid
+
     # Peak load duration in hours
     t_peak: float = np.nan
 
@@ -107,8 +109,8 @@ class HHEconfig:
     d:float = np.nan;  # Outer diameter of HE pipe (m)
     SDR:float = np.nan;  # SDR for HE pipes (-)
     D:float = np.nan;  # Pipe segment spacing (m)
-    V_brine: float = np.nan;    # Volume of brine in the pipes (m^3)
-    T_dimv: float = np.nan;     # Vector of brine temperatures (Celcius) after each of the three pulses (year, month, peak)
+    V_brine: float = np.nan;    # Volume of brine in the pipes (m^3) - calculated
+    T_dimv: float = np.nan;     # Vector of brine temperatures (Celcius) after each of the three pulses (year, month, peak) - calculated
     
     # Results
     FPH:float = np.nan;
@@ -128,7 +130,6 @@ class BHEconfig:
     # Borehole heat exchangers (BHE)
     source:str = 'BHE';
     
-    T0: float = np.nan      # Surface temperature (C)
     q_geo: float = np.nan   # Geothermal heat flux (W/m2)
     r_b:float = np.nan      # Borehole radius (m)
     r_p:float = np.nan      # Outer radius of U pipe (m)
@@ -138,8 +139,8 @@ class BHEconfig:
     l_g:float = np.nan      # Grout thermal conductivity (W/m/K)
     rhoc_g:float = np.nan   # Grout volumetric heat capacity (J/m3/K)
     D_pipes:float = np.nan  # Wall to wall distance U-pipe legs (m)
-    V_brine: float = np.nan;# Volume of brine in heat exchanger pipes (m^3)
-    T_dimv: float = np.nan; # Vector of brine temperatures (Celcius) after each of the three pulses (year, month, peak)
+    V_brine: float = np.nan;# Volume of brine in heat exchanger pipes (m^3) - calculated
+    T_dimv: float = np.nan; # Vector of brine temperatures (Celcius) after each of the three pulses (year, month, peak) - calculated
 
     # BHE field
     NX:int = np.nan         # Number of boreholes in the x-direction (-)
@@ -157,6 +158,30 @@ class BHEconfig:
     dpdL_BHEmax_H:float = np.nan;
     Re_BHEmax_C:float = np.nan;
     dpdL_BHEmax_C:float = np.nan;
+    
+    
+@dataclass_json
+@dataclass
+class PHEconfig:
+    
+    # Pile heat exchangers (PHE)
+    source:str = 'PHE'; 
+    
+    S: float = np.nan           # Pile side length (m)
+    L: float = np.nan           # Pile active length (m)
+    AR: float = np.nan          # Pile aspect ratio (AR = L/S)
+    n: int = np.nan             # Number of heat exchanger pipes in pile cross section (-)
+    do: float = np.nan          # Pipe outer diameter (m)
+    di: float = np.nan          # Pipe inner diameter (m)
+
+    l_c: float = np.nan         # Concrete thermal conductivity
+    l_ss: float = np.nan        # Soil thermal conductivity along PHEs (W/m/K)  
+    rhoc_ss: float = np.nan     # Volumetric heat capacity of soil along PHE (J/m^3/K)
+    
+    coord: float = np.nan       # Matrix of pile coordinates (m) - first and second columns contain x- and y-coordinates for the piles. The number of rows is equal to the number of piles
+    Rc_coeff: float = np.nan    # Fitting parameters for concrete thermal resistance
+    Gc_coeff: float = np.nan    # Fitting parameters for concrete G-functions
+    Gg_coeff: float = np.nan    # Fitting parameters for soil G-function
     
 
 @dataclass_json

@@ -52,6 +52,9 @@ Input parameters for class objects are defined below:
 |D_x| Spacing between BHEs in x-direction| [m] |
 |NY|Number of BHEs in y-direction|[-]|
 |D_y|Spacing between BHEs in x-direction| [m]|
+|gFuncMethod| method for evaluating g-function| N/A |
+
+Note the gFuncMethod is a string input, and may currently be set to 'ICS' for Infinite Cylinder Source or 'PYG' for the pygfunction implementation of the finite line source. If no input is given the default is 'ICS'.
 
 
 ### Horizontal Heat Exchangers (HHE)

@@ -23,7 +23,7 @@ if __name__ == '__main__':
     net, pipeGroupNames = read_dimensioned_topology(net, brine, TOPO_file)  
 
     # Initialise aggregated load object
-    aggLoad = aggregatedLoad(Ti_H = -3, Ti_C = 20, f_peak=1, t_peak=4)
+    aggLoad = aggregatedLoad(Ti_H = -3, Ti_C = 20, f_peak_H=1, t_peak_H=10, f_peak_C=1, t_peak_C=30)
     # Read remaining data from user specified file
     aggLoad = read_aggregated_load(aggLoad, brine, agg_load_file)           
 

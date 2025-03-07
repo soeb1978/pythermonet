@@ -1,9 +1,6 @@
-import sys
-sys.path.insert(0, "c:/Users/soeb/Documents/GitHub/pythermonet/pythermonet/src")
-from thermonet.dimensioning.thermonet_classes import Brine, Thermonet, HHEconfig, AggregatedLoad
-from thermonet.dimensioning.dimensioning_functions import print_project_id, read_dimensioned_topology, read_aggregated_load, run_sourcedimensioning, print_source_dimensions
-import thermonet.dimensioning.thermonet_classes
-print(thermonet.dimensioning.thermonet_classes.__file__)
+from pythermonet.dimensioning.thermonet_classes import Brine, Thermonet, HHEconfig, aggregatedLoad
+from pythermonet.dimensioning.dimensioning_functions import print_project_id, read_dimensioned_topology, read_aggregated_load, run_sourcedimensioning, print_source_dimensions
+
 
 if __name__ == '__main__':
     # Inputs
@@ -12,7 +9,7 @@ if __name__ == '__main__':
     PID = 'Silkeborg'   # Project name
 
     # Input files
-    agg_load_file = './data/sites/Silkeborg_aggregated_load_Heat_and_Cool.dat'       # Input file for specifying aggregated load for heating
+    agg_load_file = './data/sites/Silkeborg_aggregated_load_Heat.dat'       # Input file for specifying aggregated load for heating
     TOPO_file = './data/sites/Silkeborg_TOPO_dimensioned.dat'               # Input file containing topology information
 
     # User specified input
@@ -26,16 +23,14 @@ if __name__ == '__main__':
     net, pipeGroupNames = read_dimensioned_topology(net, brine, TOPO_file)  
 
     # Initialise aggregated load object
-    import os
-    print("Running from:", os.path.abspath(__file__))
-
-    aggLoad = AggregatedLoad(Ti_H = -3, Ti_C = 20, f_peak_H=1, t_peak_H=10, f_peak_C=1, t_peak_C=10)
+    aggLoad = aggregatedLoad(Ti_H = -3, Ti_C = 20, f_peak=1, t_peak=4)
     # Read remaining data from user specified file
     aggLoad = read_aggregated_load(aggLoad, brine, agg_load_file)           
 
     # Heat source (either BHE or HHE)
-    source_config = HHEconfig(N_HHE=10, d=0.04, SDR=17, D=1.5)
+    source_config = HHEconfig(N_HHE=6, d=0.04, SDR=17, D=1.5)
     # Dimensioning of sources - reuslts printed to console
     source_config = run_sourcedimensioning(brine, net, aggLoad, source_config)
     print_project_id(PID)
     print_source_dimensions(source_config,net)
+

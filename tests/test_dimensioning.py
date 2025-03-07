@@ -1,7 +1,7 @@
 import json
 
-from thermonet.dimensioning.main import run_full_dimensioning_single_combined_input
-from thermonet.dimensioning.thermonet_classes import FullDimension
+from pythermonet.dimensioning.main import run_full_dimensioning_single_combined_input
+from pythermonet.dimensioning.thermonet_classes import FullDimension
 from pathlib import Path
 import glob
 

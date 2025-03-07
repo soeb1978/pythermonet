@@ -1,3 +1,5 @@
 __pycache__
+*.pyc
+*.pyo
 .pytest_cache
-src/thermonet_dimensioning.egg-info
+src/pythermonet.egg-info

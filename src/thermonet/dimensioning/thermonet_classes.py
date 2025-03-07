@@ -76,7 +76,7 @@ class Heatpump:
 
 @dataclass_json
 @dataclass
-class aggregatedLoad:
+class AggregatedLoad:
     
     # Heat pump
     Ti_H: float = np.nan  # Design temperature for inlet (C) OK. Stress test conditions. Legislation stipulates Thi > -4C. Auxillary heater must be considered.

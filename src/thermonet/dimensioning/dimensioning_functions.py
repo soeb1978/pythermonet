@@ -15,8 +15,8 @@ Created on Fri Nov  4 08:53:07 2022
 import numpy as np
 import scipy
 import pandas as pd
-from .fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, RbMPflc, Halley, VFLS
-from thermonet.dimensioning.thermonet_classes import aggregatedLoad
+from thermonet.dimensioning.fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, RbMPflc, Halley, VFLS
+from thermonet.dimensioning.thermonet_classes import AggregatedLoad
 import pygfunction as gt
 
 

@@ -16,7 +16,7 @@ this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 
 setuptools.setup(
-    name="thermonet_dimensioning",
+    name="pythermonet",
     version=ver,
     author='',
     author_email='',

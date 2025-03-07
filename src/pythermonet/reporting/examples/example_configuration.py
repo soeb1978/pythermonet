@@ -1,4 +1,4 @@
-from thermonet.dimensioning.dimensioning_classes import BTESConfiguation, HorizontalConfiguration, Brine, Heatpump, \
+from pythermonet.dimensioning.dimensioning_classes import BTESConfiguation, HorizontalConfiguration, Brine, Heatpump, \
     Thermonet, DimensioningConfiguration
 from pathlib import Path
 

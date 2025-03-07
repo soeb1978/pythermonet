@@ -1,5 +1,5 @@
-from thermonet.dimensioning.dimensioning_functions import print_project_id, run_pipedimensioning, print_pipe_dimensions, print_source_dimensions, run_sourcedimensioning
-from thermonet.dimensioning.thermonet_classes import Brine, Thermonet, Heatpump, HHEconfig, FullDimension, BHEconfig
+from pythermonet.dimensioning.dimensioning_functions import print_project_id, run_pipedimensioning, print_pipe_dimensions, print_source_dimensions, run_sourcedimensioning
+from pythermonet.dimensioning.thermonet_classes import Brine, Thermonet, Heatpump, HHEconfig, FullDimension, BHEconfig
 
 import time
 

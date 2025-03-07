@@ -29,7 +29,7 @@ if __name__ == '__main__':
     import os
     print("Running from:", os.path.abspath(__file__))
 
-    aggLoad = AggregatedLoad(Ti_H = -3, Ti_C = 20, f_peak_H=1, t_peak_H=10, f_peak_C=1, t_peak_C=30)
+    aggLoad = AggregatedLoad(Ti_H = -3, Ti_C = 20, f_peak_H=1, t_peak_H=10, f_peak_C=1, t_peak_C=10)
     # Read remaining data from user specified file
     aggLoad = read_aggregated_load(aggLoad, brine, agg_load_file)           
 

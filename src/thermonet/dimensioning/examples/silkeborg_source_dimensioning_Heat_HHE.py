@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(0, "c:/Users/soeb/Documents/GitHub/pythermonet/pythermonet/src")
 from thermonet.dimensioning.thermonet_classes import Brine, Thermonet, HHEconfig, AggregatedLoad
 from thermonet.dimensioning.dimensioning_functions import print_project_id, read_dimensioned_topology, read_aggregated_load, run_sourcedimensioning, print_source_dimensions
 import thermonet.dimensioning.thermonet_classes
@@ -27,7 +29,7 @@ if __name__ == '__main__':
     import os
     print("Running from:", os.path.abspath(__file__))
 
-    aggLoad = aggregatedLoad(Ti_H = -3, Ti_C = 20, f_peak_H=1, t_peak_H=10, f_peak_C=1, t_peak_C=30)
+    aggLoad = AggregatedLoad(Ti_H = -3, Ti_C = 20, f_peak_H=1, t_peak_H=10, f_peak_C=1, t_peak_C=30)
     # Read remaining data from user specified file
     aggLoad = read_aggregated_load(aggLoad, brine, agg_load_file)           
 

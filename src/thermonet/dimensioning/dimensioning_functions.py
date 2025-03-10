@@ -467,7 +467,7 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
     for i in range(N_PG):
         # KART: nye S'er for hver rørgruppe
        N_HP_per_trace = len(net.I_PG[i]) / net.N_traces[i]; 
-       S = hp.f_peak*(0.62 + 0.38/N_HP_per_trace);
+       S = hp.f_peak_H*(0.62 + 0.38/N_HP_per_trace);
        
        # Find index of HP IDs in each group
        Itmp = sorter[np.searchsorted(hp.HP_IDs, net.I_PG[i], sorter=sorter)] # Match IDs from each pipe group against total list of IDs in eth grid              
@@ -509,8 +509,8 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
     # Calculate aggregated load for later calculations
     N_HP = len(hp.P_s_H);
     
-    aggLoad = aggregatedLoad(Ti_H = hp.Ti_H, Ti_C = hp.Ti_C, f_peak=hp.f_peak, t_peak=hp.t_peak)
-    S = hp.f_peak*(0.62 + 0.38/N_HP);
+    aggLoad = AggregatedLoad(Ti_H = hp.Ti_H, Ti_C = hp.Ti_C, f_peak_H=hp.f_peak_H, t_peak_H=hp.t_peak_H, f_peak_C=hp.f_peak_C, t_peak_C=hp.t_peak_C)
+    S = hp.f_peak_H*(0.62 + 0.38/N_HP);
     
     aggLoad.Ti_H = hp.Ti_H;
     aggLoad.To_H = hp.Ti_H - sum(Qdim_H*hp.dT_H)/sum(Qdim_H);           # Volumetric flow rate weighted average brine delta-T (C)
@@ -605,11 +605,12 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
     
     
     T_tmp = np.zeros([N_PG,3])
-    K1 = ils(a_s,t_H,net.D_gridpipes) - ils(a_s,t_H,2*net.z_grid) - ils(a_s,t_H,np.sqrt(net.D_gridpipes**2+4*net.z_grid**2));
+    K1_H = ils(a_s,t_H,net.D_gridpipes) - ils(a_s,t_H,2*net.z_grid) - ils(a_s,t_H,np.sqrt(net.D_gridpipes**2+4*net.z_grid**2));
+    K1_C = ils(a_s,t_C,net.D_gridpipes) - ils(a_s,t_C,2*net.z_grid) - ils(a_s,t_C,np.sqrt(net.D_gridpipes**2+4*net.z_grid**2));
     # KART: gennemgå nye varmeberegning - opsplittet på segmenter
     for i in range(N_PG):
         # G-function for grid pipes in i'th pipe group
-        G_grid_H[i,:] = CSM(net.d_selectedPipes_H[i]/2,net.d_selectedPipes_H[i]/2,t_H,a_s) + K1;
+        G_grid_H[i,:] = CSM(net.d_selectedPipes_H[i]/2,net.d_selectedPipes_H[i]/2,t_H,a_s) + K1_H;
         # Fraction of load that can be supplied by the pipe group
         FPH[i] = (net.T0 - (aggLoad.Ti_H + aggLoad.To_H)/2 - TP)*net.L_segments[i]/np.dot(dP_s_H, G_grid_H[i]/net.l_s_H + R_H[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
         
@@ -624,7 +625,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         
     if doCooling:
         for i in range(N_PG):
-            G_grid_C[i,:] = CSM(net.d_selectedPipes_C[i]/2,net.d_selectedPipes_C[i]/2,t_C,a_s) + K1;
+            G_grid_C[i,:] = CSM(net.d_selectedPipes_C[i]/2,net.d_selectedPipes_C[i]/2,t_C,a_s) + K1_C;
             # KART opdateret aggregering
             FPC[i] = ((aggLoad.Ti_C + aggLoad.To_C)/2 - net.T0 - TP)*net.L_segments[i]/np.dot(dP_s_C, G_grid_C[i]/net.l_s_C + R_C[i]);    # Fraction of total heating that can be supplied by the i'th pipe segment (-)
 

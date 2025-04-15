@@ -1,7 +1,7 @@
-from thermonet.dimensioning.dimensioning_functions import read_heatpumpdata, read_topology
-from thermonet.dimensioning.main import run_full_dimensioning_single_combined_input
-from thermonet.dimensioning.thermonet_classes import FullDimension
-from thermonet.dimensioning.thermonet_classes import Brine, Thermonet, Heatpump, HHEconfig
+from pythermonet.dimensioning.dimensioning_functions import read_heatpumpdata, read_topology
+from pythermonet.dimensioning.main import run_full_dimensioning_single_combined_input
+from pythermonet.dimensioning.thermonet_classes import FullDimension
+from pythermonet.dimensioning.thermonet_classes import Brine, Thermonet, Heatpump, HHEconfig
 import json
 import pandas as pd
 import numpy as np
@@ -22,9 +22,9 @@ if __name__ == '__main__':
     PID='Energiakademiet, Samsø',                                     # Project name
 
     # Input files
-    HP_file = '../../src/thermonet/dimensioning/examples/data/sites/Samso_HPSC.dat'                 # Input file containing heat pump information
-    TOPO_file = '../../src/thermonet/dimensioning/examples//data/sites/Samso_TOPO.dat'               # Input file containing topology information
-    pipe_file = '../../src/thermonet/dimensioning/data/equipment/PIPES.dat'                   # Input file with available pipe diameters
+    HP_file = '../../src/pythermonet/dimensioning/examples/data/sites/Samso_HPSC.dat'                 # Input file containing heat pump information
+    TOPO_file = '../../src/pythermonet/dimensioning/examples//data/sites/Samso_TOPO.dat'               # Input file containing topology information
+    pipe_file = '../../src/pythermonet/dimensioning/data/equipment/PIPES.dat'                   # Input file with available pipe diameters
 
     d_pipes = pd.read_csv(pipe_file, sep = '\t');                       # Open file with available pipe outer diameters (mm). This file can be expanded with additional pipes and used directly.
     d_pipes = d_pipes.values;                                               # Get numerical values from pipes excluding the headers

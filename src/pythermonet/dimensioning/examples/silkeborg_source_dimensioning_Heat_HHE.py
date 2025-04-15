@@ -1,9 +1,9 @@
 import sys
 sys.path.insert(0, r"C:\Users\soeb\Documents\GitHub\pythermonet\src")
-from thermonet.dimensioning.thermonet_classes import Brine, Thermonet, HHEconfig, AggregatedLoad
-from thermonet.dimensioning.dimensioning_functions import print_project_id, read_dimensioned_topology, read_aggregated_load, run_sourcedimensioning, print_source_dimensions
-import thermonet.dimensioning.thermonet_classes
-print(thermonet.dimensioning.thermonet_classes.__file__)
+from pythermonet.dimensioning.thermonet_classes import Brine, Thermonet, HHEconfig, AggregatedLoad
+from pythermonet.dimensioning.dimensioning_functions import print_project_id, read_dimensioned_topology, read_aggregated_load, run_sourcedimensioning, print_source_dimensions
+import pythermonet.dimensioning.thermonet_classes
+print(pythermonet.dimensioning.thermonet_classes.__file__)
 
 if __name__ == '__main__':
     # Inputs

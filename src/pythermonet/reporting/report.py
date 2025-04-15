@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
-from thermonet.dimensioning.dimensioning import run_dimensioning
-from thermonet.dimensioning.dimensioning_classes import BTESConfiguation, HorizontalConfiguration, DimensioningConfiguration, \
+from pythermonet.dimensioning.dimensioning import run_dimensioning
+from pythermonet.dimensioning.dimensioning_classes import BTESConfiguation, HorizontalConfiguration, DimensioningConfiguration, \
     DimensioningResults, PipeResult, EnergyProductionResult, HEResult, HEType
 
 from numerous.html_report_generator import Report, Section, Div

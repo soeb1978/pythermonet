@@ -1,5 +1,5 @@
-from thermonet.reporting.report import make_dimensioning_report
-from thermonet.reporting.examples.example_configuration import configuration
+from pythermonet.reporting.report import make_dimensioning_report
+from pythermonet.reporting.examples.example_configuration import configuration
 
 if __name__ == '__main__':
 

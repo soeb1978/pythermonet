@@ -1,9 +1,9 @@
 import sys
 sys.path.insert(0, r"C:\Users\soeb\Documents\GitHub\pythermonet\src")
 import pandas as pd
-from thermonet.dimensioning.thermonet_classes import Brine, Thermonet, Heatpump, BHEconfig
-from thermonet.dimensioning.dimensioning_functions import read_heatpumpdata, read_topology
-from thermonet.dimensioning.main import run_full_dimensioning
+from pythermonet.dimensioning.thermonet_classes import Brine, Thermonet, Heatpump, BHEconfig
+from pythermonet.dimensioning.dimensioning_functions import read_heatpumpdata, read_topology
+from pythermonet.dimensioning.main import run_full_dimensioning
 
 if __name__ == '__main__':
     # Inputs

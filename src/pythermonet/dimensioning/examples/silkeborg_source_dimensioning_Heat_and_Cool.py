@@ -1,5 +1,5 @@
-from thermonet.dimensioning.thermonet_classes import Brine, Thermonet, BHEconfig, aggregatedLoad
-from thermonet.dimensioning.dimensioning_functions import print_project_id, read_dimensioned_topology, read_aggregated_load, run_sourcedimensioning, print_source_dimensions
+from pythermonet.dimensioning.thermonet_classes import Brine, Thermonet, BHEconfig, aggregatedLoad
+from pythermonet.dimensioning.dimensioning_functions import print_project_id, read_dimensioned_topology, read_aggregated_load, run_sourcedimensioning, print_source_dimensions
 
 if __name__ == '__main__':
     # Inputs

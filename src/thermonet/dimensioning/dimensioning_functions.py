@@ -179,21 +179,22 @@ def read_aggregated_load(aggLoad, brine, agg_load_file):
     dT_C = load[0,12];
 
   
-    S = aggLoad.f_peak_H*(0.62 + 0.38/N_HP);
+    S_H = aggLoad.f_peak_H*(0.62 + 0.38/N_HP);
 
     # Calculate ground loads from COP (heating)
     P_s_H = np.zeros(3);
     P_s_H[0] = (COP_y_H-1)/COP_y_H * P_y_H;     # Annual load (W)
     P_s_H[1] = (COP_m_H-1)/COP_m_H * P_m_H;     # Monthly load (W)
-    P_s_H[2] = (COP_d_H-1)/COP_d_H * P_d_H * S; # Daily load with simultaneity factor (W)
+    P_s_H[2] = (COP_d_H-1)/COP_d_H * P_d_H * S_H; # Daily load with simultaneity factor (W)
 
     #KART COOLING
     if np.abs(P_y_C) > 1e-6:
         # Calculate ground loads from EER (cooling)
+        S_C = aggLoad.f_peak_C*(0.62 + 0.38/N_HP);
         P_s_C = np.zeros(3);
         P_s_C[0] = (EER + 1)/EER * P_y_C;       # Annual load (W)
         P_s_C[1] = (EER + 1)/EER * P_m_C;       # Monthly load (W)
-        P_s_C[2] = (EER + 1)/EER * P_d_C * S;   # Daily load (W)
+        P_s_C[2] = (EER + 1)/EER * P_d_C * S_C;   # Daily load (W)
 
         # First columns in hp.P_s_H respectively hp.P_s_C are equal but with opposite signs 
         P_s_H[0] = P_s_H[0] - P_s_C[0];         # Annual imbalance between heating and cooling, positive for heating (W)
@@ -467,14 +468,15 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
     for i in range(N_PG):
         # KART: nye S'er for hver rørgruppe
        N_HP_per_trace = len(net.I_PG[i]) / net.N_traces[i]; 
-       S = hp.f_peak_H*(0.62 + 0.38/N_HP_per_trace);
+       S_H = hp.f_peak_H*(0.62 + 0.38/N_HP_per_trace);
        
        # Find index of HP IDs in each group
        Itmp = sorter[np.searchsorted(hp.HP_IDs, net.I_PG[i], sorter=sorter)] # Match IDs from each pipe group against total list of IDs in eth grid              
-       Q_PG_H[i] =  S * sum(Qdim_H[Itmp])/net.N_traces[i];                        # Sum the heating brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
+       Q_PG_H[i] =  S_H * sum(Qdim_H[Itmp])/net.N_traces[i];                        # Sum the heating brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
 
        if doCooling:
-            Q_PG_C[i] =  S * sum(Qdim_C[Itmp])/net.N_traces[i]
+            S_C = hp.f_peak_C*(0.62 + 0.38/N_HP_per_trace);
+            Q_PG_C[i] =  S_C * sum(Qdim_C[Itmp])/net.N_traces[i]
     
     # Select the smallest diameter pipe that fulfills the pressure drop criterion
     for i in range(N_PG):                                 
@@ -510,15 +512,15 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
     N_HP = len(hp.P_s_H);
     
     aggLoad = AggregatedLoad(Ti_H = hp.Ti_H, Ti_C = hp.Ti_C, f_peak_H=hp.f_peak_H, t_peak_H=hp.t_peak_H, f_peak_C=hp.f_peak_C, t_peak_C=hp.t_peak_C)
-    S = hp.f_peak_H*(0.62 + 0.38/N_HP);
+    S_H = hp.f_peak_H*(0.62 + 0.38/N_HP);
     
     aggLoad.Ti_H = hp.Ti_H;
     aggLoad.To_H = hp.Ti_H - sum(Qdim_H*hp.dT_H)/sum(Qdim_H);           # Volumetric flow rate weighted average brine delta-T (C)
     aggLoad.P_s_H = sum(hp.P_s_H);
     # KART korriger spidslast med samtidighedsfaktor
-    aggLoad.P_s_H[2] = aggLoad.P_s_H[2] * S;
+    aggLoad.P_s_H[2] = aggLoad.P_s_H[2] * S_H;
     # KART ditto dimensionerende flow 
-    aggLoad.Qdim_H = sum(Qdim_H) * S;
+    aggLoad.Qdim_H = sum(Qdim_H) * S_H;
 
     
     if doCooling:
@@ -527,9 +529,9 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
         aggLoad.To_C = hp.Ti_C + sum(Qdim_C*hp.dT_C)/sum(Qdim_C);       # Volumetric flow rate weighted average brine delta-T (C)
         aggLoad.P_s_C = sum(hp.P_s_C);
         # KART korriger spidslast med samtidighedsfaktor
-        aggLoad.P_s_C[2] = aggLoad.P_s_C[2] * S;
+        aggLoad.P_s_C[2] = aggLoad.P_s_C[2] * S_C;
         # KART ditto dimensionerende flow 
-        aggLoad.Qdim_C = sum(Qdim_C) * S;
+        aggLoad.Qdim_C = sum(Qdim_C) * S_C;
 
     
     # Return the pipe sizing results

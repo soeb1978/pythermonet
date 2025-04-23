@@ -1,7 +1,5 @@
-# Standard library imports
 from dataclasses import dataclass
 
-# Third-party imports
 from dataclasses_json import dataclass_json
 import numpy as np
 

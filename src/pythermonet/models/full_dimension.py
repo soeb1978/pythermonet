@@ -1,12 +1,9 @@
-# Standard library imports
 from dataclasses import dataclass
 from typing import List
 
-# Third-party imports
 from dataclasses_json import dataclass_json
 import numpy as np
 
-# Local application imports
 from .bhe_config import BHEConfig
 from .brine import Brine
 from .heatpump import HeatPump

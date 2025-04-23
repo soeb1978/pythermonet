@@ -16,7 +16,7 @@ import numpy as np
 import scipy
 import pandas as pd
 from pythermonet.dimensioning.fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, RbMPflc, Halley, VFLS
-from pythermonet.dimensioning.thermonet_classes import AggregatedLoad
+from pythermonet.models import AggregatedLoad
 import pygfunction as gt
 
 

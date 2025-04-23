@@ -1,9 +1,7 @@
 import sys
 sys.path.insert(0, r"C:\Users\soeb\Documents\GitHub\pythermonet\src")
-from pythermonet.dimensioning.thermonet_classes import Brine, Thermonet, HHEconfig, AggregatedLoad
+from pythermonet.models import Brine, Thermonet, HHEConfig, AggregatedLoad
 from pythermonet.dimensioning.dimensioning_functions import print_project_id, read_dimensioned_topology, read_aggregated_load, run_sourcedimensioning, print_source_dimensions
-import pythermonet.dimensioning.thermonet_classes
-print(pythermonet.dimensioning.thermonet_classes.__file__)
 
 if __name__ == '__main__':
     # Inputs
@@ -27,14 +25,13 @@ if __name__ == '__main__':
 
     # Initialise aggregated load object
     import os
-    print("Running from:", os.path.abspath(__file__))
 
     aggLoad = AggregatedLoad(Ti_H = -3, Ti_C = 20, f_peak_H=1, t_peak_H=10, f_peak_C=1, t_peak_C=10)
     # Read remaining data from user specified file
     aggLoad = read_aggregated_load(aggLoad, brine, agg_load_file)           
 
     # Heat source (either BHE or HHE)
-    source_config = HHEconfig(N_HHE=10, d=0.04, SDR=17, D=1.5)
+    source_config = HHEConfig(N_HHE=10, d=0.04, SDR=17, D=1.5)
     # Dimensioning of sources - reuslts printed to console
     source_config = run_sourcedimensioning(brine, net, aggLoad, source_config)
     print_project_id(PID)

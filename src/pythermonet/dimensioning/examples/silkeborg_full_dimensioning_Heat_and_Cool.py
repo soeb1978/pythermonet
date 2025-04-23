@@ -1,7 +1,7 @@
 import sys
 sys.path.insert(0, r"C:\Users\soeb\Documents\GitHub\pythermonet\src")
 import pandas as pd
-from pythermonet.dimensioning.thermonet_classes import Brine, Thermonet, Heatpump, BHEconfig
+from pythermonet.models import Brine, Thermonet, HeatPump, BHEConfig
 from pythermonet.dimensioning.dimensioning_functions import read_heatpumpdata, read_topology
 from pythermonet.dimensioning.main import run_full_dimensioning
 
@@ -31,12 +31,12 @@ if __name__ == '__main__':
     net, pipeGroupNames = read_topology(net, TOPO_file) 
 
     # Initialise heat pump object
-    hp = Heatpump(Ti_H=-3, Ti_C=20, f_peak_H=1, t_peak_H=4, f_peak_C=1, t_peak_C=4)
+    hp = HeatPump(Ti_H=-3, Ti_C=20, f_peak_H=1, t_peak_H=4, f_peak_C=1, t_peak_C=4)
     # Read remaining data from user specified file
     hp = read_heatpumpdata(hp, HP_file) 
 
     # Heat source (either BHE or HHE)    
-    source_config = BHEconfig(q_geo = 0.0185, r_b=0.152/2, r_p=0.02, SDR=11, l_ss=2.36, rhoc_ss=2.65e6, l_g=1.75, rhoc_g=3e6, D_pipes=0.015, NX=1, D_x=15, NY=6, D_y=15, gFuncMethod='PYG')
+    source_config = BHEConfig(q_geo = 0.0185, r_b=0.152/2, r_p=0.02, SDR=11, l_ss=2.36, rhoc_ss=2.65e6, l_g=1.75, rhoc_g=3e6, D_pipes=0.015, NX=1, D_x=15, NY=6, D_y=15, gFuncMethod='PYG')
 
     # Full dimensioning of pipes and sources - results printed to console
     run_full_dimensioning(PID, d_pipes, brine, net, hp, pipeGroupNames, source_config)

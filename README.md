@@ -31,8 +31,10 @@ Input parameters for class objects are defined below:
 | Var | Description              |Unit|
 |-----|--------------------------|-----|
 |Ti|	inlet temperature		| [°C]|
-|f_peak|		Fraction of peak load supplied by heatpumps	|[-]|
-|t_peak|	duration of peak load 		|[h]|
+|f_peak_H|	fraction of peak heating load supplied by heatpumps	|[-]|
+|f_peak_C|	fraction of peak cooling load supplied by heatpumps	|[-]|
+|t_peak_H|	duration of peak heating load 		|[h]|
+|t_peak_C|	duration of peak cooling load 		|[h]|
 
 
 

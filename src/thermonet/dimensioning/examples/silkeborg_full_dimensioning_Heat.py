@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(0, r"C:\Users\soeb\Documents\GitHub\pythermonet\src")
 import pandas as pd
 from thermonet.dimensioning.thermonet_classes import Brine, Thermonet, Heatpump, BHEconfig
 from thermonet.dimensioning.dimensioning_functions import read_heatpumpdata, read_topology
@@ -29,7 +31,7 @@ if __name__ == '__main__':
     net, pipeGroupNames = read_topology(net, TOPO_file) 
 
     # Initialise heat pump object
-    hp = Heatpump(Ti_H=-3, Ti_C=20, f_peak=1, t_peak=4)
+    hp = Heatpump(Ti_H=-3, Ti_C=20, f_peak_H=1, t_peak_H=4)
     # Read remaining data from user specified file
     hp = read_heatpumpdata(hp, HP_file) 
 

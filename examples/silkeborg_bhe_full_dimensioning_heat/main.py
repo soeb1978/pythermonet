@@ -75,7 +75,7 @@ def main() -> None:
         D_x=15,
         NY=6,
         D_y=15,
-        gFuncMethod="PYG",
+        gFuncMethod="ICS",
     )
 
     # Full dimensioning of pipes and sources - results printed to console

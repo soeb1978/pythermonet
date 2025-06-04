@@ -189,12 +189,31 @@ def mass_flow_from_load(
     return mass_flow
 
 
-def flow_velocity_from_mass_flow(
-        mass_flow: float | np.ndarray,
+def flow_velocity_from_volumetric_flow(
+        volumetric_flow: float | np.ndarray,
         pipe_inner_diameter:  float | np.ndarray,
         ) -> float | np.ndarray:
+    """
+    Calculates fluid velocity in a circular pipe from volumetric flow.
 
-    return np.divide(4 * mass_flow, np.pi * pipe_inner_diameter**2)
+    This function computes the average flow velocity based on the
+    volumetric flow rate and the pipe's inner diameter, assuming a
+    circular cross-section.
+
+    Parameters
+    ----------
+    volumetric_flow : float or ndarray
+        Volumetric flow rate [m³/s].
+
+    pipe_inner_diameter : float or ndarray
+        Inner diameter of the pipe [m].
+
+    Returns
+    -------
+    velocity : float or ndarray
+        Average velocity of the fluid in the pipe [m/s].
+    """
+    return np.divide(4 * volumetric_flow, np.pi * pipe_inner_diameter**2)
 
 
 def pipe_inner_diameter(

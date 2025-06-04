@@ -26,7 +26,7 @@ def main() -> None:
     # Define the parent directory (current script directory)
     project_dir = Path(__file__).parent.resolve()
     project_data_dir = project_dir / "data"
-    project_config_file = project_data_dir / "project_config.json"
+    project_config_file = project_dir / "project_config.json"
 
     # load the config file
     project_config = load_project_config(project_config_file)

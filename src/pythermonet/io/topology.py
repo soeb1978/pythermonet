@@ -6,7 +6,7 @@ import numpy as np
 from pythermonet.domain import Brine, DimensionedTopologyInput, Thermonet
 from pythermonet.core.fThermonetDim import Re  # ###@@@ I should change this
 from pythermonet.core.physics import (
-    flow_velocity_from_mass_flow,
+    flow_velocity_from_volumetric_flow,
     pipe_brine_volume,
     pipe_inner_diameter
 )
@@ -87,14 +87,14 @@ def combine_net_dimensioned_topology(
 
     # Calculate Reynolds number for selected pipes for heating
     net.di_selected_H = pipe_inner_diameter(net.d_selectedPipes_H, net.SDR)
-    v_H = flow_velocity_from_mass_flow(
+    v_H = flow_velocity_from_volumetric_flow(
         topology.peak_flow_heating, net.di_selected_H
     )
     net.Re_selected_H = Re(brine.rho, brine.mu, v_H, net.di_selected_H)
 
     # Calculate Reynolds numbers for selected pipes for cooling
     net.di_selected_C = net.di_selected_H
-    v_C = flow_velocity_from_mass_flow(
+    v_C = flow_velocity_from_volumetric_flow(
         topology.peak_flow_cooling, net.di_selected_C
     )
     net.Re_selected_C = Re(brine.rho, brine.mu, v_C, net.di_selected_C)

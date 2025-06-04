@@ -1,8 +1,9 @@
 {
     "project_id": "Silkeborg",
-    "data_directory": "./data/sites",
-    "heat_pump_file": "Silkeborg_HP_Heat.dat",
-    "topology_file": "Silkeborg_TOPO.dat",
+    "files": {
+        "heat_pump_file": "silkeborg_heat_pump_heat.dat",
+        "topology_file": "silkeborg_topology.dat"
+    },
     "brine": {
         "rho": 965,
         "c": 4450,

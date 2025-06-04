@@ -1,7 +1,9 @@
-from pythermonet.dimensioning.thermonet_classes import PHEconfig
-from pythermonet.dimensioning.dimensioning_functions import read_PHEdata
+# work in progress - not done yet
+from pythermonet.domain import PHEconfig
+from pythermonet.core.dimensioning_functions import read_PHEdata
 
 if __name__ == '__main__':
+    # I broke the paths.
     Rc_file = '../data/concrete_resistance_parameters.txt'
     Gc_file = '../data/concrete_Gfunction_parameters.txt'
     coord_file = './data/sites/PHE_coordinates.txt'

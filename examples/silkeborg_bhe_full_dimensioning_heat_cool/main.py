@@ -1,27 +1,35 @@
 from pathlib import Path
-# import sys
 
 from pythermonet.data.equipment.pipes import load_pipe_catalogue
-from pythermonet.dimensioning.dimensioning_functions import (
+from pythermonet.core.dimensioning_functions import (
     read_heatpumpdata,
     read_topology,
 )
-from pythermonet.dimensioning.main import run_full_dimensioning
-from pythermonet.models import BHEConfig, Brine, HeatPump, Thermonet
+from pythermonet.core.main import run_full_dimensioning
+from pythermonet.domain import BHEConfig, Brine, HeatPump, Thermonet
 
 
-# sys.path.insert(0, r"C:\Users\soeb\Documents\GitHub\pythermonet\src")
-if __name__ == '__main__':
+def main() -> None:
+    """
+    Runs the full dimensioning for Silkeborg example with bore hole heat
+    exchangers (BHE) and heating and cooling loads.
+    The full dimensioning includes both sources sizes and pipe diameters
+    of the distribution network.
+
+    Required input files:
+    - data/silkeborg_heat_pump_heat_cool.dat
+    - data/silkeborg_topology.dat
+    """
     # Project ID
-    project_id = 'Silkeborg'
+    project_id = "Silkeborg"
 
     # Define the parent directory (current script directory)
-    script_directory = Path(__file__).parent
-    site_data_dir = script_directory / "data" / "sites"
-    # Input file containing heat pump information - only heating
-    heat_pump_file = site_data_dir / "Silkeborg_HP_Heat.dat"
-    # Input file containing topology information
-    topology_file = site_data_dir / "Silkeborg_TOPO.dat"
+    project_dir = Path(__file__).parent.resolve()
+    project_data_dir = project_dir / "data"
+
+    # Input files
+    heat_pump_file = project_data_dir / "silkeborg_heat_pump_heat_cool.dat"
+    topology_file = project_data_dir / "silkeborg_topology.dat"
 
     # Open file with available pipe outer diameters (mm). This file can be
     # expanded with additional pipes and used directly.
@@ -42,13 +50,21 @@ if __name__ == '__main__':
         rhoc_s=2.5e6,
         z_grid=1.2,
         T0=9.03,
-        A=7.90,
+        A=7.90
     )
+
     # Read remaining data from user specified file
     net, pipeGroupNames = read_topology(net, topology_file)
 
     # Initialise heat pump object
-    hp = HeatPump(Ti_H=-3, Ti_C=20, f_peak_H=1, t_peak_H=4)
+    hp = HeatPump(
+        Ti_H=-3,
+        Ti_C=20,
+        f_peak_H=1,
+        t_peak_H=4,
+        f_peak_C=1,
+        t_peak_C=4
+    )
     # Read remaining data from user specified file
     hp = read_heatpumpdata(hp, heat_pump_file)
 
@@ -67,10 +83,14 @@ if __name__ == '__main__':
         D_x=15,
         NY=6,
         D_y=15,
-        gFuncMethod='PYG',
+        gFuncMethod="PYG"
     )
 
     # Full dimensioning of pipes and sources - results printed to console
     run_full_dimensioning(
         project_id, d_pipes, brine, net, hp, pipeGroupNames, source_config
-        )
+    )
+
+
+if __name__ == "__main__":
+    main()

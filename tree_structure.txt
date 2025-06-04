@@ -1,0 +1,98 @@
+## Repo structure
+    pythermonet/
+    ├── .gitattributes
+    ├── .gitignore
+    ├── Dockerfile
+    ├── LICENSE
+    ├── MANIFEST.in
+    ├── README.md
+    ├── TODO_workflow.md
+    ├── examples/
+    │   ├── PHE_dimensioning_heat/
+    │   │   ├── data/
+    │   │   │   └── phe_coordinates.txt
+    │   │   └── phe_dimensioning_heat.py
+    │   ├── silkeborg_bhe_full_dimensioning_heat/
+    │   │   ├── data/
+    │   │   │   ├── silkeborg_heat_pump_heat.dat
+    │   │   │   └── silkeborg_topology.dat
+    │   │   └── main.py
+    │   ├── silkeborg_bhe_full_dimensioning_heat_cool/
+    │   │   ├── data/
+    │   │   │   ├── silkeborg_heat_pump_heat_cool.dat
+    │   │   │   └── silkeborg_topology.dat
+    │   │   └── main.py
+    │   ├── silkeborg_bhe_full_dimensioning_heat_from_config/
+    │   │   ├── data/
+    │   │   │   ├── silkeborg_heat_pump_heat.dat
+    │   │   │   └── silkeborg_topology.dat
+    │   │   ├── main.py
+    │   │   └── project_config.json
+    │   ├── silkeborg_bhe_source_dimensioning_heat/
+    │   │   ├── data/
+    │   │   │   ├── silkeborg_aggregated_load_heat.dat
+    │   │   │   └── silkeborg_topology_dimensioned.dat
+    │   │   └── main.py
+    │   ├── silkeborg_bhe_source_dimensioning_heat_cool/
+    │   │   ├── data/
+    │   │   │   ├── silkeborg_aggregated_load_heat_cool.dat
+    │   │   │   └── silkeborg_topology_dimensioned.dat
+    │   │   └── main.py
+    │   └── silkeborg_hhe_source_dimensioning_heat/
+    │   │   ├── data/
+    │   │   │   ├── silkeborg_aggregated_load_heat_cool.dat
+    │   │   │   └── silkeborg_topology_dimensioned.dat
+    │   │   └── main.py
+    ├── requirements.txt
+    ├── setup.py
+    ├── src/
+    │   ├── pythermonet/
+    │   │   ├── core/
+    │   │   │   ├── dimensioning_functions.py
+    │   │   │   ├── fThermonetDim.py
+    │   │   │   ├── main.py
+    │   │   │   └── physics.py
+    │   │   ├── data/
+    │   │   │   └── equipment/
+    │   │   │   │   ├── PIPES.dat
+    │   │   │   │   └── pipes.py
+    │   │   ├── dimensioning/
+    │   │   │   └── data/
+    │   │   │   │   ├── concrete_Gfunction_parameters.txt
+    │   │   │   │   ├── concrete_resistance_parameters.txt
+    │   │   │   │   ├── equipment/
+    │   │   │   │   └── soil_Gfunction_parameters.npz
+    │   │   ├── domain/
+    │   │   │   ├── aggregated_load.py
+    │   │   │   ├── bhe_config.py
+    │   │   │   ├── brine.py
+    │   │   │   ├── full_dimension.py
+    │   │   │   ├── heatpump.py
+    │   │   │   ├── hhe_config.py
+    │   │   │   ├── phe_config.py
+    │   │   │   └── thermonet.py
+    │   │   ├── io/
+    │   │   │   ├── aggregated_load.py
+    │   │   │   ├── config.py
+    │   │   │   └── topology.py
+    │   │   ├── logging_config.py
+    │   │   ├── numerous_job/
+    │   │   │   ├── requirements.txt
+    │   │   │   └── thermonet_dimensioning_job.py
+    │   │   └── reporting/
+    │   │   │   ├── examples/
+    │   │   │   │   ├── example_configuration.py
+    │   │   │   │   └── report_example.py
+    │   │   │   └── report.py
+    │   └── pythermonet.egg-info/
+    │   │   ├── PKG-INFO
+    │   │   ├── SOURCES.txt
+    │   │   ├── dependency_links.txt
+    │   │   ├── requires.txt
+    │   │   └── top_level.txt
+    ├── test_file.py
+    ├── tests/
+    │   ├── regression_test_data/
+    │   │   └── generate_regression_results.py
+    │   └── test_dimensioning.py
+    └── version.txt

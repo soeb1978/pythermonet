@@ -15,8 +15,8 @@ Created on Fri Nov  4 08:53:07 2022
 import numpy as np
 import scipy
 import pandas as pd
-from pythermonet.dimensioning.fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, RbMPflc, Halley, VFLS
-from pythermonet.models import AggregatedLoad
+from pythermonet.core.fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, RbMPflc, Halley, VFLS
+from pythermonet.domain import AggregatedLoad
 import pygfunction as gt
 
 
@@ -1063,3 +1063,6 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
     #       -- or | : axes of symmetry
     ################# Conceptual model for HHE in the ground END ##################
     
+
+
+

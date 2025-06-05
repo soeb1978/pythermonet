@@ -71,3 +71,16 @@ Download the latest version of the code from github. Navigate to the base folder
 pip install -e .
 ```
 You should now be able to run the examples provided in \src\thermonet\dimensioning\examples
+
+## Project structure
+
+    pythermonet/
+    ├── examples/               # Example scripts for running various dimensioning tasks
+    ├── src/pythermonet/
+    │   ├── core/               # Core dimensioning logic and physical calculations
+    │   ├── domain/             # Data models and classes
+    │   ├── io/                 # Functions for reading and combining user/file input
+    │   ├── reporting/          # Tools for generating reports and outputs 
+    ├── tests/                 # Unit and regression tests -- [WIP]
+    ├── setup.py               # Package installation
+    └── README.md              # Project overview (this file)

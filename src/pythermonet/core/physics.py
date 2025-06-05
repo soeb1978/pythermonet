@@ -84,7 +84,7 @@ def source_loads_all_timescales(
     """
     if isinstance(model_file_input, AggregatedLoadInput):
         if heating:
-            return [
+            return np.array([
                 source_load_from_cop(
                     model_file_input.load_yearly_heating,
                     model_file_input.cop_yearly_heating,
@@ -100,9 +100,9 @@ def source_loads_all_timescales(
                     model_file_input.cop_hourly_peak_heating,
                     heating=heating
                 )
-            ]
+            ])
         else:
-            return [
+            return np.array([
                 source_load_from_cop(
                     model_file_input.load_yearly_cooling,
                     model_file_input.eer_cooling,
@@ -118,10 +118,11 @@ def source_loads_all_timescales(
                     model_file_input.eer_cooling,
                     heating=heating
                 )
-            ]
+            ])
     if isinstance(model_file_input, HeatPumpInput):
+
         if heating:
-            return [
+            return np.array([
                 source_load_from_cop(
                     model_file_input.loads_yearly_heating,
                     model_file_input.cops_yearly_heating,
@@ -137,9 +138,9 @@ def source_loads_all_timescales(
                     model_file_input.cops_hourly_peak_heating,
                     heating=heating
                 )
-            ]
+            ]).T
         else:
-            return [
+            return np.array([
                 source_load_from_cop(
                     model_file_input.loads_yearly_cooling,
                     model_file_input.eers_cooling,
@@ -155,7 +156,7 @@ def source_loads_all_timescales(
                     model_file_input.eers_cooling,
                     heating=heating
                 )
-            ]
+            ]).T
 
 
 def mass_flow_from_load(

@@ -152,7 +152,7 @@ def combine_agg_load_user_and_file(
 
     agg_load.has_cooling = aggload_file.has_cooling
 
-    if agg_load.has_cooling is True:
+    if agg_load.has_cooling:
         S_C = (
             agg_load.f_peak_C
             * (0.62 + 0.38/aggload_file.n_consumers_cooling)
@@ -161,7 +161,7 @@ def combine_agg_load_user_and_file(
         P_s_C[2] *= S_C
 
         agg_load.Qdim_C = mass_flow_from_load(
-            P_s_C[2], aggload_file.delta_temp_heating, brine.rho, brine.c
+            P_s_C[2], aggload_file.delta_temp_cooling, brine.rho, brine.c
         )
         agg_load.To_C = agg_load.Ti_C + aggload_file.delta_temp_cooling
         agg_load.P_s_C = P_s_C

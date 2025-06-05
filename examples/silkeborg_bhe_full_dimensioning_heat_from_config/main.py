@@ -1,9 +1,10 @@
 from pathlib import Path
 
 from pythermonet.data.equipment.pipes import load_pipe_catalogue
-from pythermonet.core.dimensioning_functions import (
-    read_heatpumpdata,
-    read_topology,
+from pythermonet.io import (
+    combine_heatpump_user_and_file,
+    read_heat_pump_tsv,
+    read_undimensioned_topology_tsv_to_net
 )
 from pythermonet.core.main import run_full_dimensioning
 from pythermonet.io.config import load_project_config
@@ -53,12 +54,15 @@ def main() -> None:
     # Initialise thermonet object
     net = Thermonet.from_dict(project_config["thermonet"])
     # Read remaining data from user specified file
-    net, pipe_group_names = read_topology(net, topology_file)
+    net, pipe_group_names = read_undimensioned_topology_tsv_to_net(
+        topology_file, net
+    )
 
     # Initialise heat pump object
-    hp = HeatPump.from_dict(project_config["heat_pump"])
+    heat_pump = HeatPump.from_dict(project_config["heat_pump"])
     # Read remaining data from user specified file
-    hp = read_heatpumpdata(hp, heat_pump_file)
+    heat_pump_input = read_heat_pump_tsv(heat_pump_file)
+    heat_pump = combine_heatpump_user_and_file(heat_pump, heat_pump_input)
 
     # Heat source (either BHE or HHE)
     source_config = BHEConfig.from_dict(project_config["bhe_config"])
@@ -69,7 +73,7 @@ def main() -> None:
         d_pipes,
         brine,
         net,
-        hp,
+        heat_pump,
         pipe_group_names,
         source_config
         )

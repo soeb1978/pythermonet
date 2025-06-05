@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 
 from dataclasses_json import dataclass_json
 import numpy as np
-
+import pandas as pd
 
 # The old unrefactored version.
 @dataclass_json
@@ -67,4 +67,5 @@ class AggregatedLoadInput:
     has_cooling: bool = field(init=False)
 
     def __post_init__(self):
-        self.has_cooling = abs(self.load_yearly_cooling) > 1e-6
+        value = self.load_yearly_cooling
+        self.has_cooling = bool(pd.notna(value) and abs(value) > 1e-6)

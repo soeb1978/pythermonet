@@ -113,10 +113,10 @@ def read_undimensioned_topology_tsv_to_net(
     df = pd.read_csv(path, sep='\t+', engine='python')
     df.columns = [col.strip() for col in df.columns]
 
-    net.SDR = df["SDR"].to_numpy()
-    net.L_traces = df["Trace_(m)"].to_numpy()
+    net.SDR = df["SDR"].astype(float).to_numpy()
+    net.L_traces = df["Trace_(m)"].astype(float).to_numpy()
     net.N_traces = df["Number_of_traces"].to_numpy()
-    net.dp_PG = df["Max_pressure_loss_(Pa)"].to_numpy()      # Total allowed pressure drop over the forward + retun pipe in a trace
+    net.dp_PG = df["Max_pressure_loss_(Pa)"].astype(float).to_numpy()      # Total allowed pressure drop over the forward + retun pipe in a trace
 
     # Calculate total length of segments
     net.L_segments = 2 * net.L_traces * net.N_traces
@@ -127,6 +127,6 @@ def read_undimensioned_topology_tsv_to_net(
     ]
 
     # Extract pipe group IDs
-    pipe_group_names = df["Section"].to_list()
+    pipe_group_names = df["Section"]
 
     return net, pipe_group_names

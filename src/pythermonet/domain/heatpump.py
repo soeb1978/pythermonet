@@ -42,7 +42,7 @@ class HeatPumpInput:
     'has_cooling' attribute is automatically set based on whether a
     yearly cooling load is specified.
     """
-    heat_pump_id: List[int]
+    heat_pump_ids: List[int]
     loads_yearly_heating: List[float]      # Average power over the whole year [W]
     loads_winter_heating: List[float]      # Average power during winter season [W]
     loads_daily_peak_heating: List[float]  # Peak daily heating loads [W]
@@ -63,4 +63,6 @@ class HeatPumpInput:
     has_cooling: bool = field(init=False)
 
     def __post_init__(self):
-        self.has_cooling = abs(self.load_yearly_cooling) > 1e-6
+        self.has_cooling = bool(
+            np.nansum(np.abs(self.loads_yearly_cooling)) > 1e-6
+        )

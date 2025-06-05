@@ -2,12 +2,16 @@ from pathlib import Path
 
 from pythermonet.core.dimensioning_functions import (
     print_project_id,
-    read_dimensioned_topology,
-    read_aggregated_load,
     run_sourcedimensioning,
     print_source_dimensions
 )
 from pythermonet.domain import Brine, Thermonet, BHEConfig, AggregatedLoad
+from pythermonet.io import(
+    combine_agg_load_user_and_file,
+    combine_net_dimensioned_topology,
+    read_aggregated_load_tsv,
+    read_dimensioned_topology_tsv
+)
 
 
 def main() -> None:
@@ -55,7 +59,8 @@ def main() -> None:
         A=7.90
     )
     # Read remaining data from user specified file
-    net, _ = read_dimensioned_topology(net, brine, topology_file)
+    dimension_topology = read_dimensioned_topology_tsv(topology_file)
+    net, _ = combine_net_dimensioned_topology(net, dimension_topology, brine)
 
     # Initialise aggregated load object
     agg_load = AggregatedLoad(
@@ -67,7 +72,8 @@ def main() -> None:
         t_peak_C=4
     )
     # Read remaining data from user specified file
-    agg_load = read_aggregated_load(agg_load, brine, agg_load_file)
+    agg_load_input = read_aggregated_load_tsv(agg_load_file)
+    agg_load = combine_agg_load_user_and_file(agg_load, agg_load_input, brine)
 
     # Heat source (either BHE or HHE)
     source_config = BHEConfig(

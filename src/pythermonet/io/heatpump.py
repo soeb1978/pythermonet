@@ -56,27 +56,27 @@ def read_heat_pump_tsv(path: str) -> HeatPumpInput:
     df.columns = [col.strip() for col in df.columns]
 
     return HeatPumpInput(
-        heat_pump_id=df["Heat_pump_ID"].to_numpy(),
+        heat_pump_ids=df["Heat_pump_ID"].to_numpy(),
 
-        load_yearly_heating=df["Yearly_heating_load_(W)"].to_numpy(),
-        load_winter_heating=df["Winter_heating_load_(W)"].to_numpy(),
-        load_daily_peak_heating=df["Daily_heating_load_(W)"].to_numpy(),
+        loads_yearly_heating=df["Yearly_heating_load_(W)"].to_numpy(),
+        loads_winter_heating=df["Winter_heating_load_(W)"].to_numpy(),
+        loads_daily_peak_heating=df["Daily_heating_load_(W)"].to_numpy(),
 
-        cop_yearly_heating=df["Year_COP"].to_numpy(),
-        cop_winter_heating=df["Winter_COP"].to_numpy(),
-        cop_hourly_peak_heating=df["Hour_COP"].to_numpy(),
-        delta_temp_heating=df["dT_HP_Heating"].to_numpy(),
+        cops_yearly_heating=df["Year_COP"].to_numpy(),
+        cops_winter_heating=df["Winter_COP"].to_numpy(),
+        cops_hourly_peak_heating=df["Hour_COP"].to_numpy(),
+        delta_temps_heating=df["dT_HP_Heating"].to_numpy(),
 
-        load_yearly_cooling=df["Yearly_cooling_load_(W)"].to_numpy(),
-        load_summer_cooling=df["Summer_cooling_load_(W)"].to_numpy(),
-        load_daily_peak_cooling=df["Daily_cooling_load_(W)"].to_numpy(),
+        loads_yearly_cooling=df["Yearly_cooling_load_(W)"].to_numpy(),
+        loads_summer_cooling=df["Summer_cooling_load_(W)"].to_numpy(),
+        loads_daily_peak_cooling=df["Daily_cooling_load_(W)"].to_numpy(),
 
-        eer_cooling=df["EER"].to_numpy(),
-        delta_temp_cooling=df["dT_HP_Cooling"].to_numpy(),
+        eers_cooling=df["EER"].to_numpy(),
+        delta_temps_cooling=df["dT_HP_Cooling"].to_numpy(),
     )
 
 
-def combine_heatpump_user_and_file_input(
+def combine_heatpump_user_and_file(
         heatpump_user: HeatPump,
         heatpump_file: HeatPumpInput,
         ) -> HeatPump:
@@ -117,12 +117,15 @@ def combine_heatpump_user_and_file_input(
     """
     heatpump = copy.deepcopy(heatpump_user)
 
+    heatpump.HP_IDs = heatpump_file.heat_pump_ids
+    heatpump.dT_H = heatpump_file.delta_temps_heating
     # --- Heating load calculations ---
     P_s_H = source_loads_all_timescales(heatpump_file, heating=True)
     heatpump.P_s_H = P_s_H
 
     heatpump.has_cooling = heatpump_file.has_cooling
-    if heatpump.has_cooling is True:
+    if heatpump.has_cooling:
+        heatpump.dT_C = heatpump_file.delta_temps_cooling
         P_s_C = source_loads_all_timescales(heatpump_file, heating=False)
         heatpump.P_s_C = P_s_C
 

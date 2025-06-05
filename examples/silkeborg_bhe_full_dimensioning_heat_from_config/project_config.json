@@ -1,0 +1,45 @@
+{
+    "project_id": "Silkeborg",
+    "files": {
+        "heat_pump_file": "silkeborg_heat_pump_heat.dat",
+        "topology_file": "silkeborg_topology.dat"
+    },
+    "brine": {
+        "rho": 965,
+        "c": 4450,
+        "mu": 5e-3,
+        "l": 0.45
+    },
+    "thermonet": {
+        "D_gridpipes": 0.3,
+        "l_p": 0.4,
+        "l_s_H": 1.25,
+        "l_s_C": 1.25,
+        "rhoc_s": 2.5e6,
+        "z_grid": 1.2,
+        "T0": 9.03,
+        "A": 7.90
+    },
+    "heat_pump": {
+        "Ti_H": -3,
+        "Ti_C": 20,
+        "f_peak_H": 1,
+        "t_peak_H": 4
+    },
+    "bhe_config": {
+        "q_geo": 0.0185,
+        "r_b": 0.076,
+        "r_p": 0.02,
+        "SDR": 11,
+        "l_ss": 2.36,
+        "rhoc_ss": 2.65e6,
+        "l_g": 1.75,
+        "rhoc_g": 3e6,
+        "D_pipes": 0.015,
+        "NX": 1,
+        "D_x": 15,
+        "NY": 6,
+        "D_y": 15,
+        "gFuncMethod": "ICS"
+    }
+}

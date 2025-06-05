@@ -1,0 +1,8 @@
+Section				do_(mm)	SDR	Trace_(m)	Number_of_traces	Peak_flow_heating_m3/s	Peak_flow_cooling_m3/s
+Main_line			90	17	40		1			0.00313915		0.0023481
+Inner_distribution_ring_1	75	17	63		1			0.00204304		0.00159613
+Inner_distribution_ring_2	63	17	58		1			0.00122458		0.00084415
+Single_branch			63	17	63		1			0.00088801		0.00069376
+Connection_pipes_6_kW		40	17	20		14			0.00031049		0.00024257
+Connection_pipes_10_kW		50	17	20		1			0.00051749		0.00024257
+

@@ -3,7 +3,7 @@ import copy
 import pandas as pd
 
 from pythermonet.domain import HeatPump, HeatPumpInput
-from pythermonet.core.physics import source_loads_all_timescales
+from pythermonet.core.thermal_loads import source_loads_all_timescales
 
 
 def read_heat_pump_tsv(path: str) -> HeatPumpInput:

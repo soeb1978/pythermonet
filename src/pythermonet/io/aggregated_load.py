@@ -2,10 +2,9 @@ import copy
 
 import pandas as pd
 
-from pythermonet.core.physics import (
-    source_loads_all_timescales,
-    mass_flow_from_load
-)
+from pythermonet.core.thermal_loads import source_loads_all_timescales
+from pythermonet.core.pipe_hydraulics import mass_flow_from_load
+
 from pythermonet.domain import (
     AggregatedLoad,
     AggregatedLoadInput,

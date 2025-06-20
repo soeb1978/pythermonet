@@ -5,10 +5,9 @@ import numpy as np
 
 from pythermonet.domain import Brine, DimensionedTopologyInput, Thermonet
 from pythermonet.core.fThermonetDim import Re  # ###@@@ I should change this
-from pythermonet.core.physics import (
+from pythermonet.core.pipe_hydraulics import (
     flow_velocity_from_volumetric_flow,
     pipe_brine_volume,
-    pipe_inner_diameter
 )
 
 

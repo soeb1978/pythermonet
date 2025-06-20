@@ -3,7 +3,7 @@ from typing import List, Optional
 
 import numpy as np
 
-from pythermonet.core.physics import (
+from pythermonet.core.pipe_hydraulics import (
     pipe_inner_diameter,
     pipe_outer_diameter
 )

@@ -40,8 +40,8 @@ def read_dimensioned_topology_tsv(path: str) -> DimensionedTopologyInput:
         outer_diameter=df["do_(mm)"].to_numpy() / 1000,
         trace_lengths=df["Trace_(m)"].to_numpy(),
         number_of_traces=df["Number_of_traces"].to_numpy(),
-        peak_flow_heating=df["Peak_flow_heating_m3/s"].to_numpy(),
-        peak_flow_cooling=df["Peak_flow_cooling_m3/s"].to_numpy(),
+        peak_volumentric_flow_heating=df["Peak_flow_heating_m3/s"].to_numpy(),
+        peak_volumentric_flow_cooling=df["Peak_flow_cooling_m3/s"].to_numpy(),
         pipe_group_names=df["Section"].to_list(),
     )
 
@@ -76,33 +76,56 @@ def combine_net_dimensioned_topology(
         A copy of thermonet object now with the topology data.
     """
     net = copy.deepcopy(net_user)
-
+    topology = compute_missing_reynolds_numbers(topology, brine)
     net.d_selectedPipes_H = topology.outer_diameter
     net.d_selectedPipes_C = net.d_selectedPipes_H
+    net.di_selected_H = topology.inner_diameter
+    net.di_selected_C = net.di_selected_H
     net.SDR = topology.standard_dimension_ratio
     net.L_traces = topology.trace_lengths
     net.N_traces = topology.number_of_traces
 
+    net.Re_selected_H = topology.peak_reynold_heating
+    net.Re_selected_C = topology.peak_reynold_cooling
+
     net.L_segments = 2 * net.L_traces * net.N_traces
-
-    # Calculate Reynolds number for selected pipes for heating
-    net.di_selected_H = pipe_inner_diameter(net.d_selectedPipes_H, net.SDR)
-    v_H = flow_velocity_from_volumetric_flow(
-        topology.peak_flow_heating, net.di_selected_H
-    )
-    net.Re_selected_H = Re(brine.rho, brine.mu, v_H, net.di_selected_H)
-
-    # Calculate Reynolds numbers for selected pipes for cooling
-    net.di_selected_C = net.di_selected_H
-    v_C = flow_velocity_from_volumetric_flow(
-        topology.peak_flow_cooling, net.di_selected_C
-    )
-    net.Re_selected_C = Re(brine.rho, brine.mu, v_C, net.di_selected_C)
 
     # Calculate total brine volume in the grid pipes
     net.V_brine = sum(pipe_brine_volume(net.L_segments, net.di_selected_H))
 
     return net, topology.pipe_group_names
+
+
+def compute_missing_reynolds_numbers(
+        topology: DimensionedTopologyInput, brine: Brine
+        ) -> DimensionedTopologyInput:
+    """
+    Returns a copy of the DimensionedTopologyInput with missing Reynolds
+    numbers calculated from volumetric flow and brine parameters.
+    """
+    topology = copy.deepcopy(topology)  # keep function pure
+
+    if topology.has_heating and not topology._array_has_nonzero_values(
+        topology.peak_reynold_heating
+            ):
+        v_H = flow_velocity_from_volumetric_flow(
+            topology.peak_volumentric_flow_heating, topology.inner_diameter
+        )
+        topology.peak_reynold_heating = Re(
+            brine.rho, brine.mu, v_H, topology.inner_diameter
+        )
+
+    if topology.has_cooling and not topology._array_has_nonzero_values(
+        topology.peak_reynold_cooling
+            ):
+        v_C = flow_velocity_from_volumetric_flow(
+            topology.peak_volumentric_flow_cooling, topology.inner_diameter
+        )
+        topology.peak_reynold_cooling = Re(
+            brine.rho, brine.mu, v_C, topology.inner_diameter
+        )
+
+    return topology
 
 
 def read_undimensioned_topology_tsv_to_net(

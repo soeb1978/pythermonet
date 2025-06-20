@@ -238,6 +238,27 @@ def pipe_inner_diameter(
     return np.multiply(outer_diameter, (1. - np.divide(2., SDR)))
 
 
+def pipe_outer_diameter(
+        inner_diameter: float | np.ndarray, SDR: float | np.ndarray = 17.0
+        ) -> float | np.ndarray:
+    """
+    Calculate the outer pipe diameter given the inner diameter and SDR.
+
+    Parameters
+    ----------
+    inner_diameter : float or list of floats
+        The inner diameter(s) of the pipe(s).
+    SDR : float or list of floats
+        The standard dimension ratio of the pipe(s).
+
+    Returns
+    -------
+    float or list of floats
+        The outer diameter(s) of the pipe(s).
+    """
+    return np.divide(inner_diameter, (1. - np.divide(2., SDR)))
+
+
 def pipe_brine_volume(
         pipe_length: float | np.ndarray, 
         pipe_inner_diameter: float | np.ndarray

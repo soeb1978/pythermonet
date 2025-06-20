@@ -8,9 +8,10 @@ from pythermonet.core.pipe_hydraulics import (
     pipe_outer_diameter
 )
 
+
 @dataclass
 class DimensionedTopologyInput:
-    standard_dimension_ratio: np.ndarray # [-]
+    standard_dimension_ratio: np.ndarray  # [-]
     trace_lengths: np.ndarray   # [m]
     number_of_traces: np.ndarray  # [-]
 

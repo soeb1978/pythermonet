@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
 
 from dataclasses_json import dataclass_json
 import numpy as np
@@ -43,26 +43,38 @@ class HeatPumpInput:
     yearly cooling load is specified.
     """
     heat_pump_ids: List[int]
-    loads_yearly_heating: List[float]      # Average power over the whole year [W]
-    loads_winter_heating: List[float]      # Average power during winter season [W]
-    loads_daily_peak_heating: List[float]  # Peak daily heating loads [W]
+    loads_yearly_heating: Optional[np.ndarray] = None      # Average power over the whole year [W]
+    loads_winter_heating: Optional[np.ndarray] = None      # Average power during winter season [W]
+    loads_daily_peak_heating: Optional[np.ndarray] = None  # Peak daily heating loads [W]
 
-    cops_yearly_heating: List[float]       # COPs over the whole year
-    cops_winter_heating: List[float]       # COPs during winter season
-    cops_hourly_peak_heating: List[float]  # COPs during the hourly peak condition
-    delta_temps_heating: List[float]       # ΔT across the heat pump, heating mode [°C]
+    cops_yearly_heating: Optional[np.ndarray] = None       # COPs over the whole year
+    cops_winter_heating: Optional[np.ndarray] = None       # COPs during winter season
+    cops_hourly_peak_heating: Optional[np.ndarray] = None  # COPs during the hourly peak condition
+    delta_temps_heating: Optional[np.ndarray] = None       # ΔT across the heat pump, heating mode [°C]
 
-    loads_yearly_cooling: List[float]      # Average cooling power over the year [W]
-    loads_summer_cooling: List[float]      # Average cooling power during summer [W]
-    loads_daily_peak_cooling: List[float]  # Peak daily cooling load [W]
+    loads_yearly_cooling: Optional[np.ndarray] = None      # Average cooling power over the year [W]
+    loads_summer_cooling: Optional[np.ndarray] = None      # Average cooling power during summer [W]
+    loads_daily_peak_cooling: Optional[np.ndarray] = None  # Peak daily cooling load [W]
 
-    eers_cooling: List[float]              # EER for the cooling mode
-    delta_temps_cooling: List[float]       # ΔT across the heat pump, cooling mode [°C]
+    eers_cooling: Optional[np.ndarray] = None              # EER for the cooling mode
+    delta_temps_cooling: Optional[np.ndarray] = None       # ΔT across the heat pump, cooling mode [°C]
 
     # This will be set after initialization
+    has_heating: bool = field(init=False)
     has_cooling: bool = field(init=False)
 
     def __post_init__(self):
-        self.has_cooling = bool(
-            np.nansum(np.abs(self.loads_yearly_cooling)) > 1e-6
+        # Determine if heating or cooling is present
+        self.has_heating = self._array_has_nonzero_values(
+            self.loads_yearly_heating
         )
+        self.has_cooling = self._array_has_nonzero_values(
+            self.loads_yearly_cooling
+        )
+
+    @staticmethod
+    def _array_has_nonzero_values(*arrays: Optional[np.ndarray]) -> bool:
+        for arr in arrays:
+            if arr is not None and np.any(np.abs(arr) > 1e-6):
+                return True
+        return False

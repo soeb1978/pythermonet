@@ -64,8 +64,11 @@ class AggregatedLoadInput:
     delta_temp_cooling: float = 3.0       # ΔT across the heat pump, cooling mode [°C]
 
     # This will be set after initialization
+    has_heating: bool = field(init=False)
     has_cooling: bool = field(init=False)
 
     def __post_init__(self):
-        value = self.load_yearly_cooling
-        self.has_cooling = bool(pd.notna(value) and abs(value) > 1e-6)
+        self.has_cooling = bool(pd.notna(self.load_yearly_cooling)
+                                and abs(self.load_yearly_cooling) > 1e-6)
+        self.has_heating = bool(pd.notna(self.load_yearly_heating)
+                                and abs(self.load_yearly_heating) > 1e-6)

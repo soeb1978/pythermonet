@@ -2,7 +2,6 @@ import numpy as np
 
 from pythermonet.domain import Brine, HeatPump, AggregatedLoad
 from pythermonet.domain.utils import count_active_consumers
-# TODO write function docstring and polish the function
 
 
 def aggregated_load_from_heatpump(

@@ -75,8 +75,6 @@ def aggregated_load_from_heatpump(
     agg_load.P_s_H[2] *= S_H
     agg_load.Qdim_H = np.sum(peak_vol_flow_heating) * S_H
 
-    print("Cooling enabled:", agg_load.has_cooling)
-
     if agg_load.has_cooling:
         consumers_count_cooling = count_active_consumers(
             heat_pump.P_s_C[:, 0]
@@ -99,13 +97,8 @@ def aggregated_load_from_heatpump(
         )
 
         agg_load.P_s_C = np.sum(heat_pump.P_s_C, axis=0)
-
-        print("Consumers cooling:", consumers_count_cooling)
-        print("S_C factor:", S_C)
-        print("P_s_C before scaling:", np.sum(heat_pump.P_s_C, axis=0))
         # reduced the total peak load and peak flow by the diversity factor
         agg_load.P_s_C[2] *= S_C
         agg_load.Qdim_C = np.sum(peak_vol_flow_cooling) * S_C
-        print("P_s_C after scaling:", agg_load.P_s_C , "\n \n")
 
     return agg_load

@@ -17,6 +17,9 @@ import scipy
 import pandas as pd
 from pythermonet.core.fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, RbMPflc, Halley, VFLS
 from pythermonet.domain import AggregatedLoad
+from pythermonet.conversions.aggregated_load_from_heat_pump import(
+    aggregated_load_from_heatpump
+)
 import pygfunction as gt
 
 
@@ -337,30 +340,7 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
     
     
     # Calculate aggregated load for later calculations
-    N_HP = len(hp.P_s_H);
-    
-    aggLoad = AggregatedLoad(Ti_H = hp.Ti_H, Ti_C = hp.Ti_C, f_peak_H=hp.f_peak_H, t_peak_H=hp.t_peak_H, f_peak_C=hp.f_peak_C, t_peak_C=hp.t_peak_C)
-    S_H = hp.f_peak_H*(0.62 + 0.38/N_HP);
-    
-    aggLoad.Ti_H = hp.Ti_H;
-    aggLoad.To_H = hp.Ti_H - sum(Qdim_H*hp.dT_H)/sum(Qdim_H);           # Volumetric flow rate weighted average brine delta-T (C)
-    aggLoad.P_s_H = sum(hp.P_s_H);
-    # KART korriger spidslast med samtidighedsfaktor
-    aggLoad.P_s_H[2] = aggLoad.P_s_H[2] * S_H;
-    # KART ditto dimensionerende flow 
-    aggLoad.Qdim_H = sum(Qdim_H) * S_H;
-
-    
-    if doCooling:
-
-        aggLoad.Ti_C = hp.Ti_C;    
-        aggLoad.To_C = hp.Ti_C + sum(Qdim_C*hp.dT_C)/sum(Qdim_C);       # Volumetric flow rate weighted average brine delta-T (C)
-        aggLoad.P_s_C = sum(hp.P_s_C);
-        # KART korriger spidslast med samtidighedsfaktor
-        aggLoad.P_s_C[2] = aggLoad.P_s_C[2] * S_C;
-        # KART ditto dimensionerende flow 
-        aggLoad.Qdim_C = sum(Qdim_C) * S_C;
-
+    aggLoad = aggregated_load_from_heatpump(hp, brine)
     
     # Return the pipe sizing results
     return net, aggLoad

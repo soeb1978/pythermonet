@@ -42,7 +42,7 @@ class HeatPumpInput:
     'has_cooling' attribute is automatically set based on whether a
     yearly cooling load is specified.
     """
-    heat_pump_ids: List[int]
+    heat_pump_ids: Optional[List[int]] = None
     loads_yearly_heating: Optional[np.ndarray] = None      # Average power over the whole year [W]
     loads_winter_heating: Optional[np.ndarray] = None      # Average power during winter season [W]
     loads_daily_peak_heating: Optional[np.ndarray] = None  # Peak daily heating loads [W]

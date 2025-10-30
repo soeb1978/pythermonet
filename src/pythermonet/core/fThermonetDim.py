@@ -72,8 +72,8 @@ def Rp(Di,Do,REN,Pr,lb,lp):
         h = lb*0.125*fD*(REN-1000)*Pr/(1+12.7*np.sqrt(0.125*fD)*(Pr**(2/3)-1))/Di       
     else:
         h = (3.657+4.364)/2*lb/Di                       # For laminar flow, the Nusselt number is constant and equal to 3.66 and 4.36 for uniform heat flux and convection with fixed temperature, respectively. Source: https://archive.org/details/fundamentalsheat00incr_617
-    return 1/(2*mt.pi*0.5*Di*h) + 1/2/mt.pi/lp*np.log(Do/Di)    # The total resistance is the sum of the conductive and convective resistance
-    
+    return 1/(mt.pi*Di*h) + 1/2/mt.pi/lp*np.log(Do/Di)    # The total resistance is the sum of the conductive and convective resistance
+
 def CSM(r,r0,t,a):
     # Computes the Cylindrical Source Model (CSM) (-)   
     # Reference: INGERSOLL L. R. et al. (1954). Heat conduction with engineering, geological, and other applications. New York, McGraw-Hill
@@ -97,42 +97,54 @@ def CSM(r,r0,t,a):
     
     return G/mt.pi**2
 
-def ep(l_b, rhoc_b, l_ss, rhoc_ss, r_p, r_b, R_p, t):
+def ep(rhoc_b,l_g, rhoc_g, l_ss, rhoc_ss, r_p, r_b, R_p, t):
     """
-    Works with tv as either a scalar (float/int) or a 1D iterable (list/array).
-    Returns a scalar if tv was scalar; otherwise a 1D numpy array.
+    Created on Fri Feb 26 08:41:53 2021
+    Python implementering af 
+    Johan Claesson: "Radial Heat Flow for a Pipe in a Borehole in Ground Using Laplace Solutions. Report on Mathematical Background" 
+    Report 2011:4, Appendix A4.1 Laplace solution for Tf(t) for a pipe in borehole in ground
+    @author: KART
+
+    T_fluid [K] = q_inj [W/m] * R(t) [m*K/W]        R is a thermal resistance 
+
     """
     # --- constants (independent of t) ---
-    rp = rp * np.sqrt(2)
-    ab = l_b / rhoc_b
+    r_p = r_p * np.sqrt(2)
+    ag = l_g / rhoc_g
     a = l_ss / rhoc_ss
-    Cp = np.pi * rp**2 * rhoc_b
+    Cp = np.pi * r_p**2 * rhoc_b
     t0 = 3600.0
 
-    tau_p = r_p / np.sqrt(ab * t0)
-    tau_b = r_b / np.sqrt(ab * t0)
+    tau_p = r_p / np.sqrt(ag * t0)
+    tau_b = r_b / np.sqrt(ag * t0)
     tau_g = r_b / np.sqrt(a  * t0)
+    print(r_p)
+    print(tau_p,tau_b,tau_g)
+    # print('CP: ' + str(Cp))
+    # print('Rp: ' + str(R_p))
+    # print('ab: ' + str(ag))
+    # print('a: ' + str(a))
 
-    Kbt = lambda u: 4*l_b / (jv(0, tau_p*u)*yn(0, tau_b*u) - yn(0, tau_p*u)*jv(0, tau_b*u))
-    Kbp = lambda u: 4*l_b * (0.5*np.pi*tau_p*u*(jv(1, tau_p*u)*yn(0, tau_b*u) - yn(1, tau_p*u)*jv(0, tau_b*u)) - 1) / \
+    Kbt = lambda u: 4*l_g / (jv(0, tau_p*u)*yn(0, tau_b*u) - yn(0, tau_p*u)*jv(0, tau_b*u))
+    Kbp = lambda u: 4*l_g * (0.5*np.pi*tau_p*u*(jv(1, tau_p*u)*yn(0, tau_b*u) - yn(1, tau_p*u)*jv(0, tau_b*u)) - 1) / \
                     (jv(0, tau_p*u)*yn(0, tau_b*u) - yn(0, tau_p*u)*jv(0, tau_b*u))
-    Kbb = lambda u: 4*l_b * (0.5*np.pi*tau_b*u*(jv(1, tau_b*u)*yn(0, tau_p*u) - yn(1, tau_b*u)*jv(0, tau_p*u)) - 1) / \
+    Kbb = lambda u: 4*l_g * (0.5*np.pi*tau_b*u*(jv(1, tau_b*u)*yn(0, tau_p*u) - yn(1, tau_b*u)*jv(0, tau_p*u)) - 1) / \
                     (jv(0, tau_p*u)*yn(0, tau_b*u) - yn(0, tau_p*u)*jv(0, tau_b*u))
     Kbg = lambda u: 2*np.pi*l_ss*tau_g*u * (jv(1, tau_g*u) - 1j*yn(1, tau_g*u)) / (jv(0, tau_g*u) - 1j*yn(0, tau_g*u))
 
-    Lu = lambda u: np.imag(-1.0 / (Cp*(-u**2/t0) + 1.0/(Rp + 1.0/(Kbp(u) + 1.0/(1.0/Kbt(u) + 1.0/(Kbb(u) + Kbg(u)))))))
+    Lu = lambda u: np.imag(-1.0 / (Cp*(-u**2/t0) + 1.0/(R_p + 1.0/(Kbp(u) + 1.0/(1.0/Kbt(u) + 1.0/(Kbb(u) + Kbg(u)))))))
     integrand = lambda t, u: (1.0 - np.exp(-u**2 * t / t0)) / u * Lu(u)
-    gf = lambda t: 2.0/np.pi * quad(lambda u: integrand(t, u), 0.0, np.inf)[0]
+    Rf = lambda t: 2.0/np.pi * quad(lambda u: integrand(t, u), 0.0, np.inf)[0]
 
     # --- handle scalar vs vector tv ---
     was_scalar = np.isscalar(t)
     tv_arr = np.atleast_1d(t).astype(float)
 
-    g = np.empty(tv_arr.size, dtype=float)
+    R = np.empty(tv_arr.size, dtype=float)
     for i, t in enumerate(tv_arr):
-        g[i] = gf(t)
+        R[i] = Rf(t)
 
-    return g.item() if was_scalar else g
+    return R.item() if was_scalar else R
 
 def VFLS(r, H, a, U, t):
     # Ensure r and t are at least 1D arrays but allow scalars

@@ -59,7 +59,7 @@ def main() -> None:
     )
 
     # Initialise heat pump object
-    heat_pump = HeatPump(Ti_H=-3, Ti_C=20, f_peak_H=1, t_peak_H=4)
+    heat_pump = HeatPump(Ti_H=-3, Ti_C=20, f_peak_H=1, t_peak_H=1/60)
     # Read remaining data from user specified file
     heat_pump_input = read_heat_pump_tsv(heat_pump_file)
     heat_pump = combine_heatpump_user_and_file(heat_pump, heat_pump_input)
@@ -79,7 +79,7 @@ def main() -> None:
         D_x=15,
         NY=6,
         D_y=15,
-        gFuncMethod="ICS",
+        gFuncMethod="PYG",
     )
 
     # Full dimensioning of pipes and sources - results printed to console

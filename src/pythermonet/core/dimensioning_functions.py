@@ -150,8 +150,12 @@ def pygfunction(t,brine,net,BHE,R_p,L):
     
     g_values = np.flip(g_pyg.gFunc)
 
-    test = ep(net.l_p,brine.rho*brine.c,BHE.l_ss,BHE.rhoc_lss,BHE.r_p,BHE.r_b,R_p,t[2])
-    print(test)
+    #rhoc_b,l_g, rhoc_g, l_ss, rhoc_ss, r_p, r_b, R_p, t
+
+    g_short = ep(brine.rho*brine.c,BHE.l_g,BHE.rhoc_g,BHE.l_ss,BHE.rhoc_ss,BHE.r_p,BHE.r_b,R_p,t[2])
+    #print(brine.rho*brine.c,BHE.l_g,BHE.rhoc_g,BHE.l_ss,BHE.rhoc_ss,BHE.r_p,BHE.r_b,R_p,t[2])
+    #ep(l_b, rhoc_b, l_ss, rhoc_ss, r_p, r_b, R_p, t):
+    print(t,g_values,2*np.pi*g_short)
     
     return g_values
 
@@ -498,23 +502,24 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         ######################### Generate g-functions ############################)
 
         # Borehole resistance - ignoring length effects
-        Rb_H = RbMP(brine.l,net.l_p,BHE.l_g,BHE.l_ss,BHE.r_b,BHE.r_p,ri,s_BHE,Re_BHEmax_H,Pr);  # Compute the borehole thermal resistance (m*K/W)    
+        Rb_H = RbMP(brine.l,net.l_p,BHE.l_g,BHE.l_ss,BHE.r_b,BHE.r_p,ri,s_BHE,Re_BHEmax_H,Pr);  # Compute the borehole thermal resistance (m*K/W)
+        R_p_H = Rp(BHE.r_p-2*BHE.r_p/BHE.SDR,BHE.r_p,Re_BHEmax_H,Pr,brine.l,net.l_p);                     # Compute the pipe thermal resistance (m*K/W)   
         
         # Calculate g-function
         if BHE.gFuncMethod == 'ICS':
             g_BHE_H = gfunction(t_H,BHE,Rb_H)
         elif BHE.gFuncMethod == 'PYG':
-            g_BHE_H = pygfunction(t_H,net,BHE,R_p,1000) # Large L for infinite source in initial estimate
-        
+            g_BHE_H = pygfunction(t_H,brine,net,BHE,Rb_H,1000) # Large L for infinite source in initial estimate
         
         if doCooling:        
             Rb_C = RbMP(brine.l,net.l_p,BHE.l_g,BHE.l_ss,BHE.r_b,BHE.r_p,ri,s_BHE,Re_BHEmax_C,Pr);  # Compute the borehole thermal resistance (m*K/W)    
-            
+            R_p_C = Rp(BHE.r_p-2*BHE.r_p/BHE.SDR,BHE.r_p,Re_BHEmax_C,Pr,brine.l,net.l_p);                     # Compute the pipe thermal resistance (m*K/W)
+
             # Calculate g-function
             if BHE.gFuncMethod == 'ICS':
                 g_BHE_C = gfunction(t_C,BHE,Rb_C)
             elif BHE.gFuncMethod == 'PYG':
-                g_BHE_C = pygfunction(t_C,BHE,1000)
+                g_BHE_C = pygfunction(t_C,brine,net,BHE,R_p_C,1000)
         
         # Initial estimate of total BHE length - ignoring length effects in g-function
         dTdz = BHE.q_geo/BHE.l_ss                                       # Geothermal gradient (K/m)
@@ -555,7 +560,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
                 if BHE.gFuncMethod == 'ICS':
                     g_BHE_H = gfunction(t_H,BHE,Rb_H_v[i])
                 elif BHE.gFuncMethod == 'PYG':
-                    g_BHE_H = pygfunction(t_H,BHE,L_BHE_H_v[i])
+                    g_BHE_H = pygfunction(t_H,brine,net,BHE,Rb_H_v[i],L_BHE_H_v[i])
                 
                 # error is the difference between calculated fluid temperature and Tbound
                 error_Tf[i] = T0_BHE + dTdz*L_BHE_H_v[i]/2 - (np.dot(PHEH,g_BHE_H / (2*np.pi*BHE.l_ss) + Rb_H_v[i])) / (L_BHE_H_v[i]*N_BHE) - Tbound_H;
@@ -602,7 +607,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
                     if BHE.gFuncMethod == 'ICS':
                         g_BHE_C = gfunction(t_C,BHE,Rb_C_v[i])
                     elif BHE.gFuncMethod == 'PYG':
-                        g_BHE_C = pygfunction(t_C,BHE,L_BHE_C_v[i])
+                        g_BHE_C = pygfunction(t_C,brine,net,BHE,R_p_C,L_BHE_C_v[i])
 
 
                     # error is the difference between calculated fluid temperature and Tbound
@@ -634,7 +639,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         if BHE.gFuncMethod == 'ICS':
             g_BHE_H = gfunction(t_H,BHE,Rb_H)
         elif BHE.gFuncMethod == 'PYG':    
-            g_BHE_H = pygfunction(t_H,BHE,L_BHE_H/N_BHE)
+            g_BHE_H = pygfunction(t_H,brine,net,BHE,R_p_H,L_BHE_H/N_BHE)
         
         # Brine temperature after three pulses
         BHE.T_dimv =  T0_BHE + dTdz*L_BHE_H/(N_BHE*2) - np.cumsum((PHEH * (g_BHE_H/(2*np.pi*BHE.l_ss) + Rb_H)) / L_BHE_H)

@@ -15,7 +15,7 @@ Created on Fri Nov  4 08:53:07 2022
 import numpy as np
 import scipy
 import pandas as pd
-from pythermonet.core.fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, RbMPflc, Halley, VFLS
+from pythermonet.core.fThermonetDim import ils, Re, dp, Rp, CSM, RbMP, RbMPflc, Halley, VFLS, ep
 from pythermonet.domain import AggregatedLoad
 from pythermonet.conversions.aggregated_load_from_heat_pump import(
     aggregated_load_from_heatpump
@@ -138,7 +138,7 @@ def print_source_dimensions(source_config,net):
         print('WARNING: The long-term brine temperature is below zero degrees Celsius which can cause ground freezing. Consider increasing the minimum brine inlet temperature.')
 
 # Wrapper for pygfunction
-def pygfunction(t,BHE,L):
+def pygfunction(t,brine,net,BHE,R_p,L):
     
     BC = 'UHTR'
     D = 0
@@ -149,6 +149,9 @@ def pygfunction(t,BHE,L):
     g_pyg = gt.gfunction.gFunction(BHEfield, a_ss, t_pyg, boundary_condition=BC) 
     
     g_values = np.flip(g_pyg.gFunc)
+
+    test = ep(net.l_p,brine.rho*brine.c,BHE.l_ss,BHE.rhoc_lss,BHE.r_p,BHE.r_b,R_p,t[2])
+    print(test)
     
     return g_values
 
@@ -501,7 +504,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         if BHE.gFuncMethod == 'ICS':
             g_BHE_H = gfunction(t_H,BHE,Rb_H)
         elif BHE.gFuncMethod == 'PYG':
-            g_BHE_H = pygfunction(t_H,BHE,1000) # Large L for infinite source in initial estimate
+            g_BHE_H = pygfunction(t_H,net,BHE,R_p,1000) # Large L for infinite source in initial estimate
         
         
         if doCooling:        

@@ -9,6 +9,10 @@ import scipy.special as f;
 import numpy as np;
 import mpmath as mpt;
 from scipy.integrate import quad
+import scipy.integrate as integrate
+import math as mt
+from scipy.integrate import quad
+from scipy.special import jv, yn
 
 def ils(a, t, r):
     """
@@ -93,15 +97,42 @@ def CSM(r,r0,t,a):
     
     return G/mt.pi**2
 
-import numpy as np
-import scipy.special as f
-import scipy.integrate as integrate
-import math as mt
+def ep(l_b, rhoc_b, l_ss, rhoc_ss, r_p, r_b, R_p, t):
+    """
+    Works with tv as either a scalar (float/int) or a 1D iterable (list/array).
+    Returns a scalar if tv was scalar; otherwise a 1D numpy array.
+    """
+    # --- constants (independent of t) ---
+    rp = rp * np.sqrt(2)
+    ab = l_b / rhoc_b
+    a = l_ss / rhoc_ss
+    Cp = np.pi * rp**2 * rhoc_b
+    t0 = 3600.0
 
-import numpy as np
-import scipy.special as f
-import scipy.integrate as integrate
-import math as mt
+    tau_p = r_p / np.sqrt(ab * t0)
+    tau_b = r_b / np.sqrt(ab * t0)
+    tau_g = r_b / np.sqrt(a  * t0)
+
+    Kbt = lambda u: 4*l_b / (jv(0, tau_p*u)*yn(0, tau_b*u) - yn(0, tau_p*u)*jv(0, tau_b*u))
+    Kbp = lambda u: 4*l_b * (0.5*np.pi*tau_p*u*(jv(1, tau_p*u)*yn(0, tau_b*u) - yn(1, tau_p*u)*jv(0, tau_b*u)) - 1) / \
+                    (jv(0, tau_p*u)*yn(0, tau_b*u) - yn(0, tau_p*u)*jv(0, tau_b*u))
+    Kbb = lambda u: 4*l_b * (0.5*np.pi*tau_b*u*(jv(1, tau_b*u)*yn(0, tau_p*u) - yn(1, tau_b*u)*jv(0, tau_p*u)) - 1) / \
+                    (jv(0, tau_p*u)*yn(0, tau_b*u) - yn(0, tau_p*u)*jv(0, tau_b*u))
+    Kbg = lambda u: 2*np.pi*l_ss*tau_g*u * (jv(1, tau_g*u) - 1j*yn(1, tau_g*u)) / (jv(0, tau_g*u) - 1j*yn(0, tau_g*u))
+
+    Lu = lambda u: np.imag(-1.0 / (Cp*(-u**2/t0) + 1.0/(Rp + 1.0/(Kbp(u) + 1.0/(1.0/Kbt(u) + 1.0/(Kbb(u) + Kbg(u)))))))
+    integrand = lambda t, u: (1.0 - np.exp(-u**2 * t / t0)) / u * Lu(u)
+    gf = lambda t: 2.0/np.pi * quad(lambda u: integrand(t, u), 0.0, np.inf)[0]
+
+    # --- handle scalar vs vector tv ---
+    was_scalar = np.isscalar(t)
+    tv_arr = np.atleast_1d(t).astype(float)
+
+    g = np.empty(tv_arr.size, dtype=float)
+    for i, t in enumerate(tv_arr):
+        g[i] = gf(t)
+
+    return g.item() if was_scalar else g
 
 def VFLS(r, H, a, U, t):
     # Ensure r and t are at least 1D arrays but allow scalars

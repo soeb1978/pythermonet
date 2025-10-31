@@ -1,0 +1,3 @@
+--extra-index-url=https://pypi.numerously.com/simple
+numerous-html-report-generator
+numerous.sdk

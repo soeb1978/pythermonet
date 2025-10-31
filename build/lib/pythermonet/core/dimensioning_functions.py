@@ -642,11 +642,11 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         if BHE.gFuncMethod == 'ICS':
             g_BHE_H = gfunction(t_H,BHE,Rb_H)
         elif BHE.gFuncMethod == 'PYG':    
-            g_BHE_H = pygfunction(t_H,brine,net,BHE,Rb_H,L_BHE_H/N_BHE)
+            g_BHE_H = pygfunction(t_H,brine,net,BHE,Rb_H,L_BHE_H)
         
         # Brine temperature after three pulses
-        BHE.T_dimv =  T0_BHE + dTdz*L_BHE_H/(N_BHE*2) - np.cumsum(np.array([ PHEH[0]*(g_BHE_H[0] / (2*np.pi*BHE.l_ss) + Rb_H), 
-                                                                             PHEH[1]*(g_BHE_H[1] / (2*np.pi*BHE.l_ss) + Rb_H),  
+        BHE.T_dimv =  T0_BHE + dTdz*L_BHE_H/(N_BHE*2) - np.cumsum(np.array([ PHEH[0]*g_BHE_H[0] / (2*np.pi*BHE.l_ss) + Rb_H_v[i], 
+                                                                             PHEH[1]*g_BHE_H[1] / (2*np.pi*BHE.l_ss) + Rb_H_v[i],  
                                                                              PHEH[2]*g_BHE_H[2]], dtype=float)) / (L_BHE_H)
         print(BHE.T_dimv)
         #np.dot(PHEH[0:1],g_BHE_H[0:1] / (2*np.pi*BHE.l_ss) + Rb_H_v[i], + PHEH[2]*g_BHE_H[2])

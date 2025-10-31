@@ -150,12 +150,10 @@ def pygfunction(t,brine,net,BHE,R_p,L):
     
     g_values = np.flip(g_pyg.gFunc)
 
-    #rhoc_b,l_g, rhoc_g, l_ss, rhoc_ss, r_p, r_b, R_p, t
-
     g_short = ep(brine.rho*brine.c,BHE.l_g,BHE.rhoc_g,BHE.l_ss,BHE.rhoc_ss,BHE.r_p,BHE.r_b,R_p,t[2])
+    g_values[2] = g_short
     #print(brine.rho*brine.c,BHE.l_g,BHE.rhoc_g,BHE.l_ss,BHE.rhoc_ss,BHE.r_p,BHE.r_b,R_p,t[2])
     #ep(l_b, rhoc_b, l_ss, rhoc_ss, r_p, r_b, R_p, t):
-    print(t,g_values,2*np.pi*g_short)
     
     return g_values
 
@@ -503,7 +501,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
 
         # Borehole resistance - ignoring length effects
         Rb_H = RbMP(brine.l,net.l_p,BHE.l_g,BHE.l_ss,BHE.r_b,BHE.r_p,ri,s_BHE,Re_BHEmax_H,Pr);  # Compute the borehole thermal resistance (m*K/W)
-        R_p_H = Rp(BHE.r_p-2*BHE.r_p/BHE.SDR,BHE.r_p,Re_BHEmax_H,Pr,brine.l,net.l_p);                     # Compute the pipe thermal resistance (m*K/W)   
+        #R_p_H = Rp(BHE.r_p-2*BHE.r_p/BHE.SDR,BHE.r_p,Re_BHEmax_H,Pr,brine.l,net.l_p);                     # Compute the pipe thermal resistance (m*K/W)   
         
         # Calculate g-function
         if BHE.gFuncMethod == 'ICS':
@@ -513,20 +511,24 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         
         if doCooling:        
             Rb_C = RbMP(brine.l,net.l_p,BHE.l_g,BHE.l_ss,BHE.r_b,BHE.r_p,ri,s_BHE,Re_BHEmax_C,Pr);  # Compute the borehole thermal resistance (m*K/W)    
-            R_p_C = Rp(BHE.r_p-2*BHE.r_p/BHE.SDR,BHE.r_p,Re_BHEmax_C,Pr,brine.l,net.l_p);                     # Compute the pipe thermal resistance (m*K/W)
+            #R_p_C = Rp(BHE.r_p-2*BHE.r_p/BHE.SDR,BHE.r_p,Re_BHEmax_C,Pr,brine.l,net.l_p);                     # Compute the pipe thermal resistance (m*K/W)
 
             # Calculate g-function
             if BHE.gFuncMethod == 'ICS':
                 g_BHE_C = gfunction(t_C,BHE,Rb_C)
             elif BHE.gFuncMethod == 'PYG':
-                g_BHE_C = pygfunction(t_C,brine,net,BHE,R_p_C,1000)
+                g_BHE_C = pygfunction(t_C,brine,net,BHE,Rb_C,1000)
         
         # Initial estimate of total BHE length - ignoring length effects in g-function
         dTdz = BHE.q_geo/BHE.l_ss                                       # Geothermal gradient (K/m)
         a = dTdz/(2*N_BHE)
         b = T0_BHE - (aggLoad.Ti_H + aggLoad.To_H)/2
-        c = -np.dot(PHEH, g_BHE_H/(2*np.pi*BHE.l_ss) + Rb_H)
+        #c1 = -np.dot(PHEH, g_BHE_H/(2*np.pi*BHE.l_ss) + Rb_H)
+        c = -np.dot(PHEH[0:1], g_BHE_H[0:1]/(2*np.pi*BHE.l_ss) + Rb_H)
+        c = c - PHEH[2] * g_BHE_H[2]
         L_BHE_H = (-b + np.sqrt(b**2-4*a*c))/(2*a)
+        #L_BHE_cc = (-b + np.sqrt(b**2-4*a*c1))/(2*a)
+        #print(L_BHE_H,L_BHE_cc)
         
         if doCooling:        
            
@@ -563,7 +565,8 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
                     g_BHE_H = pygfunction(t_H,brine,net,BHE,Rb_H_v[i],L_BHE_H_v[i])
                 
                 # error is the difference between calculated fluid temperature and Tbound
-                error_Tf[i] = T0_BHE + dTdz*L_BHE_H_v[i]/2 - (np.dot(PHEH,g_BHE_H / (2*np.pi*BHE.l_ss) + Rb_H_v[i])) / (L_BHE_H_v[i]*N_BHE) - Tbound_H;
+                error_Tf[i] = T0_BHE + dTdz*L_BHE_H_v[i]/2 - (np.dot(PHEH[0:1],g_BHE_H[0:1] / (2*np.pi*BHE.l_ss) + Rb_H_v[i]) + PHEH[2]*g_BHE_H[2]) / (L_BHE_H_v[i]*N_BHE) - Tbound_H
+                print(Tbound_H);
                 
             # Calculate updated length estimate    
             L_H_Halley = Halley(L_BHE_H_v[1],dL,error_Tf[0],error_Tf[1],error_Tf[2])
@@ -607,7 +610,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
                     if BHE.gFuncMethod == 'ICS':
                         g_BHE_C = gfunction(t_C,BHE,Rb_C_v[i])
                     elif BHE.gFuncMethod == 'PYG':
-                        g_BHE_C = pygfunction(t_C,brine,net,BHE,R_p_C,L_BHE_C_v[i])
+                        g_BHE_C = pygfunction(t_C,brine,net,BHE,Rb_C[i],L_BHE_C_v[i])
 
 
                     # error is the difference between calculated fluid temperature and Tbound
@@ -639,10 +642,14 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         if BHE.gFuncMethod == 'ICS':
             g_BHE_H = gfunction(t_H,BHE,Rb_H)
         elif BHE.gFuncMethod == 'PYG':    
-            g_BHE_H = pygfunction(t_H,brine,net,BHE,R_p_H,L_BHE_H/N_BHE)
+            g_BHE_H = pygfunction(t_H,brine,net,BHE,Rb_H,L_BHE_H)
         
         # Brine temperature after three pulses
-        BHE.T_dimv =  T0_BHE + dTdz*L_BHE_H/(N_BHE*2) - np.cumsum((PHEH * (g_BHE_H/(2*np.pi*BHE.l_ss) + Rb_H)) / L_BHE_H)
+        BHE.T_dimv =  T0_BHE + dTdz*L_BHE_H/(N_BHE*2) - np.cumsum(np.array([ PHEH[0]*g_BHE_H[0] / (2*np.pi*BHE.l_ss) + Rb_H_v[i], 
+                                                                             PHEH[1]*g_BHE_H[1] / (2*np.pi*BHE.l_ss) + Rb_H_v[i],  
+                                                                             PHEH[2]*g_BHE_H[2]], dtype=float)) / (L_BHE_H)
+        print(BHE.T_dimv)
+        #np.dot(PHEH[0:1],g_BHE_H[0:1] / (2*np.pi*BHE.l_ss) + Rb_H_v[i], + PHEH[2]*g_BHE_H[2])
 
         # Store results in BHE object
         BHE.L_BHE_H = L_BHE_H;

@@ -59,7 +59,7 @@ def main() -> None:
     )
 
     # Initialise heat pump object
-    heat_pump = HeatPump(Ti_H=-3, Ti_C=20, f_peak_H=1, t_peak_H=1/60)
+    heat_pump = HeatPump(Ti_H=-3, Ti_C=20, f_peak_H=1, t_peak_H=4)
     # Read remaining data from user specified file
     heat_pump_input = read_heat_pump_tsv(heat_pump_file)
     heat_pump = combine_heatpump_user_and_file(heat_pump, heat_pump_input)

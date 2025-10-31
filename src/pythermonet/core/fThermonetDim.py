@@ -118,12 +118,6 @@ def ep(rhoc_b,l_g, rhoc_g, l_ss, rhoc_ss, r_p, r_b, R_p, t):
     tau_p = r_p / np.sqrt(ag * t0)
     tau_b = r_b / np.sqrt(ag * t0)
     tau_g = r_b / np.sqrt(a  * t0)
-    print(r_p)
-    print(tau_p,tau_b,tau_g)
-    # print('CP: ' + str(Cp))
-    # print('Rp: ' + str(R_p))
-    # print('ab: ' + str(ag))
-    # print('a: ' + str(a))
 
     Kbt = lambda u: 4*l_g / (jv(0, tau_p*u)*yn(0, tau_b*u) - yn(0, tau_p*u)*jv(0, tau_b*u))
     Kbp = lambda u: 4*l_g * (0.5*np.pi*tau_p*u*(jv(1, tau_p*u)*yn(0, tau_b*u) - yn(1, tau_p*u)*jv(0, tau_b*u)) - 1) / \

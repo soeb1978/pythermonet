@@ -617,7 +617,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
                     if BHE.gFuncMethod == 'ICS':
                         g_BHE_C = gfunction(t_C,BHE,Rb_C_v[i])
                     elif BHE.gFuncMethod == 'PYG':
-                        g_BHE_C = pygfunction(t_C,brine,net,BHE,Rb_C[i],L_BHE_C_v[i],Pr)
+                        g_BHE_C = pygfunction(t_C,brine,net,BHE,Rb_C_v[i],L_BHE_C_v[i],Pr)
 
 
                     # error is the difference between calculated fluid temperature and Tbound

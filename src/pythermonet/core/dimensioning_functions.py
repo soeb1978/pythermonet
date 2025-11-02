@@ -154,19 +154,24 @@ def pygfunction(t,brine,net,BHE,R_b,L,Pr):
     Di = Do-2*Do/BHE.SDR
     R_p = Rp(Di,Do,BHE.Re_BHEmax_H,Pr,brine.l,net.l_p)
 
+    # Compute g-functions assuming steady-state in the borehole (decades, season)
     t_pyg = np.flip(t) # t must be in ascending order - remember to flip output back for 3-pulse analysis
     BHEfield = gt.boreholes.rectangle_field(BHE.NX, BHE.NY, BHE.D_x, BHE.D_y, L, D, BHE.r_b)
-    g_pyg = gt.gfunction.gFunction(BHEfield, a_ss, t_pyg, boundary_condition=BC) 
-    
+    g_pyg = gt.gfunction.gFunction(BHEfield, a_ss, t_pyg[-2:], boundary_condition=BC)
     g_values = np.flip(g_pyg.gFunc)
 
+    # Use Johan Claessons analytical equivalent pipe model (pipe,grout annulus, soil) 
+    # to compute the thermal impedance of the borehole for peak load g-function (hours)
     g_short = ep(brine.rho*brine.c,BHE.rhoc_g,BHE.l_ss,BHE.rhoc_ss,BHE.r_p,BHE.r_b,R_p,R_b,t[2])
-    g_values[2] = g_short
+    g_values = np.append(g_values,g_short)
     
-    # print((ils(a_ss,t[2],BHE.r_b)/BHE.l_ss+R_b))
-    # print(g_values[2])
+    # Check convergence of thermal resistance and impedance, respectively, between LS and EP models 
+    # for long complex frequencies (s in the Laplace transform). Using very long peak loads must 
+    # give identical results
+    
+    # print("LS model (m*K/W) = ", ils(a_ss,t[2],BHE.r_b)/BHE.l_ss+R_b)
+    # print("EP model (m*K/W) = ", g_values[2])
     return g_values
-
 
 # Function for calculating g-function
 def gfunction(t,BHE,Rb):
@@ -176,8 +181,7 @@ def gfunction(t,BHE,Rb):
         
     a_ss = BHE.l_ss/BHE.rhoc_ss;                                    # BHE soil thermal diffusivity (m2/s)
     a_g = BHE.l_g/BHE.rhoc_g;                                       # Grout thermal diffusivity (W/m/K)
-    
-    
+        
     # 1) Borehole field geometry
     x = np.linspace(0,BHE.NX-1,BHE.NX)*BHE.D_x;                     # x-coordinates of BHEs (m)                     
     y = np.linspace(0,BHE.NY-1,BHE.NY)*BHE.D_y;                     # y-coordinates of BHEs (m)
@@ -203,8 +207,7 @@ def gfunction(t,BHE,Rb):
 
     # 2) CSM for long term response (months + years)
     G_BHE = CSM(BHE.r_b,BHE.r_b,t[0:2],a_ss);                       # Compute G-functions for t[0] and t[1] with the cylindrical source model (-)
-    
-    
+       
     s1 = 0;                                                         # Summation variable for t[0] G-function (-)
     s2 = 0;                                                         # Summation variable for t[1] G-function (-)
     for i in range(NXi*NYi):                                        # Line source superposition for all neighbour boreholes for 1/4 of the BHE field (symmetry)
@@ -254,7 +257,6 @@ def Gpile(Fo, r, AR, coeffGg):
     
     Focut[Focut>Fomax] = Fomax   
 
-
     Gg = np.nan*np.ones((NFo,Nra))
     for i in range(0,Nra):
         # Evaluate fit polynomial
@@ -262,8 +264,6 @@ def Gpile(Fo, r, AR, coeffGg):
         # Implement cutoff at Fomin
         Gg[Focut<Fomin[i],i] = 0
     
-    
-
     if np.max(r) > ra[-1]:
         Gg = np.concatenate((Gg, np.zeros((np.shape(Gg)[0],1))), axis=1) 
         ra = np.append(ra,100) # Temporary - hard code "large r" where G=0 
@@ -279,7 +279,6 @@ def Gpile(Fo, r, AR, coeffGg):
         Gpile[i,:] = f(r)
     
     return Gpile
-
 
 # Function for dimensioning pipes
 def run_pipedimensioning(d_pipes, brine, net, hp):
@@ -298,8 +297,7 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
         ind_C = np.zeros(N_PG);                                         # Index vector for pipe groups cooling (-)
         d_selectedPipes_C = np.zeros(N_PG);                             # Pipes selected from dimensioning for cooling (length)
         Q_PG_C = np.zeros(N_PG);                                        # Design flow cooling (m3/s)
-
-        
+     
     N_HP = len(hp.P_s_H);
    
     # KART Qdim fjernes fra hp -> flyttet til aggLoad
@@ -351,24 +349,19 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
         net.di_selected_C = d_selectedPipes_C*(1-2/net.SDR);            # Compute inner diameter of selected pipes (m)
         v_C = Q_PG_C/np.pi/net.di_selected_C**2*4;                      # Compute flow velocity for selected pipes (m/s)
         net.Re_selected_C = Re(brine.rho,brine.mu,v_C,net.di_selected_C)# Compute Reynolds numbers for the selected pipes (-)
-    
-    
+        
     # Calculate aggregated load for later calculations
     aggLoad = aggregated_load_from_heatpump(hp, brine)
     
     # Return the pipe sizing results
     return net, aggLoad
 
-    
-    
 # Function for dimensioning sources
 def run_sourcedimensioning(brine, net, aggLoad, source_config):
     
-    
     # Determine if calculation includes cooling
     doCooling = not np.isnan(aggLoad.P_s_C).any();
-    
-    
+       
     N_PG = len(net.L_segments);                                         # Number of pipe groups    
       
     # g-function evaluation times
@@ -404,20 +397,17 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         for i in range(N_PG):                                           # For all pipe groups
             R_C[i] = Rp(net.di_selected_C[i],net.d_selectedPipes_C[i],net.Re_selected_C[i],Pr,brine.l,net.l_p);         # Compute thermal resistances (m*K/W)
 
-    
     # Compute delta-qs for superposition of heating load responsesS
     dP_s_H = np.zeros(3);                                               # Allocate power difference matrix for tempoeral superposition (W)
     dP_s_H[0] = aggLoad.P_s_H[0];                                       # First entry is just the annual average power (W)
     dP_s_H[1:] = np.diff(aggLoad.P_s_H);                                # Differences between year-month and month-hour are added (W)
-
-    
+   
     if doCooling:
 
         dP_s_C = np.zeros(3);                                           # Allocate power difference matrix for tempoeral superposition (W)
         dP_s_C[0] = aggLoad.P_s_C[0];                                   # First entry is just the annual average power (W)
         dP_s_C[1:] = np.diff(aggLoad.P_s_C);                            # Differences between year-month and month-hour are added (W)
-
-    
+  
     # Compute temperature responses in heating and cooling mode for all pipes
     # KART bliv enige om sigende navne der følger konvention og implementer x 4
     FPH = np.zeros(N_PG);                                               # Vector with total heating load fractions supplied by each pipe segment (-)
@@ -426,8 +416,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
     if doCooling:    
        FPC = np.zeros(N_PG);                                            # Vector with total cooling load fractions supplied by each pipe segment (-)
        G_grid_C = np.zeros([N_PG,3]);
-    
-    
+       
     T_tmp = np.zeros([N_PG,3])
     K1_H = ils(a_s,t_H,net.D_gridpipes) - ils(a_s,t_H,2*net.z_grid) - ils(a_s,t_H,np.sqrt(net.D_gridpipes**2+4*net.z_grid**2));
     K1_C = ils(a_s,t_C,net.D_gridpipes) - ils(a_s,t_C,2*net.z_grid) - ils(a_s,t_C,np.sqrt(net.D_gridpipes**2+4*net.z_grid**2));
@@ -467,8 +456,6 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         
         PHEC = (1-FPC)*dP_s_C;                                          # Residual heat demand (W)
     
-
-    
     ################################ Source sizing ################################
     
     # If BHEs are selected as source
@@ -480,7 +467,6 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         # For readability only
         BHE = source_config;
         
-
         ri = BHE.r_p*(1 - 2/BHE.SDR);                                   # Inner radius of U pipe (m)
         T0_BHE = net.T0;                                                # Measured undisturbed BHE temperature (C)
         s_BHE = 2*BHE.r_p + BHE.D_pipes;                                # Calculate shank spacing U-pipe (m)
@@ -494,7 +480,6 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         
         BHE.Re_BHEmax_H = Re_BHEmax_H;                                  # Add Re to BHE instance
         BHE.dpdL_BHEmax_H = dpdL_BHEmax_H;                              # Add pressure loss to BHE instance
-
 
         if doCooling:
             # BHE cooling
@@ -518,8 +503,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
             g_BHE_H = pygfunction(t_H,brine,net,BHE,Rb_H,1000,Pr) # Large L for infinite source in initial estimate
         
         if doCooling:        
-            Rb_C = RbMP(brine.l,net.l_p,BHE.l_g,BHE.l_ss,BHE.r_b,BHE.r_p,ri,s_BHE,Re_BHEmax_C,Pr);  # Compute the borehole thermal resistance (m*K/W)    
-            #R_p_C = Rp(BHE.r_p-2*BHE.r_p/BHE.SDR,BHE.r_p,Re_BHEmax_C,Pr,brine.l,net.l_p);                     # Compute the pipe thermal resistance (m*K/W)
+            Rb_C = RbMP(brine.l,net.l_p,BHE.l_g,BHE.l_ss,BHE.r_b,BHE.r_p,ri,s_BHE,Re_BHEmax_C,Pr);  # Compute the borehole thermal resistance (m*K/W)
 
             # Calculate g-function
             if BHE.gFuncMethod == 'ICS':
@@ -531,25 +515,21 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         dTdz = BHE.q_geo/BHE.l_ss                                       # Geothermal gradient (K/m)
         a = dTdz/(2*N_BHE)
         b = T0_BHE - (aggLoad.Ti_H + aggLoad.To_H)/2
-        #c1 = -np.dot(PHEH, g_BHE_H/(2*np.pi*BHE.l_ss) + Rb_H)
-        c = -np.dot(PHEH[0:1], g_BHE_H[0:1]/(2*np.pi*BHE.l_ss) + Rb_H)
+        c = -np.dot(PHEH[:2], g_BHE_H[:2]/(2*np.pi*BHE.l_ss) + Rb_H)
         c = c - PHEH[2] * g_BHE_H[2]
         L_BHE_H = (-b + np.sqrt(b**2-4*a*c))/(2*a)
-        #L_BHE_cc = (-b + np.sqrt(b**2-4*a*c1))/(2*a)
-        #print(L_BHE_H,L_BHE_cc)
         
         if doCooling:        
-           
             b = - T0_BHE + (aggLoad.Ti_C + aggLoad.To_C)/2
-            c = -np.dot(PHEC, g_BHE_C/(2*np.pi*BHE.l_ss) + Rb_C)
+            c = -np.dot(PHEC[:2], g_BHE_C[:2]/(2*np.pi*BHE.l_ss) + Rb_C)
+            c = c - PHEC[2] * g_BHE_C[2]
             L_BHE_C = (-b + np.sqrt(b**2-4*a*c))/(2*a)
-        
             
         # Search neighbourhood of the approximate solution considering length effect - heating mode
         # Result is an updated estimate of L_BHE_H and Rb_H 
         eps = np.finfo(np.float64).eps # Machine precision
         tol = 1e-4; # Tolerance for search algorithm
-        iter_max = 50;
+        iter_max = 50
         
         # Variables for single iteration of numerical search
         dL = L_BHE_H/N_BHE*np.sqrt(eps)                                 # Optimal stepsize depends on the square root of machine epsilon (https://en.wikipedia.org/wiki/Numerical_differentiation#Practical_considerations_using_floating_point_arithmetic)
@@ -593,8 +573,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
 
         # Save final estimate of borehole resistance
         source_config.Rb_H = Rb_H
-        
-        
+              
         # Search neighbourhood of the approximate solution considering length effect - cooling mode
         # Result is an updated estimate of L_BHE_C and Rb_C 
         if doCooling:
@@ -619,9 +598,8 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
                     elif BHE.gFuncMethod == 'PYG':
                         g_BHE_C = pygfunction(t_C,brine,net,BHE,Rb_C_v[i],L_BHE_C_v[i],Pr)
 
-
                     # error is the difference between calculated fluid temperature and Tbound
-                    error_Tf[i] = T0_BHE + dTdz*L_BHE_C_v[i]/2 + (np.dot(PHEC,g_BHE_C / (2*np.pi*BHE.l_ss) + Rb_C_v[i])) / (L_BHE_C_v[i]*N_BHE) - Tbound_C;
+                    error_Tf[i] = T0_BHE + dTdz*L_BHE_C_v[i]/2 + (np.dot(PHEC[:2],g_BHE_C[:2] / (2*np.pi*BHE.l_ss) + Rb_C_v[i]) + PHEC[2]*g_BHE_C[2]) / (L_BHE_C_v[i]*N_BHE) - Tbound_C
                     
                 # Calculate updated length estimate    
                 L_C_Halley = Halley(L_BHE_C_v[1],dL,error_Tf[0],error_Tf[1],error_Tf[2])

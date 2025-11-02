@@ -94,7 +94,13 @@ def print_source_dimensions(source_config,net):
     # BHE specific results
     if source_config.source == 'BHE':
         N_BHE = source_config.NX * source_config.NY;
-        
+
+        print('*********** Multipole estimated borehole thermal resistance ***********'); 
+        print(f'Borehole resistance in peak heating mode = {round(source_config.Rb_H,2)} m*K/W');
+        if doCooling:
+            print(f'Borehole resistance in peak cooling mode = {round(source_config.Rb_C,2)} m*K/W');
+        print(' ');
+
         # Display output in console
         print('********** Suggested length of borehole heat exchangers (BHE) **********'); 
         print(f'Required length of each of the {int(N_BHE)} BHEs = {int(np.ceil(source_config.L_BHE_H/N_BHE))} m for heating');
@@ -138,23 +144,27 @@ def print_source_dimensions(source_config,net):
         print('WARNING: The long-term brine temperature is below zero degrees Celsius which can cause ground freezing. Consider increasing the minimum brine inlet temperature.')
 
 # Wrapper for pygfunction
-def pygfunction(t,brine,net,BHE,R_p,L):
+def pygfunction(t,brine,net,BHE,R_b,L,Pr):
     
     BC = 'UHTR'
     D = 0
-    a_ss = BHE.l_ss/BHE.rhoc_ss;
+    a_ss = BHE.l_ss/BHE.rhoc_ss
+
+    Do = 2*BHE.r_p
+    Di = Do-2*Do/BHE.SDR
+    R_p = Rp(Di,Do,BHE.Re_BHEmax_H,Pr,brine.l,net.l_p)
+
     t_pyg = np.flip(t) # t must be in ascending order - remember to flip output back for 3-pulse analysis
-    
     BHEfield = gt.boreholes.rectangle_field(BHE.NX, BHE.NY, BHE.D_x, BHE.D_y, L, D, BHE.r_b)
     g_pyg = gt.gfunction.gFunction(BHEfield, a_ss, t_pyg, boundary_condition=BC) 
     
     g_values = np.flip(g_pyg.gFunc)
 
-    g_short = ep(brine.rho*brine.c,BHE.l_g,BHE.rhoc_g,BHE.l_ss,BHE.rhoc_ss,BHE.r_p,BHE.r_b,R_p,t[2])
+    g_short = ep(brine.rho*brine.c,BHE.rhoc_g,BHE.l_ss,BHE.rhoc_ss,BHE.r_p,BHE.r_b,R_p,R_b,t[2])
     g_values[2] = g_short
-    #print(brine.rho*brine.c,BHE.l_g,BHE.rhoc_g,BHE.l_ss,BHE.rhoc_ss,BHE.r_p,BHE.r_b,R_p,t[2])
-    #ep(l_b, rhoc_b, l_ss, rhoc_ss, r_p, r_b, R_p, t):
     
+    # print((ils(a_ss,t[2],BHE.r_b)/BHE.l_ss+R_b))
+    # print(g_values[2])
     return g_values
 
 
@@ -214,7 +224,6 @@ def gfunction(t,BHE,Rb):
     
     Rw = G1/BHE.l_ss + G2h/BHE.l_g - G3/BHE.l_g;                  # Step response for short term model on the form q*Rw = T (m*K/W). Rw indicates that it is in fact a thermal resistance
     
-
     # G-function for heating mode
     G_BHE = np.asarray([G_BHE[0], G_BHE[1], (Rw-Rb)*BHE.l_ss])
 
@@ -501,13 +510,12 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
 
         # Borehole resistance - ignoring length effects
         Rb_H = RbMP(brine.l,net.l_p,BHE.l_g,BHE.l_ss,BHE.r_b,BHE.r_p,ri,s_BHE,Re_BHEmax_H,Pr);  # Compute the borehole thermal resistance (m*K/W)
-        #R_p_H = Rp(BHE.r_p-2*BHE.r_p/BHE.SDR,BHE.r_p,Re_BHEmax_H,Pr,brine.l,net.l_p);                     # Compute the pipe thermal resistance (m*K/W)   
         
         # Calculate g-function
         if BHE.gFuncMethod == 'ICS':
             g_BHE_H = gfunction(t_H,BHE,Rb_H)
         elif BHE.gFuncMethod == 'PYG':
-            g_BHE_H = pygfunction(t_H,brine,net,BHE,Rb_H,1000) # Large L for infinite source in initial estimate
+            g_BHE_H = pygfunction(t_H,brine,net,BHE,Rb_H,1000,Pr) # Large L for infinite source in initial estimate
         
         if doCooling:        
             Rb_C = RbMP(brine.l,net.l_p,BHE.l_g,BHE.l_ss,BHE.r_b,BHE.r_p,ri,s_BHE,Re_BHEmax_C,Pr);  # Compute the borehole thermal resistance (m*K/W)    
@@ -517,7 +525,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
             if BHE.gFuncMethod == 'ICS':
                 g_BHE_C = gfunction(t_C,BHE,Rb_C)
             elif BHE.gFuncMethod == 'PYG':
-                g_BHE_C = pygfunction(t_C,brine,net,BHE,Rb_C,1000)
+                g_BHE_C = pygfunction(t_C,brine,net,BHE,Rb_C,1000,Pr)
         
         # Initial estimate of total BHE length - ignoring length effects in g-function
         dTdz = BHE.q_geo/BHE.l_ss                                       # Geothermal gradient (K/m)
@@ -562,11 +570,10 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
                 if BHE.gFuncMethod == 'ICS':
                     g_BHE_H = gfunction(t_H,BHE,Rb_H_v[i])
                 elif BHE.gFuncMethod == 'PYG':
-                    g_BHE_H = pygfunction(t_H,brine,net,BHE,Rb_H_v[i],L_BHE_H_v[i])
+                    g_BHE_H = pygfunction(t_H,brine,net,BHE,Rb_H_v[i],L_BHE_H_v[i],Pr)
                 
                 # error is the difference between calculated fluid temperature and Tbound
-                error_Tf[i] = T0_BHE + dTdz*L_BHE_H_v[i]/2 - (np.dot(PHEH[0:1],g_BHE_H[0:1] / (2*np.pi*BHE.l_ss) + Rb_H_v[i]) + PHEH[2]*g_BHE_H[2]) / (L_BHE_H_v[i]*N_BHE) - Tbound_H
-                print(Tbound_H);
+                error_Tf[i] = T0_BHE + dTdz*L_BHE_H_v[i]/2 - (np.dot(PHEH[:2],g_BHE_H[:2] / (2*np.pi*BHE.l_ss) + Rb_H_v[i]) + PHEH[2]*g_BHE_H[2]) / (L_BHE_H_v[i]*N_BHE) - Tbound_H
                 
             # Calculate updated length estimate    
             L_H_Halley = Halley(L_BHE_H_v[1],dL,error_Tf[0],error_Tf[1],error_Tf[2])
@@ -610,7 +617,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
                     if BHE.gFuncMethod == 'ICS':
                         g_BHE_C = gfunction(t_C,BHE,Rb_C_v[i])
                     elif BHE.gFuncMethod == 'PYG':
-                        g_BHE_C = pygfunction(t_C,brine,net,BHE,Rb_C[i],L_BHE_C_v[i])
+                        g_BHE_C = pygfunction(t_C,brine,net,BHE,Rb_C[i],L_BHE_C_v[i],Pr)
 
 
                     # error is the difference between calculated fluid temperature and Tbound
@@ -642,14 +649,12 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         if BHE.gFuncMethod == 'ICS':
             g_BHE_H = gfunction(t_H,BHE,Rb_H)
         elif BHE.gFuncMethod == 'PYG':    
-            g_BHE_H = pygfunction(t_H,brine,net,BHE,Rb_H,L_BHE_H/N_BHE)
+            g_BHE_H = pygfunction(t_H,brine,net,BHE,Rb_H,L_BHE_H/N_BHE,Pr)
         
         # Brine temperature after three pulses
         BHE.T_dimv =  T0_BHE + dTdz*L_BHE_H/(N_BHE*2) - np.cumsum(np.array([ PHEH[0]*(g_BHE_H[0] / (2*np.pi*BHE.l_ss) + Rb_H), 
                                                                              PHEH[1]*(g_BHE_H[1] / (2*np.pi*BHE.l_ss) + Rb_H),  
-                                                                             PHEH[2]*g_BHE_H[2]], dtype=float)) / (L_BHE_H)
-        print(BHE.T_dimv)
-        #np.dot(PHEH[0:1],g_BHE_H[0:1] / (2*np.pi*BHE.l_ss) + Rb_H_v[i], + PHEH[2]*g_BHE_H[2])
+                                                                             PHEH[2]*g_BHE_H[2]], dtype=float)/ (L_BHE_H))
 
         # Store results in BHE object
         BHE.L_BHE_H = L_BHE_H;

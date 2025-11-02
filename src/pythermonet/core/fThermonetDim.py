@@ -97,7 +97,7 @@ def CSM(r,r0,t,a):
     
     return G/mt.pi**2
 
-def ep(rhoc_b,l_g, rhoc_g, l_ss, rhoc_ss, r_p, r_b, R_p, t):
+def ep(rhoc_b, rhoc_g, l_ss, rhoc_ss, r_p, r_b, R_p, R_b, t):
     """
     Created on Fri Feb 26 08:41:53 2021
     Python implementering af 
@@ -108,12 +108,19 @@ def ep(rhoc_b,l_g, rhoc_g, l_ss, rhoc_ss, r_p, r_b, R_p, t):
     T_fluid [K] = q_inj [W/m] * R(t) [m*K/W]        R is a thermal resistance 
 
     """
+
     # --- constants (independent of t) ---
     r_p = r_p * np.sqrt(2)
+
+    # Compute the effective grout thermal resistance to obtain the full borehole thermal resistance when adding the pipe thermal resistance 
+    l_g = 1/(2*np.pi*(R_b - R_p))*np.log(r_b/r_p)
+    
     ag = l_g / rhoc_g
     a = l_ss / rhoc_ss
     Cp = np.pi * r_p**2 * rhoc_b
     t0 = 3600.0
+
+    
 
     tau_p = r_p / np.sqrt(ag * t0)
     tau_b = r_b / np.sqrt(ag * t0)

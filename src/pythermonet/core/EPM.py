@@ -13,7 +13,7 @@ from scipy.integrate import quad
 import matplotlib.pyplot as plt
 from pythermonet.core.fThermonetDim import ep,ils
 
-qinj = 10
+qinj = 1
 kb = 1.5
 rhocb = 1550*2000
 k = 3.0
@@ -53,7 +53,7 @@ Lu = lambda u: np.imag(-1 / (Cp*(-u**2/t0) + 1/(Rp + 1/(Kbp(u) + 1/( 1/Kbt(u) + 
 integrand = lambda t, u: (1-np.exp(-u**2*t/t0))/u *Lu(u)
 Tf = lambda t: 2/np.pi * quad(lambda u: integrand(t,u), 0, np.inf)[0]
 
-tv = 4*3600
+tv = 400*3600
 T1 = Tf(tv);
 print(qinj*T1)
 print(qinj*(ils(a,tv,rb)/k+1/2/np.pi/kb*np.log(rb/rp)+Rp))

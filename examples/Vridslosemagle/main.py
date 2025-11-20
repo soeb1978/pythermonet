@@ -62,7 +62,7 @@ def main() -> None:
 
     # Initialise aggregated load object
     agg_load = AggregatedLoad(
-        Ti_H=-3,
+        Ti_H=-4,
         Ti_C=20,
         f_peak_H=1,
         t_peak_H=4,
@@ -82,7 +82,7 @@ def main() -> None:
         SDR=11,
         l_ss=1.61,
         rhoc_ss=2.65e6,
-        l_g=3,
+        l_g=2.5,
         rhoc_g=3e6,
         D_pipes=0.015,
         NX=2,

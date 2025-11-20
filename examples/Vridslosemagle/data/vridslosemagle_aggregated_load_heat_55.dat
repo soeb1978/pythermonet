@@ -1,2 +1,2 @@
 No. consumers	Yearly_heating_load_(W)	Winter_heating_load_(W)	Daily_heating_load_(W)	Year_COP	Winter_COP	Hour_COP	dT_HP_Heating	Yearly_cooling_load_(W)	Summer_cooling_load_(W)	Daily_cooling_load_(W)	EER	dT_HP_Cooling
-55	156514	270456	685000	3.45	3.55	3	3	0	0	0	0	0
+55	156514	270456	686000	3.45	3.55	3	3	0	0	0	0	0

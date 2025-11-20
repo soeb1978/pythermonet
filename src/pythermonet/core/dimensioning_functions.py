@@ -518,14 +518,12 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         c = -np.dot(PHEH[:2], g_BHE_H[:2]/(2*np.pi*BHE.l_ss) + Rb_H)
         c = c - PHEH[2] * g_BHE_H[2]
         L_BHE_H = (-b + np.sqrt(b**2-4*a*c))/(2*a)
-        print("Heating: ", L_BHE_H/N_BHE)
         
         if doCooling:    
             b = - T0_BHE + (aggLoad.Ti_C + aggLoad.To_C)/2
             c = - np.dot(PHEC[:2], g_BHE_C[:2]/(2*np.pi*BHE.l_ss) + Rb_C)
             c = c - PHEC[2] * g_BHE_C[2]
             L_BHE_C = (-b + np.sqrt(b**2-4*a*c))/(2*a)
-            print("Cooling: ", L_BHE_C/N_BHE)
             
         # Search neighbourhood of the approximate solution considering length effect using Halley's method - heating mode
         # Result is an updated estimate of L_BHE_H and Rb_H 

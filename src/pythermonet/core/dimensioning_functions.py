@@ -50,7 +50,7 @@ def print_project_id(PID):
     # Output to prompt
     print(' ');
     print('************************************************************************')
-    print('************************** pythermonet v. 1 ************************')
+    print('*************************** pythermonet v 0.1 **************************')
     print('************************************************************************')
     print(' ');
     print(f'Project: {PID}');
@@ -72,7 +72,7 @@ def print_pipe_dimensions(net, pipeGroupNames):
         for i in range(len(net.I_PG)):
             print(f'{pipeGroupNames.iloc[i]}: Ø{int(1000*net.d_selectedPipes_C[i])} mm SDR {int(net.SDR[i])}, Re = {int(round(net.Re_selected_C[i]))}');
             
-    print(' ');
+    #print(' ');
 
 
 # Print source dimensioning results to console
@@ -95,7 +95,7 @@ def print_source_dimensions(source_config,net):
     if source_config.source == 'BHE':
         N_BHE = source_config.NX * source_config.NY;
 
-        print('*********** Multipole estimated borehole thermal resistance ***********'); 
+        print('***************** Computed borehole thermal resistance *****************'); 
         print(f'Borehole resistance in peak heating mode = {round(source_config.Rb_H,2)} m*K/W');
         if doCooling:
             print(f'Borehole resistance in peak cooling mode = {round(source_config.Rb_C,2)} m*K/W');
@@ -518,14 +518,16 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         c = -np.dot(PHEH[:2], g_BHE_H[:2]/(2*np.pi*BHE.l_ss) + Rb_H)
         c = c - PHEH[2] * g_BHE_H[2]
         L_BHE_H = (-b + np.sqrt(b**2-4*a*c))/(2*a)
+        print("Heating: ", L_BHE_H/N_BHE)
         
-        if doCooling:        
+        if doCooling:    
             b = - T0_BHE + (aggLoad.Ti_C + aggLoad.To_C)/2
-            c = -np.dot(PHEC[:2], g_BHE_C[:2]/(2*np.pi*BHE.l_ss) + Rb_C)
+            c = - np.dot(PHEC[:2], g_BHE_C[:2]/(2*np.pi*BHE.l_ss) + Rb_C)
             c = c - PHEC[2] * g_BHE_C[2]
             L_BHE_C = (-b + np.sqrt(b**2-4*a*c))/(2*a)
+            print("Cooling: ", L_BHE_C/N_BHE)
             
-        # Search neighbourhood of the approximate solution considering length effect - heating mode
+        # Search neighbourhood of the approximate solution considering length effect using Halley's method - heating mode
         # Result is an updated estimate of L_BHE_H and Rb_H 
         eps = np.finfo(np.float64).eps # Machine precision
         tol = 1e-4; # Tolerance for search algorithm
@@ -599,7 +601,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
                         g_BHE_C = pygfunction(t_C,brine,net,BHE,Rb_C_v[i],L_BHE_C_v[i],Pr)
 
                     # error is the difference between calculated fluid temperature and Tbound
-                    error_Tf[i] = T0_BHE + dTdz*L_BHE_C_v[i]/2 + (np.dot(PHEC[:2],g_BHE_C[:2] / (2*np.pi*BHE.l_ss) + Rb_C_v[i]) + PHEC[2]*g_BHE_C[2]) / (L_BHE_C_v[i]*N_BHE) - Tbound_C
+                    error_Tf[i] = T0_BHE + dTdz*L_BHE_C_v[i]/2 + (np.dot(PHEC[:2], g_BHE_C[:2] / (2*np.pi*BHE.l_ss) + Rb_C_v[i]) + PHEC[2]*g_BHE_C[2]) / (L_BHE_C_v[i]*N_BHE) - Tbound_C
                     
                 # Calculate updated length estimate    
                 L_C_Halley = Halley(L_BHE_C_v[1],dL,error_Tf[0],error_Tf[1],error_Tf[2])
@@ -692,7 +694,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
         # Result is an updated estimate of L_HHE_H  
         eps = np.finfo(np.float64).eps # Machine precision
         tol = 1e-4; # Tolerance for search algorithm
-        iter_max = 50;
+        iter_max = 50
         error_Tf = np.ones(3)
 
         # Variables for single iteration of numerical search
@@ -715,12 +717,12 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
                 G_HHE_H = G_HHE/net.l_s_H + Rp_HHE_H;                           # Add annual and monthly thermal resistances to G_HHE (m*K/W)
         
                 # error is the difference between calculated fluid temperature and Tbound
-                error_Tf[i] = (net.T0 - TP - Tbound_H) - np.dot(PHEH,G_HHE_H)/(L_HHE_H_v[i]*HHE.N_HHE);
+                error_Tf[i] = (net.T0 - TP - Tbound_H) - np.dot(PHEH,G_HHE_H)/(L_HHE_H_v[i]*HHE.N_HHE)
                 
             # Calculate updated length estimate    
             L_H_Halley = Halley(L_HHE_H_v[1],dL,error_Tf[0],error_Tf[1],error_Tf[2])
             L_HHE_H_v = L_H_Halley + np.array([-dL,0,dL]);           
-            N_iter += 1;
+            N_iter += 1
 
         if N_iter > iter_max - 1:   
             # If the maximum number of allowed iterations is exceeded fall back to initial estimate of Rb
@@ -728,15 +730,15 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
 
         else:
             # Update combined length of all BHEs and borehole resistance
-            L_HHE_H = L_H_Halley*HHE.N_HHE;
+            L_HHE_H = L_H_Halley*HHE.N_HHE
 
         # # Total brine volume in HHE pipes
         # source_config.V_brine = L_HHE_H*np.pi*ri_HHE**2; 
         # Brine temperature after three pulses (year, month, peak)
         HHE.T_dimv = net.T0 - TP - np.cumsum(PHEH*G_HHE_H)/L_HHE_H
-        HHE.V_brine = L_HHE_H*np.pi*ri_HHE**2;
-        HHE.FPH = FPH;
-        HHE.L_HHE_H = L_HHE_H;
+        HHE.V_brine = L_HHE_H*np.pi*ri_HHE**2
+        HHE.FPH = FPH
+        HHE.L_HHE_H = L_HHE_H
 
         if doCooling:
             # HHE cooling
@@ -771,7 +773,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
                         s[0] = s[0] + sum(VFLS(abs(DIST[ind!=j]-j*HHE.D),L_HHE_C_v[i],a_s,0,t_C[0])) - sum(VFLS(np.sqrt((DIST-j*HHE.D)**2 + 4*net.z_grid**2),L_HHE_C_v[i],a_s,0,t_C[0])); # Sum annual temperature responses from distant pipes (C)
                         s[1] = s[1] + sum(VFLS(abs(DIST[ind!=j]-j*HHE.D),L_HHE_C_v[i],a_s,0,t_C[1])) - sum(VFLS(np.sqrt((DIST-j*HHE.D)**2 + 4*net.z_grid**2),L_HHE_C_v[i],a_s,0,t_C[1])); # Sum monthly temperature responses from distant pipes (C)
                     
-                    G_HHE = VFLS(ro_HHE,L_HHE_C_v[i],a_s,0,t_C);
+                    G_HHE = VFLS(ro_HHE,L_HHE_C_v[i],a_s,0,t_C)
                     #KART: tjek - i tidligere version var en faktor 2 til forskel
                     G_HHE[0:2] = G_HHE[0:2] + s/HHE.N_HHE;                          # Add thermal disturbance from neighbour pipes (-)        
                     G_HHE_C = G_HHE/net.l_s_C + Rp_HHE_C;                           # Add annual and monthly thermal resistances to G_HHE (m*K/W)
@@ -782,7 +784,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
                 # Calculate updated length estimate    
                 L_C_Halley = Halley(L_HHE_C_v[1],dL,error_Tf[0],error_Tf[1],error_Tf[2])
                 L_HHE_C_v = L_C_Halley + np.array([-dL,0,dL]);           
-                N_iter += 1;
+                N_iter += 1
 
             if N_iter > iter_max - 1:   
                 # If the maximum number of allowed iterations is exceeded fall back to initial estimate of Rb
@@ -790,19 +792,16 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
 
             else:
                 # Update combined length of all HHEs
-                L_HHE_C = L_C_Halley*HHE.N_HHE;
+                L_HHE_C = L_C_Halley*HHE.N_HHE
                 # source_config.V_brine = L_HHE_C*np.pi*ri_HHE**2; 
                 # HHE.T_dimv = net.T0 - TP - np.cumsum(PHEC*G_HHE_C)/L_HHE_C
 
-            HHE.FPC = FPC;
-            HHE.L_HHE_C = L_HHE_C;
+            HHE.FPC = FPC
+            HHE.L_HHE_C = L_HHE_C
       
-        source_config = HHE;
+        source_config = HHE
     
     return source_config
-    
-
-    
 
     ################## CONCEPTUAL MODEL DRAWINGS FOR REFERENCE ####################
     
@@ -825,6 +824,7 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
     #       T(o1) = q*(R(o1) + R(o2) - R(x1) - R(x2)) + Tu(t)
     #       Tu(t) is the undisturbed seasonal temperature variation at depth
     #       Assumption: surface temperature equal to the undisturbed seasonal temperature (Dirichlet BC)
+    #       The pipe is modelled as a finite line source 
     #
     #
     ############## Conceptual model for twin pipe in the ground END ###############

@@ -22,7 +22,7 @@ def main() -> None:
     - data/silkeborg_topology.dat
     """
     # Project ID
-    project_id = "Silkeborg"
+    project_id = "Balle Bygade, Silkeborg"
 
     # Define the parent directory (current script directory)
     project_dir = Path(__file__).parent.resolve()

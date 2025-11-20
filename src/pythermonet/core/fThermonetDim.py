@@ -173,7 +173,7 @@ def VFLS(r, H, a, U, t):
         for i, t_val in enumerate(t):  # Iterate over each t value
             G[j, i], _ = integrate.quad(fun, 1 / np.sqrt(4 * a * t_val), np.inf, args=(rr_val,))
 
-    G = f.iv(0, 0 * U / (2 * a)) * G  # Modified Bessel function of the first kind
+    G = f.iv(0, U / (2 * a)) * G  # Modified Bessel function of the first kind
     G /= (4 * mt.pi)
 
     # Return a scalar if both r and t were scalars, otherwise return the appropriate shape

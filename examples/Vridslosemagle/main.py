@@ -36,8 +36,8 @@ def main() -> None:
     project_data_dir = project_dir / "data"
 
     # Input files
-    agg_load_file = project_data_dir / "vridslosemagle_aggregated_load_heat_cool_55.dat"
-    topology_file = project_data_dir / "vridslosemagle_topology_dimensioned_cool_55.dat"
+    agg_load_file = project_data_dir / "vridslosemagle_aggregated_load_heat_cool_106.dat"
+    topology_file = project_data_dir / "vridslosemagle_topology_dimensioned_cool_106.dat"
 
     # User specified input
 
@@ -62,7 +62,7 @@ def main() -> None:
 
     # Initialise aggregated load object
     agg_load = AggregatedLoad(
-        Ti_H=-4,
+        Ti_H=-3.5,
         Ti_C=20,
         f_peak_H=1,
         t_peak_H=4,

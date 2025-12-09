@@ -1,25 +1,36 @@
-import setuptools
-import os
-from distutils.util import convert_path
 from pathlib import Path
+from setuptools import setup, find_packages
 
-ver_path = convert_path('version.txt')
-ver = None
-if os.path.exists(ver_path):
-    with open(ver_path) as ver_file:
-        ver = ver_file.read()
+root = Path(__file__).parent
 
-with open('requirements.txt') as f:
-    requirements = f.read().splitlines()
+# --- Version ---
+ver_file = root / "version.txt"
+if not ver_file.exists():
+    raise RuntimeError("version.txt missing. Create it with a PEP 440 version, e.g. 0.1.0")
+ver = ver_file.read_text(encoding="utf-8").strip()
+if not ver:
+    raise RuntimeError("version.txt is empty. Put a valid version like 0.1.0")
 
-this_directory = Path(__file__).parent
-long_description = (this_directory / "README.md").read_text()
+# --- Requirements ---
+req_file = root / "requirements.txt"
+requirements = []
+if req_file.exists():
+    # allow blanks and comments
+    requirements = [
+        line.strip() for line in req_file.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    ]
+else:
+    raise RuntimeError("No requirements.txt file was found")
 
-setuptools.setup(
+
+long_description = (root / "README.md").read_text(encoding="utf-8")
+
+setup(
     name="pythermonet",
     version=ver,
-    author='',
-    author_email='',
+    author="",
+    author_email="",
     description="A dimensioning tool for Thermonets",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -29,10 +40,10 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    install_requires=[requirements],
-    packages=setuptools.find_namespace_packages(where='src'),
-    package_dir={'': 'src'},
+    install_requires=requirements,
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
     include_package_data=True,
-    python_requires='>=3.8.10',
+    python_requires=">=3.8.10",
 
 )

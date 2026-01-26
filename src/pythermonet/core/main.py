@@ -1,5 +1,7 @@
 from pythermonet.core.dimensioning_functions import print_project_id, run_pipedimensioning, print_pipe_dimensions, print_source_dimensions, run_sourcedimensioning
 from pythermonet.domain import Brine, Thermonet, HeatPump, HHEConfig, FullDimension, BHEConfig
+from pythermonet.core.infrastructure_analysis import calc_pipe_cost
+from pythermonet.io.terminal_output import print_pricing
 
 import time
 
@@ -46,6 +48,7 @@ def run_full_dimensioning(PID:str, d_pipes, brine:Brine, net:Thermonet, hp:HeatP
     # Print results to console
     print_pipe_dimensions(net, pipeGroupNames)
 
+
     # Run source dimensioning
     # KART indført aggregeret last
     # FPH, FPC, source_config = run_sourcedimensioning(brine, net, hp, source_config)
@@ -55,6 +58,7 @@ def run_full_dimensioning(PID:str, d_pipes, brine:Brine, net:Thermonet, hp:HeatP
     # Print results to console
     print_source_dimensions(source_config,net)
 
+    print_pricing(calc_pipe_cost(net, source_config))
     # Output computation time to console
     print(' ');
     print('*************************** Computation time ***************************');

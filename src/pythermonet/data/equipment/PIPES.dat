@@ -1,18 +1,18 @@
-Pipe diameters (mm)
-25
-32
-40
-50
-63
-75
-90
-110
-125
-160
-200
-225
-250
-
+Pipe diameters (mm),Price pr meter,Type
+25,100,Thermal Exchange Pipe
+32,110,Thermal Exchange Pipe
+40,120,Thermal Exchange Pipe
+50,130,Thermal Exchange Pipe
+63,140,Thermal Exchange Pipe
+75,150,Thermal Exchange Pipe
+90,160,Thermal Exchange Pipe
+110,170,Thermal Exchange Pipe
+125,180,Thermal Exchange Pipe
+160,190,Thermal Exchange Pipe
+200,200,Thermal Exchange Pipe
+225,210,Thermal Exchange Pipe
+250,220,Thermal Exchange Pipe
+15,250,Borehole Heat Exchanger
 
 
 

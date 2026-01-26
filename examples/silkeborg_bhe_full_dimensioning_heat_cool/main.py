@@ -35,7 +35,7 @@ def main() -> None:
     # Open file with available pipe outer diameters (mm). This file can be
     # expanded with additional pipes and used directly.
     # Convert d_pipes from mm to m
-    d_pipes = load_pipe_catalogue().values / 1000
+    d_pipes = load_pipe_catalogue()["Pipe diameters (mm)"].values / 1000
 
     # User specified input
 

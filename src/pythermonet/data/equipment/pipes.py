@@ -20,4 +20,4 @@ def load_pipe_catalogue():
     with importlib.resources.files("pythermonet.data.equipment")\
             .joinpath("PIPES.dat").open("r") as f:
 
-        return pd.read_csv(f, sep="\t")
+        return pd.read_csv(f, sep=",")

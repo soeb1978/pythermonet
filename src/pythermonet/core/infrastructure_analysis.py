@@ -5,6 +5,7 @@ from pythermonet.domain.thermonet import Thermonet
 from pythermonet.domain.infrastructure import Pricing
 from pythermonet.data.equipment.pipes import load_pipe_catalogue
 from pythermonet.data.misc.entrepeneur_prices import EntrepeneurPrices
+from pythermonet.data.equipment.component_cost import ComponentCost
 from pythermonet.domain import BHEConfig, HHEConfig
 
 entrep_prices = EntrepeneurPrices()
@@ -30,10 +31,10 @@ def _as_list(x):
 
 
 def _calc_pipe_prices(pipe_dims: list[float], pipe_lengths: list[int], calc_price: Pricing, pipe_type: Literal["Thermal Exchange Pipe","Borehole Heat Exchanger"]) -> None:
-    if calc_price.component_cost is None:
+    if calc_price.pipe_cost is None:
         pipe_prices = {}
     else:
-        pipe_prices = calc_price.component_cost
+        pipe_prices = calc_price.pipe_cost
 
     pipe_dims = _as_list(pipe_dims)
     pipe_lengths = _as_list(pipe_lengths)
@@ -51,7 +52,7 @@ def _calc_pipe_prices(pipe_dims: list[float], pipe_lengths: list[int], calc_pric
         pipe_prices[dim] = piping_price
         calc_price.total_cost += piping_price
 
-    calc_price.component_cost=pipe_prices
+    calc_price.pipe_cost=pipe_prices
 
 
 def _calc_worker_prices(chosen_worker: dict) -> int:
@@ -89,7 +90,19 @@ def _calc_price_by_m(net_length: float, net_price_pr_m: int, source_length: floa
     calc_price.total_cost += (net_price+source_price)
     
 
-def _calc_total_cost(input: CalcPriceInput, calc_price: Pricing, advanced: bool) -> None:
+def _calc_component_price(num_hps: int, calc_price: Pricing) -> None:
+    component_cost = ComponentCost()
+
+    heatpump_cost = component_cost.heatpump_price * num_hps
+    energy_meter_cost = component_cost.energy_meter_price * num_hps
+
+    calc_price.component_cost["heatpump_cost"] = heatpump_cost
+    calc_price.component_cost["energy_meter_cost"] = energy_meter_cost
+
+    calc_price.total_cost += (heatpump_cost+energy_meter_cost)
+
+
+def _calc_total_cost(input: CalcPriceInput, calc_price: Pricing, num_hps: int, advanced: bool) -> None:
     grid_pipe_dim = input.net_pipe_dims
     grid_pipe_length = input.net_pipe_lengths
 
@@ -103,10 +116,12 @@ def _calc_total_cost(input: CalcPriceInput, calc_price: Pricing, advanced: bool)
         _calc_labor_prices(calc_price)    
     else:
         _calc_price_by_m(grid_pipe_length, input.net_price_pr_m, source_pipe_length, input.source_price_pr_m, calc_price)
+    
+    _calc_component_price(num_hps, calc_price)
 
     return None
 
-def _set_calc_model(net: Thermonet, source_config: HHEConfig|BHEConfig, advanced: bool, net_price_pr_m: int = 300, source_price_pr_m: int = 200):
+def _set_calc_model(net: Thermonet, source_config: HHEConfig|BHEConfig, advanced: bool, net_price_pr_m: int, source_price_pr_m: int):
     """
     Returns a model for calculating heating and cooling in that order
     """
@@ -141,33 +156,38 @@ def _set_calc_model(net: Thermonet, source_config: HHEConfig|BHEConfig, advanced
 
     return heating_model, cooling_model
 
-def calc_pipe_cost(net: Thermonet, source_config: HHEConfig|BHEConfig, advanced: bool = False) -> dict[str,Pricing]:
+def calc_pipe_cost(net: Thermonet, source_config: HHEConfig|BHEConfig, num_hps: int, advanced: bool = False, net_price_pr_m: int = 300, source_price_pr_m: int = 650) -> dict[str,Pricing]:
     """
     This model calculates the total cost of buying and installing the piping for a thermonet. It is based on the
     pipes in /src/pythermonet/data/equipment/PIPES.dat and the prices in /src/pythermonet/data/misc/entrepeneur_prices.py
 
     The function can be toggled to advanced or not. This defaults to using either a simple price estimation on a price pr 
-    meter for the net and for the boreholes or a more detailed version
+    meter for the net and for the boreholes or a more detailed version. If the simple version is toggled by setting advanced = False,
+    the user has to supply values for net_price_pr_m and source_price_pr_m.
+    The net is the cost for establishing the horizontal grid (the thermonet) while the source is the designated heat generator (e.g. horizontal heat exchanger or
+    borehole heat exchanger).
     
     :param net: Has to be the Thermonet dataclass. 
     :type net: Thermonet
     :param source_config: Has to be either a HHEConfig or BHEConfig dataclass. It contains how many meters of which diameters
     there are needed to create the thermonet.
     :type source_config: HHEConfig | BHEConfig
-    :param advanced: If true, uses the in depth prices of the various types of entrepeneurs so that the user can define 
-    the detail level as they wish. If false, the user can define a price pr running meter in the grid and the borehole for
-    a simplified estimation.
+    :param advanced: If true, uses the in depth prices of the various types of entrepeneurs so that the user can define the detail level as they wish. If false, the user can define a price pr running meter in the grid and the borehole for a simplified estimation.
     :type advanced: bool
+    :param net_price_pr_m: The price pr meter for establishing a thermonet
+    :type net_price_pr_m: int
+    :param source_price_pr_m: The price pr meter for establishing the heat source
+    :type source_price_pr_m: int
     :return: The pricing estimation for heating and cooling.
     :rtype: dict[str, Pricing]
     """
     # Can set pricing pr meter by input parameters here
-    models = _set_calc_model(net, source_config, advanced) # Heating model, cooling model
+    models = _set_calc_model(net, source_config, advanced, net_price_pr_m=net_price_pr_m, source_price_pr_m=source_price_pr_m) # Heating model, cooling model
     
     completed_models = []
     for model in models:
         calc_price = Pricing()
-        _calc_total_cost(model, calc_price, advanced)
+        _calc_total_cost(model, calc_price, num_hps, advanced)
         completed_models.append(calc_price)
 
     return {"heating": completed_models[0], "cooling": completed_models[1]}

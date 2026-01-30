@@ -58,7 +58,7 @@ def run_full_dimensioning(PID:str, d_pipes, brine:Brine, net:Thermonet, hp:HeatP
     # Print results to console
     print_source_dimensions(source_config,net)
 
-    print_pricing(calc_pipe_cost(net, source_config))
+    print_pricing(calc_pipe_cost(net, source_config, len(hp.HP_IDs)))
     # Output computation time to console
     print(' ');
     print('*************************** Computation time ***************************');

@@ -1,0 +1,7 @@
+Section	SDR	Trace_(m)	Number_of_traces	Max_pressure_loss_(Pa)	HP_ID_vector
+Main_line	17	40	1	7200	1,2,3,4,5,6,7,8
+Branch_large 	17	32	2	7200	1,2,3,4 
+Branch_mixed 	17	24	1	7200	6,7
+Connection  	17	26	1	7200	5,6,7,8
+Service_pipes_large	17	4	6	1000	1,2,3,4,5,6
+Service_pipes_small	17	4	2	1000	7,8

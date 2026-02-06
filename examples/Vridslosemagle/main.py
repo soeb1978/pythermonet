@@ -36,8 +36,8 @@ def main() -> None:
     project_data_dir = project_dir / "data"
 
     # Input files
-    agg_load_file = project_data_dir / "vridslosemagle_aggregated_load_heat_cool_106.dat"
-    topology_file = project_data_dir / "vridslosemagle_topology_dimensioned_cool_106.dat"
+    agg_load_file = project_data_dir / "vridslosemagle_aggregated_load_heat_cool_55.dat"
+    topology_file = project_data_dir / "vridslosemagle_topology_dimensioned_cool_55.dat"
 
     # User specified input
 
@@ -90,7 +90,7 @@ def main() -> None:
         NY=11,
         D_y=15
     )
-
+    print(agg_load)
     # Dimensioning of sources - results printed to console
     source_config = run_sourcedimensioning(brine, net, agg_load, source_config)
     print_project_id(project_id)

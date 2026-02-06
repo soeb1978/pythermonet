@@ -372,8 +372,8 @@ def run_sourcedimensioning(brine, net, aggLoad, source_config):
     # Evaluation times for three-pulse analysis are t = [20y 3m t_peak, 3m t_peak, t_peak]
     t_peak_H = aggLoad.t_peak_H; # Peak load duration [h]
     t_peak_C = aggLoad.t_peak_C; # Peak load duration [h]
-    t_H = np.asarray([30 * SECONDS_IN_YEAR + 3 * SECONDS_IN_MONTH + t_peak_H * SECONDS_IN_HOUR, 3 * SECONDS_IN_MONTH + t_peak_H * SECONDS_IN_HOUR, t_peak_H * SECONDS_IN_HOUR], dtype=float);            # time = [30 years + 3 months + 4 hours; 3 months + 4 hours; 4 hours]. Time vector for the temporal superposition (s).       
-    t_C = np.asarray([30 * SECONDS_IN_YEAR + 3 * SECONDS_IN_MONTH + t_peak_C * SECONDS_IN_HOUR, 3 * SECONDS_IN_MONTH + t_peak_C * SECONDS_IN_HOUR, t_peak_C * SECONDS_IN_HOUR], dtype=float);
+    t_H = np.asarray([50 * SECONDS_IN_YEAR + 3 * SECONDS_IN_MONTH + t_peak_H * SECONDS_IN_HOUR, 3 * SECONDS_IN_MONTH + t_peak_H * SECONDS_IN_HOUR, t_peak_H * SECONDS_IN_HOUR], dtype=float);            # time = [30 years + 3 months + 4 hours; 3 months + 4 hours; 4 hours]. Time vector for the temporal superposition (s).       
+    t_C = np.asarray([50 * SECONDS_IN_YEAR + 3 * SECONDS_IN_MONTH + t_peak_C * SECONDS_IN_HOUR, 3 * SECONDS_IN_MONTH + t_peak_C * SECONDS_IN_HOUR, t_peak_C * SECONDS_IN_HOUR], dtype=float);
     
     # Brine (fluid)
     nu_f = brine.mu/brine.rho;                                          # Brine kinematic viscosity (m2/s)  

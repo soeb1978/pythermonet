@@ -29,7 +29,7 @@ def main() -> None:
     project_data_dir = project_dir / "data"
 
     # Input files
-    heat_pump_file = project_data_dir / "silkeborg_heat_pump_heat_cool.dat"
+    heat_pump_file = project_data_dir / "silkeborg_heat_pump_heat_cool_for_HE.dat"
     topology_file = project_data_dir / "silkeborg_topology.dat"
 
     # Open file with available pipe outer diameters (mm). This file can be
@@ -83,10 +83,10 @@ def main() -> None:
         l_g=1.75,
         rhoc_g=3e6,
         D_pipes=0.015,
-        NX=1,
-        D_x=15,
-        NY=6,
-        D_y=15,
+        NX=2,
+        D_x=5,
+        NY=2,
+        D_y=5,
         gFuncMethod="PYG"
     )
 

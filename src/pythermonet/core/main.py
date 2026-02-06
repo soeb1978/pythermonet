@@ -22,18 +22,8 @@ DISKUTER
 """
 
 def run_full_dimensioning(PID:str, d_pipes, brine:Brine, net:Thermonet, hp:HeatPump, pipeGroupNames, source_config:HHEConfig|BHEConfig):
-    # # Output to prompt
-    # print(' ');
-    # print('************************************************************************')
-    # print('************************** ThermonetDim v. 1 ************************')
-    # print('************************************************************************')
-    # print(' ');
-    # print(f'Project: {PID}');
     print_project_id(PID)
-
-
-
-
+    
     # Record calculation time
     tic = time.time();
 

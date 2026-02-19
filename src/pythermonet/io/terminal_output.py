@@ -1,5 +1,6 @@
 from typing import Literal
 from dataclasses import fields
+import numpy as np
 
 from pythermonet.domain.infrastructure import Pricing
 
@@ -17,6 +18,9 @@ def print_pricing(calculated_price: Pricing, modes: Literal["heating", "cooling"
     print('Pipe prices defined in data/equipment/PIPES.dat')
 
     for mode in modes:
+        tot_cost = calculated_price[mode].total_cost[0]
+        if  np.isnan(tot_cost):
+            continue
         print(" ")
         print(f"Price for {mode}:")
 

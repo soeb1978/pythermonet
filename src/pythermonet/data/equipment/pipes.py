@@ -5,7 +5,7 @@ import importlib.resources
 import pandas as pd
 
 
-def load_pipe_catalogue():
+def load_pipe_catalogue(only_pipe_dia: bool = True):
     """
     Loads and returns the pipe catalogue from the bundled "PIPES.dat" file.
 
@@ -20,4 +20,7 @@ def load_pipe_catalogue():
     with importlib.resources.files("pythermonet.data.equipment")\
             .joinpath("PIPES.dat").open("r") as f:
 
-        return pd.read_csv(f, sep=",")
+        if only_pipe_dia:
+            return pd.read_csv(f, sep=",")["Pipe diameters (mm)"]
+        else: 
+            return pd.read_csv(f, sep=",")

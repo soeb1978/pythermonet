@@ -9,7 +9,7 @@ from pythermonet.data.equipment.component_cost import ComponentCost
 from pythermonet.domain import BHEConfig, HHEConfig
 
 entrep_prices = EntrepeneurPrices()
-pipe_catalogue = load_pipe_catalogue()
+pipe_catalogue = load_pipe_catalogue(only_pipe_dia=False)
 
 class CalcPriceInput:
     net_pipe_dims = None

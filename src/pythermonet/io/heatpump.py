@@ -55,6 +55,11 @@ def read_heat_pump_tsv(path: str) -> HeatPumpInput:
     df = pd.read_csv(path, sep="\t+", engine="python")
     df.columns = [col.strip() for col in df.columns]
 
+    #TODO
+    # Add assertion if the file is not valid
+    # If yearly_heating_load is present, yearly_heating_load < Winter_heating_load < Daily_heating_load
+    # If yearly_cooling_load is present, yearly_cooling_load < summer_cooling_load < daily_cooling_load
+
     return HeatPumpInput(
         heat_pump_ids=df["Heat_pump_ID"].to_numpy(),
 

@@ -289,10 +289,12 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
     N_HP = len(hp.P_s_H);
    
     # KART Qdim fjernes fra hp -> flyttet til aggLoad
-    Qdim_H =  hp.P_s_H[:,2]/hp.dT_H/brine.rho/brine.c;                  # Design flow heating (m3/s)
+    heat_pump_psh = hp.P_s_H[:,2]
+    Qdim_H = np.divide(heat_pump_psh, hp.dT_H, out=np.zeros_like(heat_pump_psh, dtype=float), where=hp.dT_H != 0)/brine.rho/brine.c # Design flow heating (m3/s)
     
     if doCooling:
-        Qdim_C =  hp.P_s_C[:,2]/hp.dT_C/brine.rho/brine.c;              # Design flow cooling (m3/s). 
+        heat_pump_psc = hp.P_s_C[:,2]
+        Qdim_C =  np.divide(heat_pump_psc, hp.dT_C, out=np.zeros_like(heat_pump_psc, dtype=float), where=hp.dT_C != 0)/brine.rho/brine.c;              # Design flow cooling (m3/s). 
 
     # Compute design flow for the pipes
     sorter = np.argsort(hp.HP_IDs) # for sorting and finding IDs of heatpumps in pipe groups
@@ -303,7 +305,7 @@ def run_pipedimensioning(d_pipes, brine, net, hp):
        
        # Find index of HP IDs in each group
        Itmp = sorter[np.searchsorted(hp.HP_IDs, net.I_PG[i], sorter=sorter)] # Match IDs from each pipe group against total list of IDs in eth grid              
-       Q_PG_H[i] =  S_H * sum(Qdim_H[Itmp])/net.N_traces[i];                        # Sum the heating brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
+       Q_PG_H[i] =  S_H * sum(Qdim_H[Itmp])/net.N_traces[i];                 # Sum the heating brine flow for all consumers connected to a specific pipe group and normalize with the number of traces in that group to get flow in the individual pipes (m3/s)
 
        if doCooling:
             S_C = hp.f_peak_C*(0.62 + 0.38/N_HP_per_trace);

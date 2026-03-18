@@ -37,10 +37,15 @@ def source_load_from_cop(
         The portion of the thermal load that the source must provide or
         receive [W].
     """
-    if heating:
-        thermal_load = np.multiply(heat_pump_load, 1 - np.divide(1, cop))
-    else:
-        thermal_load = np.multiply(heat_pump_load, 1 + np.divide(1, cop))
+    inv_cop = np.divide(
+        1.0, cop,
+        out=np.zeros_like(cop, dtype=float),
+        where=cop != 0
+    )
+
+    factor = 1 - inv_cop if heating else 1 + inv_cop
+    thermal_load = heat_pump_load * factor
+
     return thermal_load
 
 
